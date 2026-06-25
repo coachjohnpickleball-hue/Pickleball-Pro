@@ -2070,16 +2070,18 @@ body.pb-non-admin a[href^="/admin/"]{
     <div class="premium-panel" style="margin-top:1rem">
       <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
         <div>
-          <div style="font-weight:900;color:var(--lime);font-size:1.1rem">🛡️ Scheduler Integrity Check</div>
-          <div style="color:var(--txt3);font-size:.85rem;margin-top:.25rem">Verify completed rounds, scores, modes, and optimizer targeting before live play.</div>
+          <div style="font-weight:900;color:var(--lime);font-size:1.1rem">📸 History Snapshots</div>
+          <div style="color:var(--txt3);font-size:.85rem;margin-top:.25rem">Saved copies of completed rounds. Use these to verify or restore scores and assignments if something goes wrong.</div>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm admin-lock-safe" onclick="runSchedulerIntegrityCheck()">Run Check</button>
-          <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="snapshotCompletedRounds(true)">📸 Snapshot Completed</button>
+          <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbSnapshotAllCompleted('manual')">📸 Snapshot Completed Rounds</button>
+          <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbRunSnapshotIntegrityCheck()">🛡️ Run Snapshot Check</button>
         </div>
       </div>
-      <div id="scheduler-integrity-status" style="color:var(--txt3);font-size:.86rem;line-height:1.55;margin-top:.75rem">No check run yet.</div>
+      <div id="history-snapshot-status" style="color:var(--txt3);font-size:.82rem;line-height:1.55;margin-top:.7rem"></div>
+      <div id="history-snapshot-list" style="margin-top:.75rem"></div>
     </div>
+
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Open Access Log</button>
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/tos-status','_blank')">📄 TOS Status</button>
@@ -3360,6 +3362,7 @@ var state = {
   historyUnlockReason: '',
   playerModeRoundsUnlocked: false, // admin override: allows player-mode/scheduler mode changes to rebuild locked rounds
   playerModeUnlockReason: '',
+  historySnapshots: [], // immutable round snapshots captured when rounds are completed / scored
 };
 
 // ── pRating: scheduling uses Club Rating (numeric) when set, falls back to Skill Rating ──
@@ -3625,7 +3628,7 @@ function showTab(tab, evt) {
   if(tab==='playerportal') renderPlayerPortalPublic();
   if(tab==='fairness') renderFairnessEngine();
   if(tab==='history') renderTournamentHistory();
-  if(tab==='admin') renderAdminLock();
+  if(tab==='admin') { renderAdminLock(); try { pbRenderHistorySnapshots(); } catch(e) {} }
   if(tab==='selfcheckinpublic') renderSelfCheckinPublic();
   if(tab==='playoffs') renderPlayoffs();
   if(tab==='playerstats') { renderPlayerStats(); populateH2HDropdowns(); renderH2H(); }
@@ -9009,6 +9012,7 @@ function saveScore() {
 
   // Record for undo
   pushUndo(m.id, prevSa, prevSb, prevComplete);
+  try { pbSnapshotRound((Number(m.round)||1)-1, 'score saved'); } catch(e) {}
   autoSave();
 
   // Sync back to river board if this is a river match
@@ -9072,6 +9076,7 @@ function saveScoreInline(matchId) {
   const prevSa = m.scoreA, prevSb = m.scoreB, prevComplete = m.complete;
   m.scoreA = sa; m.scoreB = sb; m.complete = true;
   pushUndo(m.id, prevSa, prevSb, prevComplete);
+  try { pbSnapshotRound((Number(m.round)||1)-1, 'inline score saved'); } catch(e) {}
   autoSave();
 
   if(m.isRiverMatch && riverState.enabled) {
@@ -11919,6 +11924,7 @@ function checkRoundComplete() {
     if(!allDone || state.notifiedRounds.has(r)) return;
 
     state.notifiedRounds.add(r);
+    try { pbSnapshotRound(r, 'round complete'); } catch(e) {}
 
     const msg      = document.getElementById('round-complete-msg');
     const titleEl  = document.getElementById('round-complete-title');
@@ -13378,6 +13384,7 @@ function buildSaveData() {
       historyUnlockReason: state.historyUnlockReason || '',
       playerModeRoundsUnlocked: state.playerModeRoundsUnlocked === true,
       playerModeUnlockReason: state.playerModeUnlockReason || '',
+      historySnapshots: state.historySnapshots || [],
       _ldAnnouncement: state._ldAnnouncement || '',
     },
     riverState: {
@@ -13440,6 +13447,7 @@ function restoreSaveData(data) {
   state.historyUnlockReason = s.historyUnlockReason || '';
   state.playerModeRoundsUnlocked = s.playerModeRoundsUnlocked === true;
   state.playerModeUnlockReason = s.playerModeUnlockReason || '';
+  state.historySnapshots = Array.isArray(s.historySnapshots) ? s.historySnapshots : [];
   state._ldAnnouncement = s._ldAnnouncement || '';
   if(data.riverState)   Object.assign(riverState,   data.riverState);
   if(data.playoffState) Object.assign(playoffState, data.playoffState);
@@ -17985,6 +17993,171 @@ function exportEndSessionSummary(){
 </script>
 
 
+
+<script>
+/* === REAL HISTORY SNAPSHOTS ===
+   Stores immutable copies of completed/scored rounds so history can be
+   inspected, verified, and restored if a future action corrupts scores. */
+(function(){
+  const MAX_SNAPSHOTS = 80;
+  function clone(v){ try { return JSON.parse(JSON.stringify(v)); } catch(e){ return v; } }
+  function hasVal(v){ return v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-'; }
+  function roundHasScore(round){ return (round||[]).some(m => m && (m.complete === true || hasVal(m.scoreA) || hasVal(m.scoreB))); }
+  function roundComplete(round){ const ms=(round||[]).filter(m=>m && m.teamA && m.teamB && !m.isRiverMatch); return !!ms.length && ms.every(m=>m.complete === true || (hasVal(m.scoreA) && hasVal(m.scoreB))); }
+  function modeLabelForRound(i){
+    try {
+      const md = state.roundMeta && state.roundMeta[i];
+      if(md && md.modeLabel) return md.modeLabel;
+      if(typeof roundMode === 'function' && typeof modeLabel === 'function') return modeLabel(roundMode(i, document.getElementById('team-mode')?.value || ''));
+    } catch(e) {}
+    try { return document.getElementById('team-mode')?.selectedOptions?.[0]?.textContent || 'Current mode'; } catch(e) { return 'Current mode'; }
+  }
+  function modeValueForRound(i){
+    try { return (state.roundMeta && state.roundMeta[i] && state.roundMeta[i].mode) || (typeof roundMode === 'function' ? roundMode(i, document.getElementById('team-mode')?.value || '') : document.getElementById('team-mode')?.value || ''); } catch(e) { return ''; }
+  }
+  function fingerprint(round, meta, byes){
+    const compact = {
+      mode: meta && meta.mode,
+      label: meta && meta.modeLabel,
+      byes: byes || [],
+      matches: (round||[]).map(m => ({
+        id:m.id, round:m.round, court:m.court,
+        teamA:m.teamA || [], teamB:m.teamB || [],
+        scoreA: hasVal(m.scoreA) ? String(m.scoreA) : '',
+        scoreB: hasVal(m.scoreB) ? String(m.scoreB) : '',
+        complete: !!m.complete
+      }))
+    };
+    try { return JSON.stringify(compact); } catch(e) { return String(Date.now()); }
+  }
+  function ensure(){
+    if(!window.state) return [];
+    if(!Array.isArray(state.historySnapshots)) state.historySnapshots = [];
+    return state.historySnapshots;
+  }
+  window.pbSnapshotRound = function(roundIdx, reason){
+    if(!window.state || !Array.isArray(state.schedule)) return null;
+    const i = Number(roundIdx);
+    const round = state.schedule[i];
+    if(!Array.isArray(round) || !round.length) return null;
+    if(!roundHasScore(round) && !roundComplete(round)) return null;
+    const snaps = ensure();
+    const meta = clone((state.roundMeta && state.roundMeta[i]) || { mode: modeValueForRound(i), modeLabel: modeLabelForRound(i) });
+    if(!meta.modeLabel) meta.modeLabel = modeLabelForRound(i);
+    if(!meta.mode) meta.mode = modeValueForRound(i);
+    const byes = clone((state.byeRounds || [])[i] || []);
+    const sig = fingerprint(round, meta, byes);
+    const last = snaps.filter(s => s.roundIndex === i).slice(-1)[0];
+    if(last && last.signature === sig) return last;
+    const snap = {
+      id: 'snap-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+      roundIndex: i,
+      roundNumber: i + 1,
+      createdAt: new Date().toISOString(),
+      reason: reason || 'snapshot',
+      status: roundComplete(round) ? 'complete' : 'scored',
+      mode: meta.mode,
+      modeLabel: meta.modeLabel,
+      signature: sig,
+      round: clone(round),
+      byePlayers: byes,
+      roundTeams: clone((state.roundTeams || [])[i] || []),
+      roundMeta: meta
+    };
+    snaps.push(snap);
+    while(snaps.length > MAX_SNAPSHOTS) snaps.shift();
+    try { if(typeof autoSave === 'function') autoSave(); } catch(e) {}
+    try { pbRenderHistorySnapshots(); } catch(e) {}
+    return snap;
+  };
+  window.pbSnapshotAllCompleted = function(reason){
+    if(!window.state || !Array.isArray(state.schedule)) return 0;
+    let n = 0;
+    state.schedule.forEach((round, i) => { if(roundHasScore(round) || roundComplete(round)) { if(pbSnapshotRound(i, reason || 'manual snapshot')) n++; } });
+    try { toast('📸 Snapshot check complete for ' + n + ' scored/completed round' + (n===1?'':'s'), 'ok'); } catch(e) {}
+    try { pbRenderHistorySnapshots(); } catch(e) {}
+    return n;
+  };
+  window.pbLatestSnapshotForRound = function(roundIdx){
+    const snaps = ensure();
+    return snaps.filter(s => s.roundIndex === Number(roundIdx)).slice(-1)[0] || null;
+  };
+  window.pbRunSnapshotIntegrityCheck = function(){
+    const lines = [];
+    let ok = true;
+    if(!window.state || !Array.isArray(state.schedule)) return { ok:false, lines:['No schedule found.'] };
+    state.schedule.forEach((round, i) => {
+      if(!roundHasScore(round) && !roundComplete(round)) return;
+      const meta = clone((state.roundMeta && state.roundMeta[i]) || { mode: modeValueForRound(i), modeLabel: modeLabelForRound(i) });
+      if(!meta.modeLabel) meta.modeLabel = modeLabelForRound(i);
+      if(!meta.mode) meta.mode = modeValueForRound(i);
+      const sig = fingerprint(round, meta, clone((state.byeRounds||[])[i] || []));
+      const snap = pbLatestSnapshotForRound(i);
+      if(!snap){ ok = false; lines.push('⚠️ Round ' + (i+1) + ': no snapshot yet.'); }
+      else if(snap.signature !== sig){ ok = false; lines.push('❌ Round ' + (i+1) + ': current data differs from latest snapshot.'); }
+      else lines.push('✅ Round ' + (i+1) + ': matches latest snapshot.');
+    });
+    if(!lines.length) lines.push('No completed/scored rounds to check yet.');
+    const el = document.getElementById('history-snapshot-status');
+    if(el) el.innerHTML = '<strong style="color:' + (ok ? 'var(--lime)' : 'var(--ball)') + '">' + (ok ? 'PASS' : 'REVIEW NEEDED') + '</strong><br>' + lines.map(x=>'<div>'+escHtml(x)+'</div>').join('');
+    try { toast(ok ? '🛡️ Snapshot integrity check passed' : '⚠️ Snapshot integrity needs review', ok ? 'ok' : 'err'); } catch(e) {}
+    try { pbRenderHistorySnapshots(); } catch(e) {}
+    return { ok, lines };
+  };
+  function playersLabel(list){
+    return (list||[]).map(i => state.players && state.players[i] ? state.players[i].name.split(' ')[0] : '?').join(' & ');
+  }
+  window.pbViewSnapshot = function(id){
+    const snap = ensure().find(s => s.id === id);
+    if(!snap) return;
+    const rows = (snap.round||[]).map(m => {
+      const score = (hasVal(m.scoreA) || hasVal(m.scoreB)) ? (escHtml(String(m.scoreA||'')) + ' - ' + escHtml(String(m.scoreB||''))) : '—';
+      return '<tr><td>🏟 '+escHtml(String(m.court||''))+'</td><td>'+escHtml(playersLabel(m.teamA))+'</td><td>'+escHtml(playersLabel(m.teamB))+'</td><td>'+score+'</td><td>'+(m.complete?'Complete':'Scored')+'</td></tr>';
+    }).join('');
+    const html = '<div style="font-weight:900;color:var(--lime);margin-bottom:.5rem">📸 Snapshot · Round '+snap.roundNumber+'</div>'+
+      '<div style="color:var(--txt3);font-size:.85rem;margin-bottom:.75rem">'+escHtml(new Date(snap.createdAt).toLocaleString())+' · '+escHtml(snap.modeLabel||'')+' · '+escHtml(snap.reason||'')+'</div>'+
+      '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Court</th><th>Team A</th><th>Team B</th><th>Score</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem"><button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbRenderHistorySnapshots()">Close</button><button class="btn btn-danger btn-sm admin-lock-safe" onclick="pbRestoreSnapshot(\''+snap.id+'\')">Restore Round</button></div>';
+    const list = document.getElementById('history-snapshot-list');
+    if(list) list.innerHTML = html;
+  };
+  window.pbRestoreSnapshot = function(id){
+    const snap = ensure().find(s => s.id === id);
+    if(!snap) return;
+    if(!confirm('Restore Round '+snap.roundNumber+' from this snapshot?\n\nThis will restore that round’s teams, courts, mode, byes, and scores. Other rounds will not be changed.')) return;
+    const i = snap.roundIndex;
+    state.schedule = Array.isArray(state.schedule) ? state.schedule : [];
+    state.byeRounds = Array.isArray(state.byeRounds) ? state.byeRounds : [];
+    state.roundTeams = Array.isArray(state.roundTeams) ? state.roundTeams : [];
+    state.roundMeta = Array.isArray(state.roundMeta) ? state.roundMeta : [];
+    state.schedule[i] = clone(snap.round);
+    state.byeRounds[i] = clone(snap.byePlayers || []);
+    state.roundTeams[i] = clone(snap.roundTeams || []);
+    state.roundMeta[i] = clone(snap.roundMeta || { mode:snap.mode, modeLabel:snap.modeLabel });
+    if(!state.startedRounds || typeof state.startedRounds.add !== 'function') state.startedRounds = new Set(state.startedRounds || []);
+    state.startedRounds.add(i);
+    try { recomputeRoundHistoryFromCompletedScores(); } catch(e) {}
+    try { renderSchedule(); renderDashboard(); updateProgress(); updateStandings(); renderFairnessEngine(); } catch(e) {}
+    try { autoSave(); } catch(e) {}
+    try { toast('✅ Restored Round '+snap.roundNumber+' from snapshot', 'ok'); } catch(e) {}
+    pbSnapshotRound(i, 'restored from snapshot');
+    pbRenderHistorySnapshots();
+  };
+  window.pbRenderHistorySnapshots = function(){
+    const snaps = ensure().slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    const status = document.getElementById('history-snapshot-status');
+    const list = document.getElementById('history-snapshot-list');
+    if(status && !status.innerHTML) status.innerHTML = snaps.length ? ('📸 '+snaps.length+' snapshot'+(snaps.length===1?'':'s')+' saved.') : 'No snapshots yet. They will be created automatically when scores are saved or a round is completed.';
+    if(!list) return;
+    if(!snaps.length){ list.innerHTML = '<div style="color:var(--txt3);font-size:.85rem">No snapshots yet.</div>'; return; }
+    list.innerHTML = '<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Round</th><th>Time</th><th>Mode</th><th>Reason</th><th>Action</th></tr></thead><tbody>' + snaps.slice(0,25).map(s => '<tr><td>Round '+s.roundNumber+'</td><td>'+escHtml(new Date(s.createdAt).toLocaleString())+'</td><td>'+escHtml(s.modeLabel||'')+'</td><td>'+escHtml(s.reason||'')+'</td><td><button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbViewSnapshot(\''+s.id+'\')">👁 View</button></td></tr>').join('') + '</tbody></table></div>';
+  };
+  function init(){ try { ensure(); pbSnapshotAllCompleted('auto backfill'); pbRenderHistorySnapshots(); } catch(e) { console.warn('snapshot init failed', e); } }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  setTimeout(init, 800);
+})();
+</script>
+
 <script>
 /* === HARD HISTORY PRESERVATION GUARD ===
    Scheduler / Fairness actions may regenerate draft rounds, but must never
@@ -18125,137 +18298,6 @@ function exportEndSessionSummary(){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   setTimeout(init, 500);
 })();
-
-// ── Scheduler Integrity Check / History Snapshots ─────────────────────────
-function pbDeepClone(obj){ return JSON.parse(JSON.stringify(obj || null)); }
-function pbRoundIsHistorical(roundIdx){
-  const round = (state.schedule || [])[roundIdx] || [];
-  return !!((round || []).some(m => m && m.complete) || (state.startedRounds && state.startedRounds.has(roundIdx)));
-}
-function pbRoundMode(roundIdx){
-  const metaMode = (state.roundMeta || [])[roundIdx] && (state.roundMeta || [])[roundIdx].mode;
-  const matchMode = ((state.schedule || [])[roundIdx] || []).find(m => m && m.scheduleMode)?.scheduleMode;
-  return metaMode || matchMode || 'unknown';
-}
-function pbRoundSnapshot(roundIdx){
-  const round = (state.schedule || [])[roundIdx] || [];
-  return {
-    roundIdx,
-    mode: pbRoundMode(roundIdx),
-    started: !!(state.startedRounds && state.startedRounds.has(roundIdx)),
-    matches: round.map(m => ({
-      id:m.id, court:m.court, teamA:[...(m.teamA||[])], teamB:[...(m.teamB||[])],
-      scoreA:m.scoreA, scoreB:m.scoreB, winner:m.winner, complete:!!m.complete, scheduleMode:m.scheduleMode || null
-    }))
-  };
-}
-function snapshotCompletedRounds(showToast){
-  state.roundSnapshots = state.roundSnapshots || {};
-  let made = 0;
-  (state.schedule || []).forEach((round, idx) => {
-    if(pbRoundIsHistorical(idx) && !state.roundSnapshots[idx]){
-      state.roundSnapshots[idx] = pbRoundSnapshot(idx);
-      made++;
-    }
-  });
-  try { autoSave(); } catch(e){}
-  if(showToast) toast(made ? `📸 Snapshot saved for ${made} completed round${made===1?'':'s'}` : '✅ Completed round snapshots already exist');
-  return made;
-}
-function pbCompareRoundSnapshot(idx){
-  const snap = state.roundSnapshots && state.roundSnapshots[idx];
-  if(!snap) return { ok:true, missing:true, issues:[`Round ${idx+1}: no historical snapshot yet`] };
-  const now = pbRoundSnapshot(idx);
-  const issues = [];
-  if((snap.mode || 'unknown') !== (now.mode || 'unknown')) issues.push(`Round ${idx+1}: mode changed (${snap.mode} → ${now.mode})`);
-  if((snap.matches||[]).length !== (now.matches||[]).length) issues.push(`Round ${idx+1}: match count changed`);
-  const n = Math.min((snap.matches||[]).length, (now.matches||[]).length);
-  for(let i=0;i<n;i++){
-    const a=snap.matches[i], b=now.matches[i];
-    if(String(a.id)!==String(b.id)) issues.push(`Round ${idx+1} Match ${i+1}: match id changed`);
-    if(String(a.court)!==String(b.court)) issues.push(`Round ${idx+1} Match ${a.id}: court changed`);
-    if(JSON.stringify(a.teamA)!==JSON.stringify(b.teamA) || JSON.stringify(a.teamB)!==JSON.stringify(b.teamB)) issues.push(`Round ${idx+1} Match ${a.id}: teams changed`);
-    if(String(a.scoreA ?? '')!==String(b.scoreA ?? '') || String(a.scoreB ?? '')!==String(b.scoreB ?? '') || String(a.winner ?? '')!==String(b.winner ?? '') || !!a.complete!==!!b.complete) issues.push(`Round ${idx+1} Match ${a.id}: score/result changed`);
-  }
-  return { ok:issues.length===0, missing:false, issues };
-}
-function firstEditableRoundIndex(){
-  const schedule = state.schedule || [];
-  for(let i=0;i<schedule.length;i++){ if(!pbRoundIsHistorical(i)) return i; }
-  return schedule.length ? -1 : 0;
-}
-function runSchedulerIntegrityCheck(){
-  snapshotCompletedRounds(false);
-  const out = document.getElementById('scheduler-integrity-status');
-  const schedule = state.schedule || [];
-  const rows = [];
-  let ok = true;
-  if(!schedule.length){
-    rows.push('ℹ️ No schedule exists yet. Generate a round to begin integrity tracking.');
-  } else {
-    schedule.forEach((round, idx) => {
-      if(pbRoundIsHistorical(idx)){
-        const cmp = pbCompareRoundSnapshot(idx);
-        if(cmp.ok) rows.push(`✅ Round ${idx+1}: completed/started history preserved`);
-        else { ok=false; rows.push(`❌ Round ${idx+1}: history mismatch`); cmp.issues.forEach(x=>rows.push(`&nbsp;&nbsp;• ${escHtml(x)}`)); }
-      } else {
-        rows.push(`✅ Round ${idx+1}: editable draft/future round`);
-      }
-    });
-    const target = firstEditableRoundIndex();
-    if(target >= 0) rows.push(`✅ Optimize / Regenerate target: Round ${target+1}`);
-    else rows.push('✅ No editable draft rounds available; completed history will not be touched.');
-    rows.push('✅ Score changes allowed only through Edit Score / Undo Score.');
-  }
-  rows.unshift(ok ? '<b style="color:var(--lime)">Overall Status: PASS ✅</b>' : '<b style="color:#ff6b6b">Overall Status: WARNING ❌</b>');
-  if(out) out.innerHTML = rows.join('<br>');
-  toast(ok ? '🛡️ Scheduler integrity check passed' : '⚠️ Scheduler integrity warning — review Admin panel', ok ? 'ok' : 'err');
-  return ok;
-}
-function pbPreflightHistoryGuard(actionName){
-  snapshotCompletedRounds(false);
-  const bad=[];
-  Object.keys(state.roundSnapshots || {}).forEach(k => {
-    const cmp = pbCompareRoundSnapshot(Number(k));
-    if(!cmp.ok) bad.push(...cmp.issues);
-  });
-  if(bad.length){
-    const msg = `${actionName || 'Action'} blocked. Completed history mismatch detected. No changes applied.`;
-    toast('🛡️ ' + msg, 'err');
-    const out = document.getElementById('scheduler-integrity-status');
-    if(out) out.innerHTML = '<b style="color:#ff6b6b">' + escHtml(msg) + '</b><br>' + bad.map(x=>'• '+escHtml(x)).join('<br>');
-    return false;
-  }
-  return true;
-}
-(function installSchedulerIntegrityGuards(){
-  const names = ['optimizeNextRoundFromFairness','rebuildUpcomingRounds'];
-  names.forEach(name => {
-    const fn = window[name];
-    if(typeof fn === 'function' && !fn.__integrityWrapped){
-      const wrapped = function(){
-        if(!pbPreflightHistoryGuard(name)) return false;
-        const before = pbDeepClone(state.roundSnapshots || {});
-        const result = fn.apply(this, arguments);
-        const afterOk = pbPreflightHistoryGuard(name + ' after-check');
-        if(!afterOk && before) state.roundSnapshots = before;
-        try { renderSchedulerIntegrityPanel && renderSchedulerIntegrityPanel(); } catch(e){}
-        return result;
-      };
-      wrapped.__integrityWrapped = true;
-      window[name] = wrapped;
-    }
-  });
-})();
-function renderSchedulerIntegrityPanel(){
-  const out = document.getElementById('scheduler-integrity-status');
-  if(out && out.textContent === 'No check run yet.') {
-    const completed = (state.schedule || []).filter((r,idx)=>pbRoundIsHistorical(idx)).length;
-    const target = firstEditableRoundIndex();
-    out.innerHTML = `${completed} historical round${completed===1?'':'s'} protected. ${target>=0?'Next editable target: Round '+(target+1):'No editable draft round.'}`;
-  }
-}
-
 </script>
 
 </body>
