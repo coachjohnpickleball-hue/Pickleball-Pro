@@ -1,0 +1,75 @@
+diff --git a/worker/src/app.html b/worker/src/app.html
+--- a/worker/src/app.html	2026-06-25 17:02:42.518556161 +0000
++++ b/worker/src/app.html	2026-06-25 19:08:54.186203094 +0000
+@@ -1032,6 +1032,7 @@
+   user-select: none;
+   touch-action: none;
+ }
++#global-round-timer.grt-hidden { display:none; }
+ #global-round-timer.grt-dragging { opacity:.92; transform:scale(1.01); }
+ #global-round-timer .grt-drag-handle { cursor:grab; color:var(--txt2); font-weight:900; padding:.35rem .15rem; line-height:1; }
+ #global-round-timer.grt-dragging .grt-drag-handle { cursor:grabbing; }
+@@ -1041,6 +1042,7 @@
+ #global-round-timer .grt-time.expired { color:var(--red); animation:blink 1s step-end infinite; }
+ #global-round-timer button { border:1px solid rgba(198,255,0,.28); background:rgba(198,255,0,.10); color:var(--ball); border-radius:10px; padding:.35rem .5rem; cursor:pointer; font-weight:800; }
+ #global-round-timer .grt-status { font-size:.72rem;color:var(--txt3);min-width:54px; }
++#global-round-timer .grt-hide-btn { color:var(--txt2); border-color:rgba(255,255,255,.16); background:rgba(255,255,255,.05); }
+ #global-round-timer.grt-collapsed { gap:.35rem; padding:.45rem .55rem; }
+ #global-round-timer.grt-collapsed .grt-label,
+ #global-round-timer.grt-collapsed .grt-status,
+@@ -1211,6 +1213,7 @@
+       <button class="user-dropdown-item" onclick="document.getElementById('load-file').click()">📂 Load tournament</button>
+       <button class="user-dropdown-item" onclick="openBackupModal()">📦 Backup &amp; restore</button>
+       <button class="user-dropdown-item" onclick="printSchedule()">🖨 Print schedule</button>
++      <button class="user-dropdown-item" id="global-timer-menu-toggle" onclick="grtToggleVisible()">⏱ Hide floating timer</button>
+       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access log</button>
+       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">📄 Terms settings</button>
+       <button class="user-dropdown-item" style="display:none" id="undo-btn" onclick="undoLastScore()">↩ Undo last score</button>
+@@ -1230,6 +1233,7 @@
+   <button type="button" onclick="toggleTimer()" id="global-timer-toggle">▶</button>
+   <button type="button" class="grt-reset-btn" onclick="resetTimer()">↺</button>
+   <button type="button" onclick="grtToggleCollapsed()" id="global-timer-collapse" title="Collapse timer">▾</button>
++  <button type="button" class="grt-hide-btn" onclick="grtToggleVisible(false)" id="global-timer-hide" title="Hide floating timer">×</button>
+   <span id="global-timer-status" class="grt-status">Ready</span>
+ </div>
+ 
+@@ -11777,6 +11781,7 @@
+ // scores, fairness, or regeneration.
+ const GRT_POS_KEY = 'pb_global_timer_pos_v1';
+ const GRT_COLLAPSED_KEY = 'pb_global_timer_collapsed_v1';
++const GRT_VISIBLE_KEY = 'pb_global_timer_visible_v1';
+ function grtClamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+ function grtApplyPosition(pos) {
+   const el = document.getElementById('global-round-timer');
+@@ -11814,11 +11819,31 @@
+   try { localStorage.setItem(GRT_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch(e) {}
+   setTimeout(() => { grtRestorePosition(); grtSavePosition(); }, 0);
+ }
++function grtSetVisible(visible) {
++  const el = document.getElementById('global-round-timer');
++  const menuBtn = document.getElementById('global-timer-menu-toggle');
++  const show = visible !== false;
++  if(el) el.classList.toggle('grt-hidden', !show);
++  if(menuBtn) menuBtn.textContent = show ? '⏱ Hide floating timer' : '⏱ Show floating timer';
++  try { localStorage.setItem(GRT_VISIBLE_KEY, show ? '1' : '0'); } catch(e) {}
++  if(show) setTimeout(() => { grtRestorePosition(); grtSavePosition(); updateTimerDisplay(); }, 0);
++}
++function grtToggleVisible(force) {
++  const el = document.getElementById('global-round-timer');
++  const currentlyVisible = !(el && el.classList.contains('grt-hidden'));
++  grtSetVisible(typeof force === 'boolean' ? force : !currentlyVisible);
++}
++function grtRestoreVisibility() {
++  let show = true;
++  try { show = localStorage.getItem(GRT_VISIBLE_KEY) !== '0'; } catch(e) {}
++  grtSetVisible(show);
++}
+ function grtInitFloatingTimer() {
+   const el = document.getElementById('global-round-timer');
+   if(!el || el.dataset.dragReady === '1') return;
+   el.dataset.dragReady = '1';
+   try { if(localStorage.getItem(GRT_COLLAPSED_KEY) === '1') el.classList.add('grt-collapsed'); } catch(e) {}
++  grtRestoreVisibility();
+   const btn = document.getElementById('global-timer-collapse');
+   if(btn) btn.textContent = el.classList.contains('grt-collapsed') ? '▸' : '▾';
+   const handle = document.getElementById('global-timer-drag-handle') || el;
