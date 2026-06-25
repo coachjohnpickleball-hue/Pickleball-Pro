@@ -1,0 +1,35 @@
+{
+  "_comment": "Copy this file to clients/clientname.json and fill in all fields.",
+
+  "client": {
+    "id":          "clientname",
+    "name":        "Client Club Name",
+    "adminEmail":  "admin@clientdomain.com"
+  },
+
+  "branding": {
+    "appName":     "Pickleball Pro",
+    "logoEmoji":   "🏓",
+    "primaryColor": "#C6FF00",
+    "accentColor":  "#FF9800"
+  },
+
+  "worker": {
+    "name":        "pickleball-relay-clientname",
+    "kvNamespaceId": "PASTE_KV_ID_HERE"
+  },
+
+  "limits": {
+    "maxSmsPerDay":   200,
+    "maxEmailPerDay": 500
+  },
+
+  "features": {
+    "sms":         true,
+    "email":       true,
+    "mobileSync":  true,
+    "playoffs":    true,
+    "season":      true,
+    "duprExport":  true
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "pickleball-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "dev:rally": "wrangler dev --env rally",
+    "dev:staging": "wrangler dev --env staging",
+    "deploy:rally": "wrangler deploy --env rally",
+    "deploy:staging": "wrangler deploy --env staging",
+    "check": "node --check src/index.js && node ../tools/smoke-test.mjs",
+    "dry-run:rally": "wrangler deploy --env rally --dry-run",
+    "dry-run:staging": "wrangler deploy --env staging --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

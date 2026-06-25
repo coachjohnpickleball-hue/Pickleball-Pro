@@ -1,0 +1,17 @@
+{
+  "name": "pickleball-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "deploy": "node build.js && cd worker && npx wrangler deploy",
+    "worker:check": "cd worker && npm run check",
+    "worker:dev:rally": "cd worker && npm run dev:rally",
+    "worker:dev:staging": "cd worker && npm run dev:staging",
+    "worker:deploy:rally": "cd worker && npm run deploy:rally",
+    "worker:deploy:staging": "cd worker && npm run deploy:staging"
+  },
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
+}

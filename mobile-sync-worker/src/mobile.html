@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>🏓 Court Scorekeeper</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --court:   #1B5E20;
+    --lime:    #C6FF00;
+    --lime2:   #AEEA00;
+    --ball:    #F9A825;
+    --bg:      #0A0F0A;
+    --bg2:     #111711;
+    --surface: #1E271E;
+    --card:    #243024;
+    --border:  #2E3D2E;
+    --txt:     #E8F5E9;
+    --txt2:    #A5D6A7;
+    --txt3:    #66BB6A;
+    --red:     #EF5350;
+    --gold:    #FFD54F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--txt);
+    font-family: 'DM Sans', sans-serif;
+    overscroll-behavior-y: contain;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .topbar {
+    padding: 0.9rem 1.1rem 0.7rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; }
+  .topbar .brand span { color: var(--lime); }
+  .topbar .tname { font-size: 0.72rem; color: var(--txt3); max-width: 55%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  main { flex: 1; display: flex; flex-direction: column; padding: 1.1rem; gap: 1rem; }
+
+  .screen { display: none; flex: 1; flex-direction: column; gap: 1rem; }
+  .screen.active { display: flex; }
+
+  .field-label { font-size: 0.78rem; color: var(--txt3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.4rem; display: block; }
+  input[type="text"], input[type="tel"], input[type="number"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--txt);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.7rem;
+    outline: none;
+  }
+  input:focus { border-color: var(--lime); }
+
+  .btn {
+    border: none;
+    border-radius: 0.85rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--lime); color: #0A1A0A; }
+  .btn-secondary { background: var(--surface); color: var(--txt2); border: 1.5px solid var(--border); }
+  .btn-block { width: 100%; }
+  .btn:disabled { opacity: 0.45; pointer-events: none; }
+
+  .court-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+  }
+  .court-tile {
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    cursor: pointer;
+    position: relative;
+  }
+  .court-tile.taken { opacity: 0.5; }
+  .court-tile .claimed-by { font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.55rem; color: var(--txt3); margin-top: 0.2rem; max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .court-tile.selected { border-color: var(--lime); background: rgba(198,255,0,0.08); }
+
+  .match-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.1rem;
+  }
+  .match-card .court-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--court);
+    color: var(--lime);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 99px;
+    margin-bottom: 0.7rem;
+  }
+  .match-card .round-tag { font-size: 0.72rem; color: var(--txt3); margin-bottom: 0.9rem; }
+
+  .team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .team-row:last-child { border-bottom: none; }
+  .team-names { font-weight: 600; font-size: 1rem; line-height: 1.3; }
+  .team-names small { display: block; font-weight: 400; color: var(--txt3); font-size: 0.78rem; }
+
+  .score-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .score-btn {
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--txt);
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .score-btn:active { background: var(--lime); color: #0A1A0A; }
+  .score-value {
+    width: 2.6rem;
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+  }
+
+  .waiting-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6rem;
+    color: var(--txt3);
+    padding: 2rem;
+  }
+  .waiting-card .ball { font-size: 2.5rem; animation: bounce 1.4s ease-in-out infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+  .toast {
+    position: fixed;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    background: var(--lime);
+    color: #0A1A0A;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.75rem 1.3rem;
+    border-radius: 99px;
+    transition: transform 0.25s ease;
+    z-index: 50;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--red); color: #fff; }
+
+  .footer-link {
+    text-align: center;
+    font-size: 0.74rem;
+    color: var(--txt3);
+    padding: 0.5rem 0 0.2rem;
+  }
+
+  .hint { font-size: 0.78rem; color: var(--txt3); line-height: 1.4; }
+  .error-text { font-size: 0.82rem; color: var(--red); min-height: 1.1em; }
+
+  .swap-row { display: flex; justify-content: center; margin-top: 0.3rem; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">🏓 <span>Court</span> Scorekeeper</div>
+  <div class="tname" id="tname-display">—</div>
+</div>
+
+<!-- Connection-trouble indicator — hidden by default, shown only after a
+     few consecutive failed polls in a row (see fetchState() in the script
+     below). A single dropped network request is normal and not worth
+     alarming anyone over; several in a row, on the other hand, is worth
+     surfacing rather than leaving the scorekeeper staring at a screen
+     that's silently stopped updating with no visible explanation. -->
+<div id="connection-indicator" style="display:none;background:#7a3b00;color:#fff;text-align:center;padding:0.45rem;font-size:0.8rem;font-weight:600"></div>
+
+<!-- Persistent announcements banner — shown above every screen once a
+     tournament code is set, regardless of which screen is active. Read-only
+     here; the organizer posts these from the desktop app's Mobile Sync tab. -->
+<div id="announce-banner" style="display:none">
+  <div id="announce-latest" style="background:rgba(249,168,37,0.12);border-bottom:1px solid rgba(249,168,37,0.35);padding:0.6rem 1.1rem;display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer">
+    <span style="font-size:1rem;line-height:1.3">📢</span>
+    <div style="flex:1;min-width:0">
+      <div id="announce-latest-text" style="font-size:0.82rem;color:var(--ball);font-weight:600;line-height:1.35"></div>
+      <div id="announce-latest-time" style="font-size:0.68rem;color:var(--txt3);margin-top:0.15rem"></div>
+    </div>
+    <span id="announce-toggle-icon" style="font-size:0.75rem;color:var(--txt3);margin-top:0.15rem">▾</span>
+  </div>
+  <div id="announce-list-wrap" style="display:none;max-height:40vh;overflow-y:auto;background:var(--bg2);border-bottom:1px solid var(--border)">
+    <div id="announce-list"></div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ════════ SCREEN 1: Enter tournament code ════════ -->
+  <section class="screen active" id="screen-code">
+    <div>
+      <span class="field-label">Tournament code</span>
+      <input type="text" id="code-input" placeholder="e.g. BURL25" autocapitalize="characters" autocomplete="off" maxlength="32">
+      <div class="error-text" id="code-error"></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="code-continue">Continue</button>
+    <p class="hint">Ask the tournament organizer for your event's code, or scan the QR code posted at your court.</p>
+  </section>
+
+  <!-- ════════ SCREEN 2: Pick your court ════════ -->
+  <section class="screen" id="screen-court">
+    <!-- Always-visible round banner — shown above name/court regardless of
+         whether this phone is locked to one court or showing the full grid. -->
+    <div id="court-screen-round-banner" style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:var(--ball);background:rgba(249,168,37,0.1);border:1px solid rgba(249,168,37,0.35);border-radius:0.7rem;padding:0.55rem;display:none">
+      Round —
+    </div>
+
+    <!-- Shown instead of everything else below when no round is active yet —
+         the name field, court grid, and Start Scoring button are all hidden
+         in this state, so there's nothing confusing to interact with before
+         there's anything to actually score. -->
+    <div id="no-round-message" style="display:none;text-align:center;padding:2rem 1rem;background:var(--surface);border:1.5px dashed var(--border);border-radius:0.9rem">
+      <div style="font-size:2.2rem;margin-bottom:0.5rem">⏳</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;color:var(--txt);margin-bottom:0.3rem">No round has started yet</div>
+      <div style="font-size:0.88rem;color:var(--txt3);line-height:1.5">Ask the organizer to start play, then check back here — this page updates automatically.</div>
+    </div>
+
+    <div>
+      <span class="field-label">Your name</span>
+      <input type="text" id="name-input" placeholder="e.g. Mike" autocomplete="off">
+    </div>
+
+    <!-- Shown when arriving via a court-specific QR code: locked to one court,
+         no grid of other courts is ever shown or selectable. -->
+    <div id="locked-court-wrap" style="display:none">
+      <span class="field-label">Your court</span>
+      <div style="background:var(--surface);border:1.5px solid var(--lime);border-radius:0.8rem;padding:1rem;text-align:center">
+        <div id="locked-court-display" style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.4rem;color:var(--lime)">Court —</div>
+      </div>
+    </div>
+
+    <!-- Shown when arriving without a court pre-selected (manual code entry):
+         every active court is listed and tappable. -->
+    <div id="court-grid-wrap">
+      <span class="field-label">Which court are you scoring?</span>
+      <div class="court-grid" id="court-grid"></div>
+    </div>
+
+    <!-- Players sitting out (a "bye") this round — shown whenever the
+         current round has anyone on a bye, regardless of which court (if
+         any) this phone is looking at. Hidden entirely when the list is
+         empty, rather than showing an empty "Sitting out:" label. -->
+    <div id="bye-players-wrap" style="display:none">
+      <span class="field-label">🪑 Sitting out this round</span>
+      <div id="bye-players-list" style="font-size:0.92rem;color:var(--txt2);line-height:1.6"></div>
+    </div>
+
+    <div class="error-text" id="court-error"></div>
+
+    <div id="pin-wrap" style="display:none">
+      <span class="field-label">Court PIN <span style="text-transform:none;font-weight:400;color:var(--txt3)">(posted at your court)</span></span>
+      <input type="text" id="pin-input" inputmode="numeric" placeholder="e.g. 4471" autocomplete="off">
+    </div>
+    <button class="btn btn-primary btn-block" id="claim-continue">Start Scoring</button>
+    <div class="swap-row"><button class="btn btn-secondary btn-block" id="change-code-btn">Use a different tournament code</button></div>
+  </section>
+
+  <!-- ════════ SCREEN 3: Waiting for a match ════════ -->
+  <section class="screen" id="screen-waiting">
+    <div class="waiting-card">
+      <div class="ball">🥎</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:var(--txt)" id="waiting-court-label">Court —</div>
+      <div id="waiting-round-label" style="font-size:0.78rem;color:var(--txt3)"></div>
+      <div id="waiting-msg">Waiting for your match to be assigned…</div>
+    </div>
+    <button class="btn btn-secondary btn-block" id="change-court-btn">↺ Switch court / name</button>
+  </section>
+
+  <!-- ════════ SCREEN 4: Score entry ════════ -->
+  <section class="screen" id="screen-score">
+    <div class="match-card">
+      <div class="court-pill" id="score-court-pill">Court —</div>
+      <div class="round-tag" id="score-round-tag">Round —</div>
+
+      <div class="team-row">
+        <div class="team-names" id="teamA-names">—</div>
+        <div class="score-control">
+          <div class="score-btn" data-team="A" data-delta="-1">−</div>
+          <div class="score-value" id="scoreA-val">0</div>
+          <div class="score-btn" data-team="A" data-delta="1">+</div>
+        </div>
+      </div>
+      <div class="team-row">
+        <div class="team-names" id="teamB-names">—</div>
+        <div class="score-control">
+          <div class="score-btn" data-team="B" data-delta="-1">−</div>
+          <div class="score-value" id="scoreB-val">0</div>
+          <div class="score-btn" data-team="B" data-delta="1">+</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="submit-score-btn">Submit Score</button>
+    <div class="error-text" id="score-error"></div>
+    <button class="btn btn-secondary btn-block" id="change-court-btn-2">↺ Switch court / name</button>
+  </section>
+
+</main>
+
+<div class="footer-link">Synced live · powered by Cloudflare</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Config ───────────────────────────────────────────────────────────
+  // The Worker serves this same origin, so API calls are relative.
+  const API_BASE = location.origin + '/api';
+  const POLL_MS = 4000;
+
+  // ── Local persisted session ─────────────────────────────────────────
+  const LS_KEY = 'pb_scorekeeper_session';
+  function loadSession() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function saveSession(s) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  let session = loadSession(); // { code, name, court, pin }
+
+  // ── DOM refs ─────────────────────────────────────────────────────────
+  const screens = {
+    code: document.getElementById('screen-code'),
+    court: document.getElementById('screen-court'),
+    waiting: document.getElementById('screen-waiting'),
+    score: document.getElementById('screen-score'),
+  };
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  function toast(msg, isErr) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isErr ? ' err' : '');
+    clearTimeout(toast._tid);
+    toast._tid = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ── URL param: ?code=XXXX&court=N&pin=NNNN lets QR codes deep-link ───
+  const urlParams = new URLSearchParams(location.search);
+  if (urlParams.get('code')) session.code = urlParams.get('code').toUpperCase();
+  if (urlParams.get('court')) {
+    session._prefillCourt = Number(urlParams.get('court'));
+    // A QR-code arrival locks this device to that single court for the rest
+    // of the session — the full court grid is never shown, so this phone
+    // can never claim or score a different court, even after a re-claim.
+    session.lockedCourt = session._prefillCourt;
+    saveSession(session);
+  }
+  if (urlParams.get('pin')) session._prefillPin = urlParams.get('pin');
+
+  // ── API helpers ──────────────────────────────────────────────────────
+  async function api(path, opts) {
+    // fetch() itself can throw — not just return a bad response — on a
+    // genuine connection failure: phone briefly losing signal, switching
+    // WiFi to cellular, or waking from sleep. All routine for a phone
+    // sitting at a court for an hour. Previously this wasn't caught here,
+    // so it propagated as an uncaught rejection into fetchState()'s poll
+    // loop — exactly the kind of thing that can make "auto-refresh" look
+    // like it silently stopped working with no visible cause.
+    let res;
+    try {
+      res = await fetch(API_BASE + path, Object.assign({
+        headers: { 'Content-Type': 'application/json' },
+      }, opts));
+    } catch (e) {
+      return { ok: false, error: 'Network unreachable', networkError: true };
+    }
+    let body;
+    try { body = await res.json(); } catch (e) { body = { ok: false, error: 'Bad response' }; }
+    if (!res.ok && !body.error) body.error = 'Request failed (' + res.status + ')';
+    return body;
+  }
+
+  let currentState = null; // last /state payload
+  let pollTimer = null;
+  let liveScoreA = 0, liveScoreB = 0, activeMatchId = null; // current score-screen state
+
+  function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  function startPolling() {
+    stopPolling();
+    fetchState();
+    pollTimer = setInterval(fetchState, POLL_MS);
+  }
+
+  let consecutiveFailures = 0;
+
+  async function fetchState() {
+    if (!session.code) return;
+    // Defense-in-depth: api() already catches fetch()-level failures and
+    // returns {ok:false} rather than throwing, but wrapping the whole tick
+    // means a polling cycle can NEVER throw an uncaught error here,
+    // regardless of what changes in api() later — the interval keeps
+    // ticking no matter what.
+    let data;
+    try {
+      data = await api('/' + encodeURIComponent(session.code) + '/state', { method: 'GET' });
+    } catch (e) {
+      data = { ok: false, error: 'Unexpected error', networkError: true };
+    }
+
+    if (!data.ok) {
+      consecutiveFailures++;
+      // Only surface a visible indicator after a few misses in a row (a
+      // single dropped tick is normal and not worth alarming anyone over)
+      // — but DO surface it once it's been a real stretch, rather than
+      // failing completely silently forever, which is what made this bug
+      // hard to notice or diagnose in the first place.
+      if (consecutiveFailures >= 3) {
+        const indicator = document.getElementById('connection-indicator');
+        if (indicator) {
+          indicator.style.display = '';
+          indicator.textContent = '⚠️ Connection trouble — retrying…';
+        }
+      }
+      return; // network hiccup — silently retry on next tick (until the threshold above)
+    }
+    if (consecutiveFailures >= 3) {
+      const indicator = document.getElementById('connection-indicator');
+      if (indicator) indicator.style.display = 'none';
+    }
+    consecutiveFailures = 0;
+
+    currentState = data;
+    document.getElementById('tname-display').textContent = data.tournamentName || session.code;
+    renderAnnouncements();
+
+    // If we're on the court-pick screen, refresh the claimed-by labels
+    if (screens.court.classList.contains('active')) renderCourtGrid();
+
+    // If we have a claimed court, route to waiting or scoring
+    if (session.court) routeFromState();
+  }
+
+  // ── Announcements banner ─────────────────────────────────────────────
+  let announceExpanded = false;
+  let lastSeenAnnounceId = null; // tracks which one we've already shown, for the collapse-on-arrival reset
+
+  function relTime(ms) {
+    const diff = Math.max(0, Date.now() - ms);
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.round(mins / 60);
+    if (hrs === 1) return '1 hr ago';
+    if (hrs < 24) return hrs + ' hrs ago';
+    return new Date(ms).toLocaleDateString();
+  }
+
+  function renderAnnouncements() {
+    const banner = document.getElementById('announce-banner');
+    const list = currentState && currentState.announcements ? currentState.announcements : [];
+    if (!list.length) { banner.style.display = 'none'; return; }
+    banner.style.display = '';
+
+    const latest = list[0];
+    // Auto-collapse back to just the latest line whenever a genuinely new
+    // announcement arrives, so it doesn't stay buried if the list was left open.
+    if (latest.id !== lastSeenAnnounceId) {
+      lastSeenAnnounceId = latest.id;
+      announceExpanded = false;
+    }
+
+    document.getElementById('announce-latest-text').textContent = latest.text;
+    document.getElementById('announce-latest-time').textContent = relTime(latest.postedAt);
+
+    const listWrap = document.getElementById('announce-list-wrap');
+    const toggleIcon = document.getElementById('announce-toggle-icon');
+    listWrap.style.display = announceExpanded ? '' : 'none';
+    toggleIcon.textContent = announceExpanded ? '▴' : '▾';
+    toggleIcon.style.display = list.length > 1 ? '' : 'none';
+
+    if (announceExpanded) {
+      document.getElementById('announce-list').innerHTML = list.map(a => `
+        <div style="padding:0.6rem 1.1rem;border-bottom:1px solid var(--border);font-size:0.8rem;color:var(--txt2);line-height:1.4">
+          ${escapeHtml(a.text)}
+          <div style="font-size:0.68rem;color:var(--txt3);margin-top:0.2rem">${relTime(a.postedAt)}</div>
+        </div>`).join('');
+    }
+  }
+
+  document.getElementById('announce-latest').addEventListener('click', () => {
+    const list = currentState && currentState.announcements ? currentState.announcements : [];
+    if (list.length <= 1) return; // nothing more to expand
+    announceExpanded = !announceExpanded;
+    renderAnnouncements();
+  });
+
+  function routeFromState() {
+    if (!currentState) return;
+    const courtEntry = currentState.courts.find(c => c.court === session.court);
+    if (!courtEntry || !courtEntry.teamA || !courtEntry.teamA.length) {
+      activeMatchId = null;
+      document.getElementById('waiting-court-label').textContent = 'Court ' + session.court;
+      document.getElementById('waiting-round-label').textContent = currentState.round ? 'Round ' + currentState.round : '';
+      document.getElementById('waiting-msg').textContent = 'Waiting for your match to be assigned…';
+      showScreen('waiting');
+      return;
+    }
+
+    // If a new round started, the server clears claims for that court — our
+    // saved token is now stale. Send the scorekeeper back to re-claim (and
+    // re-enter the PIN if that court requires one) rather than showing a
+    // score screen that will just fail when they try to submit.
+    const serverClaim = currentState.claims && currentState.claims[session.court];
+    if (!serverClaim || serverClaim.name !== session.name) {
+      activeMatchId = null;
+      session.court = null;
+      session.token = null;
+      saveSession(session);
+      stopPolling();
+      goToCourtScreen();
+      return;
+    }
+
+    if (courtEntry.complete) {
+      activeMatchId = null;
+      document.getElementById('waiting-court-label').textContent = 'Court ' + session.court;
+      document.getElementById('waiting-round-label').textContent = currentState.round ? 'Round ' + currentState.round + ' complete' : '';
+      document.getElementById('waiting-msg').textContent = 'Score submitted — waiting for the next round.';
+      showScreen('waiting');
+      return;
+    }
+    // Only (re)render the score screen when this is a different match than what's
+    // already on screen — otherwise a background poll would overwrite scores the
+    // scorekeeper is still in the middle of tapping in.
+    if (courtEntry.matchId !== activeMatchId) {
+      renderScoreScreen(courtEntry);
+    }
+    showScreen('score');
+  }
+
+  // ── Screen 1: tournament code ────────────────────────────────────────
+  const codeInput = document.getElementById('code-input');
+  const codeError = document.getElementById('code-error');
+
+  async function submitCode() {
+    const code = codeInput.value.trim().toUpperCase();
+    codeError.textContent = '';
+    if (!code) { codeError.textContent = 'Enter a tournament code.'; return; }
+    const btn = document.getElementById('code-continue');
+    btn.disabled = true;
+    const data = await api('/' + encodeURIComponent(code) + '/state', { method: 'GET' });
+    btn.disabled = false;
+    if (!data.ok) { codeError.textContent = 'Could not reach that tournament. Check the code and try again.'; return; }
+    session.code = code;
+    session.court = null; // force re-pick / re-claim on a fresh code
+    saveSession(session);
+    currentState = data;
+    document.getElementById('tname-display').textContent = data.tournamentName || code;
+    goToCourtScreen();
+  }
+  document.getElementById('code-continue').addEventListener('click', submitCode);
+  codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitCode(); });
+
+  // ── Screen 2: name + court pick ──────────────────────────────────────
+  const nameInput = document.getElementById('name-input');
+  const courtGrid = document.getElementById('court-grid');
+  const courtError = document.getElementById('court-error');
+  const pinWrap = document.getElementById('pin-wrap');
+  const pinInput = document.getElementById('pin-input');
+  let selectedCourt = null;
+
+  function goToCourtScreen() {
+    if (session.name) nameInput.value = session.name;
+    if (session._prefillPin) pinInput.value = session._prefillPin;
+    selectedCourt = session.lockedCourt || session._prefillCourt || session.court || null;
+    showScreen('court');
+
+    const lockedWrap = document.getElementById('locked-court-wrap');
+    const gridWrap = document.getElementById('court-grid-wrap');
+    if (session.lockedCourt) {
+      // QR-code arrival: show only this one court, no grid of others at all.
+      lockedWrap.style.display = '';
+      gridWrap.style.display = 'none';
+      document.getElementById('locked-court-display').textContent = 'Court ' + session.lockedCourt;
+    } else {
+      lockedWrap.style.display = 'none';
+      gridWrap.style.display = '';
+    }
+
+    // Keep polling while sitting on this screen too — otherwise if a round
+    // just ended, the old scorekeeper's name can keep showing as "claimed"
+    // (or this court's "not active" status can go stale) with no way to see
+    // it update without manually reloading the page. fetchState() itself
+    // calls renderCourtGrid() on every tick while this screen is active.
+    startPolling();
+  }
+
+  function renderCourtGrid() {
+    // Compute this FIRST — both the round banner and the no-round message
+    // below must agree on this exact same signal, or they can drift out of
+    // sync with each other (which is exactly what happened before this
+    // fix: the banner checked only "does a round NUMBER exist", while the
+    // no-round message checked "are there any courts" — the server always
+    // stores a round number even when courts is correctly empty for an
+    // un-started round, so the banner kept announcing "Round 3 is now
+    // playing" directly above an empty court grid).
+    const hasAnyActiveCourt = !!(currentState && currentState.courts && currentState.courts.length);
+
+    // Always-visible round banner at the top of this screen — shown whether
+    // this phone is locked to one court (QR scan) or browsing the full grid
+    // (manual code entry), so the round is impossible to miss either way.
+    // Deliberately gated on hasAnyActiveCourt, NOT just currentState.round
+    // — a round NUMBER can exist on the server before any court in that
+    // round has actually started (see comment above), and showing "Round 3
+    // is now playing" in that state would be actively misleading.
+    const roundBanner = document.getElementById('court-screen-round-banner');
+    if (currentState && currentState.round && hasAnyActiveCourt) {
+      roundBanner.textContent = 'Round ' + currentState.round + ' is now playing';
+      roundBanner.style.display = '';
+    } else {
+      roundBanner.style.display = 'none';
+    }
+
+    const noRoundMsg = document.getElementById('no-round-message');
+    const nameField = nameInput.closest('div');
+    const startBtn = document.getElementById('claim-continue');
+
+    // A phone that arrived via a court-specific QR code (session.lockedCourt
+    // set) has its own, separate "this court isn't active right now"
+    // message further below — that case is about ONE court dropping out
+    // of an otherwise-active round, which is different from NO round
+    // existing at all, so it deliberately doesn't use this same no-round
+    // state even though both can look similar to a player.
+    if (!session.lockedCourt && !hasAnyActiveCourt) {
+      noRoundMsg.style.display = '';
+      nameField.style.display = 'none';
+      document.getElementById('court-grid-wrap').style.display = 'none';
+      document.getElementById('bye-players-wrap').style.display = 'none';
+      pinWrap.style.display = 'none';
+      startBtn.style.display = 'none';
+      courtError.textContent = '';
+      courtGrid.innerHTML = '';
+      return;
+    }
+    noRoundMsg.style.display = 'none';
+    nameField.style.display = '';
+    startBtn.style.display = '';
+    if (!session.lockedCourt) document.getElementById('court-grid-wrap').style.display = '';
+
+    // Keep the locked single-court display in sync on every refresh too —
+    // e.g. if this court drops out of the round mid-wait, or a claim made
+    // by someone else on this court appears/disappears, or a new round starts.
+    if (session.lockedCourt) {
+      const lockedDisplay = document.getElementById('locked-court-display');
+      const stillExists = currentState && currentState.courts.some(c => c.court === session.lockedCourt);
+      if (stillExists) {
+        lockedDisplay.textContent = 'Court ' + session.lockedCourt;
+        courtError.textContent = '';
+      } else {
+        lockedDisplay.textContent = 'Court ' + session.lockedCourt + ' — not active right now';
+        courtError.textContent = 'This court isn\'t part of the current round. Ask the organizer, or wait for the next round.';
+      }
+    }
+    if (!currentState) { courtGrid.innerHTML = ''; return; }
+    const courts = currentState.courts.length
+      ? currentState.courts.map(c => c.court).sort((a, b) => a - b)
+      : [];
+    courtGrid.innerHTML = courts.map(num => {
+      const claim = currentState.claims && currentState.claims[num];
+      const taken = claim && claim.name && claim.name !== nameInput.value.trim();
+      const sel = num === selectedCourt;
+      return '<div class="court-tile' + (taken ? ' taken' : '') + (sel ? ' selected' : '') + '" data-court="' + num + '">' +
+        num +
+        (claim && claim.name ? '<span class="claimed-by">' + escapeHtml(claim.name) + '</span>' : '') +
+        '</div>';
+    }).join('');
+    Array.from(courtGrid.querySelectorAll('.court-tile')).forEach(el => {
+      el.addEventListener('click', () => {
+        selectedCourt = Number(el.dataset.court);
+        renderCourtGrid();
+        updatePinVisibility();
+      });
+    });
+    updatePinVisibility();
+
+    // Bye players for the current round — shown regardless of whether
+    // this phone is locked to one court or browsing the full grid, since
+    // "who's sitting out" is relevant either way.
+    const byeWrap = document.getElementById('bye-players-wrap');
+    const byeList = document.getElementById('bye-players-list');
+    const byePlayers = (currentState && currentState.byePlayers) || [];
+    if (byePlayers.length) {
+      byeWrap.style.display = '';
+      byeList.textContent = byePlayers.join(', ');
+    } else {
+      byeWrap.style.display = 'none';
+    }
+  }
+
+  // Show the PIN field only when the currently-selected court actually
+  // requires one — keeps courts with no PIN frictionless.
+  function updatePinVisibility() {
+    const courtData = currentState && currentState.courts.find(c => c.court === selectedCourt);
+    pinWrap.style.display = courtData && courtData.pinRequired ? '' : 'none';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  document.getElementById('claim-continue').addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    const pin = pinInput.value.trim();
+    courtError.textContent = '';
+    if (!name) { courtError.textContent = 'Enter your name.'; return; }
+    if (!selectedCourt) { courtError.textContent = 'Pick a court.'; return; }
+    const btn = document.getElementById('claim-continue');
+    btn.disabled = true;
+    const data = await api('/' + encodeURIComponent(session.code) + '/claim', {
+      method: 'POST',
+      body: JSON.stringify({ court: selectedCourt, name, pin }),
+    });
+    btn.disabled = false;
+    if (!data.ok) {
+      if (data.notOnRoster && session.lockedCourt) {
+        // They scanned a QR code for a court they're not actually playing
+        // on — "pick another court" doesn't apply here since this phone is
+        // locked to one. Point them at the right fix instead.
+        courtError.textContent = (data.error || "You're not on this court's roster.") +
+          ' If you scanned the wrong court\'s code, ask the organizer for the correct one, or tap "Use a different tournament code" below to start over.';
+      } else if (data.ambiguous) {
+        // Two+ players on this court share the typed name (e.g. two
+        // "John"s) — the server deliberately didn't guess which one. Help
+        // them retype their full name immediately rather than leaving them
+        // to figure out what to do from the error text alone.
+        courtError.textContent = data.error || 'More than one player matches that name — please type your full first and last name.';
+        nameInput.focus();
+        nameInput.select();
+      } else {
+        courtError.textContent = data.error || 'Could not claim that court.';
+      }
+      return;
+    }
+    // Use the server's resolved roster name when available — the server
+    // matches whatever was typed (nickname, first-name-only, a minor typo)
+    // against the actual schedule and returns the canonical "First Last"
+    // name, which is what should appear everywhere downstream (including
+    // "submitted by" on the desktop). Fall back to the typed name only if
+    // the server didn't return one (e.g. no roster to match against for
+    // this court, which shouldn't normally happen but is handled safely).
+    session.name = (data.claim && data.claim.name) || name;
+    session.court = selectedCourt;
+    session.token = data.token;
+    saveSession(session);
+    startPolling();
+    toast('Court ' + selectedCourt + ' claimed!');
+  });
+
+  document.getElementById('change-code-btn').addEventListener('click', () => {
+    stopPolling();
+    session = {};
+    saveSession(session);
+    codeInput.value = '';
+    showScreen('code');
+  });
+
+  function backToCourtPick() {
+    session.court = null;
+    saveSession(session);
+    goToCourtScreen();
+  }
+  document.getElementById('change-court-btn').addEventListener('click', backToCourtPick);
+  document.getElementById('change-court-btn-2').addEventListener('click', backToCourtPick);
+
+  // ── Screen 4: score entry ────────────────────────────────────────────
+
+  function renderScoreScreen(courtEntry) {
+    activeMatchId = courtEntry.matchId;
+    document.getElementById('score-court-pill').textContent = 'Court ' + courtEntry.court;
+    document.getElementById('score-round-tag').textContent = 'Round ' + (currentState.round || '—');
+    document.getElementById('teamA-names').innerHTML = (courtEntry.teamA || []).join(' &amp; ');
+    document.getElementById('teamB-names').innerHTML = (courtEntry.teamB || []).join(' &amp; ');
+    liveScoreA = courtEntry.scoreA === '' || courtEntry.scoreA == null ? 0 : Number(courtEntry.scoreA);
+    liveScoreB = courtEntry.scoreB === '' || courtEntry.scoreB == null ? 0 : Number(courtEntry.scoreB);
+    document.getElementById('scoreA-val').textContent = liveScoreA;
+    document.getElementById('scoreB-val').textContent = liveScoreB;
+    document.getElementById('score-error').textContent = '';
+  }
+
+  document.querySelectorAll('.score-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const team = btn.dataset.team;
+      const delta = Number(btn.dataset.delta);
+      if (team === 'A') { liveScoreA = Math.max(0, liveScoreA + delta); document.getElementById('scoreA-val').textContent = liveScoreA; }
+      else { liveScoreB = Math.max(0, liveScoreB + delta); document.getElementById('scoreB-val').textContent = liveScoreB; }
+    });
+  });
+
+  document.getElementById('submit-score-btn').addEventListener('click', async () => {
+    const errEl = document.getElementById('score-error');
+    errEl.textContent = '';
+    // Fast, local check using whatever we already know from the last poll
+    // — catches the common "this screen went stale by a few seconds"
+    // case immediately, without waiting on a network round-trip. This is
+    // a UX nicety layered on top of the server's own check (see /score in
+    // tournament-room.js), which remains the actual authority — this
+    // local check can only see data as fresh as the last poll, so it
+    // can't be relied on alone for a genuine two-phones-racing scenario.
+    const currentCourtEntry = currentState && currentState.courts &&
+      currentState.courts.find(c => c.court === session.court);
+    if (currentCourtEntry && currentCourtEntry.complete) {
+      errEl.textContent = 'This match was already scored.';
+      fetchState(); // pull the latest state now, which will redirect to the waiting screen
+      return;
+    }
+    if (liveScoreA === liveScoreB) { errEl.textContent = "Scores can't be tied — pickleball games need a winner."; return; }
+    const btn = document.getElementById('submit-score-btn');
+    btn.disabled = true;
+    const data = await api('/' + encodeURIComponent(session.code) + '/score', {
+      method: 'POST',
+      body: JSON.stringify({
+        court: session.court,
+        scoreA: liveScoreA,
+        scoreB: liveScoreB,
+        submittedBy: session.name,
+        token: session.token || '',
+      }),
+    });
+    btn.disabled = false;
+    if (!data.ok) {
+      errEl.textContent = data.error || 'Could not submit score. Try again.';
+      // A rejected token usually means a new round started and this court needs
+      // re-claiming (with its PIN again) — send the scorekeeper back to do that.
+      if (data.error && data.error.indexOf('claim it again') !== -1) {
+        session.court = null;
+        session.token = null;
+        saveSession(session);
+        setTimeout(() => { stopPolling(); goToCourtScreen(); }, 1200);
+      }
+      // The server rejected this as a duplicate submission to an
+      // already-complete match (see alreadyComplete in tournament-room.js)
+      // — pull fresh state immediately so the screen redirects to the
+      // waiting screen rather than sitting on the now-stale score form.
+      if (data.alreadyComplete) {
+        fetchState();
+      }
+      return;
+    }
+    toast('Score submitted!');
+    fetchState();
+  });
+
+  // ── Boot ─────────────────────────────────────────────────────────────
+  if (session.code && session.court) {
+    document.getElementById('tname-display').textContent = session.code;
+    showScreen('waiting');
+    startPolling();
+  } else if (session.code) {
+    codeInput.value = session.code;
+    goToCourtScreen();
+  } else {
+    showScreen('code');
+  }
+})();
+</script>
+</body>
+</html>

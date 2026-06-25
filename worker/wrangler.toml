@@ -1,0 +1,72 @@
+name = "pickleball-relay"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[[kv_namespaces]]
+binding = "USAGE"
+id = "faac1bcc30ef4711a9377e60ef70636d"
+
+[vars]
+CURRENT_TERMS_VERSION = "2026-06-24"
+CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
+MAX_SMS_PER_DAY = "200"
+MAX_EMAIL_PER_DAY = "500"
+BLOCKED_USERS = ""
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+
+# Deploy with: npx wrangler deploy --env rally
+# This targets the existing Cloudflare Worker/environment named rally.
+[env.rally]
+name = "rally"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[[env.rally.rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[[env.rally.kv_namespaces]]
+binding = "USAGE"
+id = "faac1bcc30ef4711a9377e60ef70636d"
+
+[env.rally.vars]
+CURRENT_TERMS_VERSION = "2026-06-24"
+CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
+MAX_SMS_PER_DAY = "200"
+MAX_EMAIL_PER_DAY = "500"
+BLOCKED_USERS = ""
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+
+
+# Deploy with: npx wrangler deploy --env staging
+# Staging is a separate Worker name so you can test changes before touching rally.
+# NOTE: for true tenant/data isolation, replace the KV namespace id below with
+# a dedicated staging KV namespace created in Cloudflare.
+[env.staging]
+name = "rally-staging"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[[env.staging.rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[[env.staging.kv_namespaces]]
+binding = "USAGE"
+id = "faac1bcc30ef4711a9377e60ef70636d"
+
+[env.staging.vars]
+CURRENT_TERMS_VERSION = "2026-06-24"
+CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
+MAX_SMS_PER_DAY = "50"
+MAX_EMAIL_PER_DAY = "100"
+BLOCKED_USERS = ""
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+ENVIRONMENT = "staging"
