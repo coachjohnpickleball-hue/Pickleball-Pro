@@ -18352,5 +18352,226 @@ function exportEndSessionSummary(){
 })();
 </script>
 
+
+
+<script>
+/* === SCHEDULER HISTORY HARD GUARD v4 ===
+   One rule: Schedule/Fairness actions may only touch draft rounds.
+   Completed or started rounds are immutable; scores are preserved unless
+   Edit/Undo Score is explicitly used. This guard wraps every known generate,
+   regenerate, preview and fairness optimize path, including async best-of-N
+   commits.
+*/
+(function(){
+  if(window.__pbHistoryHardGuardV4) return;
+  window.__pbHistoryHardGuardV4 = true;
+
+  function clone(v){ try { return JSON.parse(JSON.stringify(v)); } catch(e){ return v; } }
+  function nonEmptyScore(v){
+    if(v === undefined || v === null) return false;
+    var s = String(v).trim();
+    return s !== '' && s !== '-';
+  }
+  function matchHasScore(m){
+    if(!m) return false;
+    return m.complete === true || nonEmptyScore(m.scoreA) || nonEmptyScore(m.scoreB) || nonEmptyScore(m.ptsA) || nonEmptyScore(m.ptsB);
+  }
+  function roundHasScore(round){ return (round || []).some(matchHasScore); }
+  function roundStarted(i){
+    return !!(window.state && state.startedRounds && typeof state.startedRounds.has === 'function' && state.startedRounds.has(i));
+  }
+  function isHistoricalRound(i){
+    if(!window.state || !Array.isArray(state.schedule)) return false;
+    if(state.historyUnlocked === true) return false;
+    var round = state.schedule[i] || [];
+    var lock = state.roundLocks && state.roundLocks[i];
+    return roundStarted(i) || roundHasScore(round) || !!(lock && ['started','scored','complete','score-edited','history'].includes(lock.reason));
+  }
+  function firstDraftRound(){
+    if(!window.state || !Array.isArray(state.schedule)) return -1;
+    for(var i=0;i<state.schedule.length;i++){
+      if(!isHistoricalRound(i)) return i;
+    }
+    return -1;
+  }
+  function protectedSnapshot(){
+    var out=[];
+    if(!window.state || !Array.isArray(state.schedule)) return out;
+    (state.schedule || []).forEach(function(round,i){
+      if(isHistoricalRound(i)){
+        out.push({
+          i:i,
+          round:clone(round),
+          bye:clone((state.byeRounds||[])[i] || []),
+          teams:clone((state.roundTeams||[])[i] || []),
+          meta:clone((state.roundMeta||[])[i] || null),
+          lock:clone((state.roundLocks||[])[i] || null),
+          started:roundStarted(i)
+        });
+      }
+    });
+    return out;
+  }
+  function restoreProtected(snap){
+    if(!snap || !snap.length || !window.state || state.historyUnlocked === true) return 0;
+    state.schedule = Array.isArray(state.schedule) ? state.schedule : [];
+    state.byeRounds = Array.isArray(state.byeRounds) ? state.byeRounds : [];
+    state.roundTeams = Array.isArray(state.roundTeams) ? state.roundTeams : [];
+    state.roundMeta = Array.isArray(state.roundMeta) ? state.roundMeta : [];
+    state.roundLocks = Array.isArray(state.roundLocks) ? state.roundLocks : [];
+    if(!state.startedRounds || typeof state.startedRounds.add !== 'function') state.startedRounds = new Set(state.startedRounds || []);
+    var restored=0;
+    snap.forEach(function(x){
+      state.schedule[x.i] = clone(x.round);
+      state.byeRounds[x.i] = clone(x.bye);
+      state.roundTeams[x.i] = clone(x.teams);
+      state.roundMeta[x.i] = clone(x.meta) || state.roundMeta[x.i] || null;
+      state.roundLocks[x.i] = clone(x.lock) || state.roundLocks[x.i] || { lockedAt:new Date().toISOString(), reason:roundHasScore(x.round)?'scored':'started' };
+      if(x.started) state.startedRounds.add(x.i);
+      restored++;
+    });
+    try {
+      state.teams = [];
+      (state.roundTeams || []).forEach(function(r){ (r||[]).forEach(function(pair){ state.teams.push(pair); }); });
+    } catch(e) {}
+    return restored;
+  }
+  function afterRestore(snap, label){
+    var restored = restoreProtected(snap);
+    try { if(typeof recomputeRoundHistoryFromCompletedScores === 'function') recomputeRoundHistoryFromCompletedScores(); } catch(e) {}
+    try { if(typeof renderSchedule === 'function') renderSchedule(); } catch(e) {}
+    try { if(typeof renderTeams === 'function') renderTeams(); } catch(e) {}
+    try { if(typeof renderCourtsGrid === 'function') renderCourtsGrid(); } catch(e) {}
+    try { if(typeof updateProgress === 'function') updateProgress(); } catch(e) {}
+    try { if(typeof renderDashboard === 'function') renderDashboard(); } catch(e) {}
+    try { if(typeof updateStandings === 'function') updateStandings(); } catch(e) {}
+    try { if(restored && typeof autoSave === 'function') autoSave(); } catch(e) {}
+    return restored;
+  }
+  window.pbFirstDraftRoundIndex = firstDraftRound;
+  window.pbProtectedRoundSnapshot = protectedSnapshot;
+  window.pbRestoreProtectedRounds = restoreProtected;
+
+  function wrap(name){
+    var fn = window[name];
+    if(typeof fn !== 'function' || fn.__pbHardGuardV4) return;
+    var wrapped = function(){
+      var snap = protectedSnapshot();
+      var res = fn.apply(this, arguments);
+      // Some generators are async; restore now and again after delayed commits.
+      afterRestore(snap, name);
+      setTimeout(function(){ afterRestore(snap, name + ':deferred1'); }, 250);
+      setTimeout(function(){ afterRestore(snap, name + ':deferred2'); }, 1200);
+      setTimeout(function(){ afterRestore(snap, name + ':deferred3'); }, 4200);
+      return res;
+    };
+    wrapped.__pbHardGuardV4 = true;
+    window[name] = wrapped;
+  }
+
+  // Remove the unsafe "erase all" route. Generate should either create a first
+  // schedule or rebuild only editable/draft rounds.
+  var oldConfirmGenerate = window.confirmGenerateSchedule;
+  window.confirmGenerateSchedule = function(){
+    try { if(typeof closeGenScheduleModal === 'function') closeGenScheduleModal(); } catch(e) {}
+    if(!window.state || !Array.isArray(state.schedule) || !state.schedule.length){
+      if(typeof oldConfirmGenerate === 'function') return oldConfirmGenerate.apply(this, arguments);
+      if(typeof generateBestOfN === 'function') return generateBestOfN();
+      if(typeof generateSchedule === 'function') return generateSchedule();
+      return;
+    }
+    var snap = protectedSnapshot();
+    var draft = firstDraftRound();
+    if(draft < 0){ try { toast('🔒 All rounds are complete/started. Completed history will not be rebuilt.', 'err'); } catch(e){} return; }
+    try {
+      if(typeof window.pbRegenerateRound === 'function') window.pbRegenerateRound(draft);
+      else if(typeof window.rebuildUpcomingRounds === 'function') window.rebuildUpcomingRounds();
+      else if(typeof window.regenerateRemaining === 'function') window.regenerateRemaining();
+    } finally {
+      afterRestore(snap, 'confirmGenerateSchedule');
+    }
+  };
+
+  // Commit from async best-of-N must never be allowed to persist a changed
+  // historical prefix.
+  if(typeof window._commitBestResult === 'function'){
+    var oldCommit = window._commitBestResult;
+    window._commitBestResult = function(){
+      var snap = protectedSnapshot();
+      var res = oldCommit.apply(this, arguments);
+      afterRestore(snap, '_commitBestResult');
+      return res;
+    };
+  }
+
+  // Fairness optimization targets only the first draft round after all
+  // completed/started rounds.
+  window.optimizeNextRoundFromFairness = function(){
+    if(!window.state || !Array.isArray(state.schedule) || !state.schedule.length){
+      if(typeof promptGenerateSchedule === 'function') promptGenerateSchedule();
+      return;
+    }
+    var idx = firstDraftRound();
+    if(idx < 0){ try { toast('🔒 No editable draft round found. Completed rounds are preserved.', 'err'); } catch(e){} return; }
+    var snap = protectedSnapshot();
+    try {
+      if(typeof window.pbRegenerateRound === 'function') window.pbRegenerateRound(idx);
+      else if(typeof window.rebuildUpcomingRounds === 'function') window.rebuildUpcomingRounds();
+      afterRestore(snap, 'optimizeNextRoundFromFairness');
+      try { toast('✅ Optimized draft Round ' + (idx+1) + '. Completed scores preserved.', 'ok'); } catch(e) {}
+    } catch(e){
+      console.error(e);
+      afterRestore(snap, 'optimizeNextRoundFromFairness:error');
+      try { toast('Could not optimize draft round', 'err'); } catch(_) {}
+    }
+  };
+
+  // Regenerate Preview is draft-only as well.
+  window.regenerateSchedulePreview = function(){
+    var snap = protectedSnapshot();
+    var idx = firstDraftRound();
+    if(idx >= 0 && typeof window.pbRegenerateRound === 'function') window.pbRegenerateRound(idx);
+    else if(typeof window.promptGenerateSchedule === 'function') window.promptGenerateSchedule();
+    afterRestore(snap, 'regenerateSchedulePreview');
+    try { if(typeof renderSchedulePreviewPanel === 'function') renderSchedulePreviewPanel(); } catch(e) {}
+  };
+
+  // Protect the per-round regenerate button too.
+  if(typeof window.pbRegenerateRound === 'function'){
+    var oldPbRegenerateRound = window.pbRegenerateRound;
+    window.pbRegenerateRound = function(i){
+      i = Number(i);
+      if(isHistoricalRound(i)){
+        try { toast('🔒 Round ' + (i+1) + ' is complete/started and cannot be regenerated. Use Edit/Undo Score only.', 'err'); } catch(e) {}
+        return false;
+      }
+      var snap = protectedSnapshot();
+      var res = oldPbRegenerateRound.apply(this, arguments);
+      afterRestore(snap, 'pbRegenerateRound');
+      return res;
+    };
+  }
+
+  ['generateSchedule','generateBestOfN','regenerateRemaining','rebuildUpcomingRounds','applyPartnerLocks','applyPartnerLocksAndSync'].forEach(wrap);
+
+  // Clean up labels so the dangerous intent is clear.
+  function relabel(){
+    try {
+      document.querySelectorAll('button').forEach(function(btn){
+        var t = (btn.textContent || '').trim();
+        if(t === '🔁 Regenerate Remaining') btn.textContent = '🔁 Regenerate Draft Rounds';
+        if(t === '🚀 Generate / Preview Round') btn.textContent = '🚀 Generate Next Draft Round';
+      });
+    } catch(e) {}
+  }
+  var oldRenderSchedule = window.renderSchedule;
+  if(typeof oldRenderSchedule === 'function' && !oldRenderSchedule.__pbRelabelGuardV4){
+    window.renderSchedule = function(){ var r = oldRenderSchedule.apply(this, arguments); relabel(); return r; };
+    window.renderSchedule.__pbRelabelGuardV4 = true;
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', relabel); else relabel();
+  setTimeout(relabel,500);
+})();
+</script>
 </body>
 </html>
