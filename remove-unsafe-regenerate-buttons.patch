@@ -1,0 +1,76 @@
+diff --git a/worker/src/app.html b/worker/src/app.html
+index 3f65865..4f70e07 100644
+--- a/worker/src/app.html
++++ b/worker/src/app.html
+@@ -1544,7 +1544,6 @@ body.pb-non-admin a[href^="/admin/"]{
+           <option value="30000">30 sec</option>
+         </select>
+       </div>
+-      <button class="btn btn-orange" onclick="regenerateRemaining()" title="Keep played rounds, rebuild future rounds with current active players">🔁 Regenerate Remaining</button>
+       <button class="btn btn-orange" id="btn-rebuild-next" onclick="rebuildNextRound()" style="display:none" title="Rebuild next round using actual results from completed rounds">🔁 Rebuild Next Round</button>
+       <button class="btn btn-secondary" onclick="exportScheduleCSV()">📥 Export CSV</button>
+       <button class="btn btn-secondary" onclick="openLiveDisplay()" title="Full-screen court display — great for projecting at the venue">📺 Live Display</button>
+@@ -17670,7 +17669,6 @@ function exportEndSessionSummary(){
+       '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
+         '<button class="btn btn-secondary btn-sm" onclick="toggleSchedulePreviewDetails()">'+(expanded?'▴ Hide Preview':'▾ Show Preview')+'</button>'+
+         '<button class="btn btn-primary btn-sm" onclick="publishSchedulePreview()">✅ Publish / Start Round</button>'+
+-        '<button class="btn btn-orange btn-sm" onclick="regenerateSchedulePreview()">🔄 Regenerate Preview</button>'+
+         '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'schedule-container\') && document.getElementById(\'schedule-container\').scrollIntoView({behavior:\'smooth\'});">View Full Schedule</button>'+ 
+         (started ? '<span style="align-self:center;color:var(--lime);font-weight:800;font-size:.82rem">Already started</span>' : '')+
+       '</div>'+ 
+@@ -17880,7 +17878,7 @@ function exportEndSessionSummary(){
+     state.roundMeta[i]=Object.assign({},state.roundMeta[i]||{}, { mode:mode, modeLabel:modeLabel(mode), changedAt:now() });
+     ((state.schedule||[])[i]||[]).forEach(function(m){ if(m) m.scheduleMode=mode; });
+     try { autoSave(); renderSchedule(); } catch(e){}
+-    toast('Round '+(i+1)+' mode set to '+modeLabel(mode)+'. Click Regenerate Round to rebuild it.');
++    toast('Round '+(i+1)+' mode set to '+modeLabel(mode)+'. Completed rounds remain protected.');
+   };
+ 
+   var originalGenerate=window.generateSchedule;
+@@ -17978,7 +17976,7 @@ function exportEndSessionSummary(){
+             var options='';
+             var src=document.getElementById('team-mode');
+             if(src) Array.from(src.options).forEach(function(o){ options+='<option value="'+o.value+'" '+(o.value===mode?'selected':'')+'>'+o.textContent+'</option>'; });
+-            tools.innerHTML='<select id="pb-round-mode-'+i+'" onchange="pbChangeRoundMode('+i+', this.value)" style="background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:.25rem .4rem;font-size:.75rem">'+options+'</select><button class="btn btn-secondary btn-sm" onclick="pbRegenerateRound('+i+')">🔄 Regenerate Round</button>';
++            tools.innerHTML='<select id="pb-round-mode-'+i+'" onchange="pbChangeRoundMode('+i+', this.value)" style="background:var(--card);color:var(--txt);border:1px solid var(--border);border-radius:8px;padding:.25rem .4rem;font-size:.75rem">'+options+'</select><span style="font-size:.72rem;color:var(--txt3)">Mode applies when generating a new draft round</span>';
+             header.appendChild(tools);
+           }
+         });
+@@ -18300,5 +18298,36 @@ function exportEndSessionSummary(){
+ })();
+ </script>
+ 
++<script>
++/* === Disable unsafe regenerate actions ===
++   These actions previously rebuilt full schedules and could erase completed scores.
++   Keep only Generate Next Draft Round and Publish/Start until scheduler regeneration is fully refactored. */
++(function(){
++  function warn(){
++    try { toast('Regenerate is disabled to protect completed round history. Use Generate Next Draft Round for the next editable round.', 'err'); }
++    catch(e){ alert('Regenerate is disabled to protect completed round history.'); }
++    return false;
++  }
++  window.regenerateRemaining = warn;
++  window.regenerateSchedulePreview = warn;
++  window.pbRegenerateRound = warn;
++  window.rebuildUpcomingRounds = warn;
++  window.rebuildNextRound = warn;
++  function cleanUnsafeButtons(){
++    try {
++      document.querySelectorAll('button').forEach(function(btn){
++        var txt=(btn.textContent||'').trim();
++        var onclick=(btn.getAttribute('onclick')||'');
++        if(/Regenerate Remaining|Regenerate Draft Rounds|Regenerate Preview|Regenerate Round|Rebuild Next Round/.test(txt) || /regenerateRemaining|regenerateSchedulePreview|pbRegenerateRound|rebuildUpcomingRounds|rebuildNextRound/.test(onclick)){
++          btn.remove();
++        }
++      });
++    } catch(e){}
++  }
++  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanUnsafeButtons); else cleanUnsafeButtons();
++  setInterval(cleanUnsafeButtons, 1000);
++})();
++</script>
++
+ </body>
+ </html>
+\ No newline at end of file
