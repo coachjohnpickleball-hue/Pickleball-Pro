@@ -1548,7 +1548,7 @@ body.pb-non-admin a[href^="/admin/"]{
           <option value="30000">30 sec</option>
         </select>
       </div>
-      <button class="btn btn-orange" onclick="regenerateRemaining()" title="Completed/started rounds are preserved; only draft/unstarted rounds are rebuilt">🔁 Regenerate Draft Rounds</button>
+      <!--button class="btn btn-orange" onclick="regenerateRemaining()" title="Completed/started rounds are preserved; only draft/unstarted rounds are rebuilt">🔁 Regenerate Draft Rounds</button>-->
       <button class="btn btn-orange" id="btn-rebuild-next" onclick="rebuildNextRound()" style="display:none" title="Rebuild next round using actual results from completed rounds">🔁 Rebuild Next Round</button>
       <button class="btn btn-secondary" onclick="exportScheduleCSV()">📥 Export CSV</button>
       <button class="btn btn-secondary" onclick="openLiveDisplay()" title="Full-screen court display — great for projecting at the venue">📺 Live Display</button>
@@ -17722,7 +17722,7 @@ function exportEndSessionSummary(){
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
         '<button class="btn btn-secondary btn-sm" onclick="toggleSchedulePreviewDetails()">'+(expanded?'▴ Hide Preview':'▾ Show Preview')+'</button>'+
         '<button class="btn btn-primary btn-sm" onclick="publishSchedulePreview()">✅ Publish / Start Round</button>'+
-        '<button class="btn btn-orange btn-sm" onclick="regenerateSchedulePreview()">🔄 Regenerate Preview</button>'+
+        //'<button class="btn btn-orange btn-sm" onclick="regenerateSchedulePreview()">🔄 Regenerate Preview</button>'+
         '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'schedule-container\') && document.getElementById(\'schedule-container\').scrollIntoView({behavior:\'smooth\'});">View Full Schedule</button>'+ 
         (started ? '<span style="align-self:center;color:var(--lime);font-weight:800;font-size:.82rem">Already started</span>' : '')+
       '</div>'+ 
