@@ -1,0 +1,105 @@
+--- a/worker/src/app.html
++++ b/worker/src/app.html
+@@ -1535,7 +1535,7 @@
+         </div>
+       </div>
+       <div style="display:inline-flex;align-items:center;gap:0.4rem;vertical-align:middle">
+-        <button class="btn btn-primary" id="btn-generate-schedule" onclick="promptGenerateSchedule()">🚀 Generate / Preview Round</button>
++        <button class="btn btn-primary" id="btn-generate-schedule" onclick="promptGenerateSchedule()">🚀 Generate Next Draft Round</button>
+         <select id="gen-time-budget" title="How long to search for the best schedule" style="font-size:0.8rem;padding:0.35rem 0.5rem">
+           <option value="1000">1 sec</option>
+           <option value="3000" selected>3 sec</option>
+@@ -1544,7 +1544,7 @@
+           <option value="30000">30 sec</option>
+         </select>
+       </div>
+-      <button class="btn btn-orange" onclick="regenerateRemaining()" title="Keep played rounds, rebuild future rounds with current active players">🔁 Regenerate Remaining</button>
++      <button class="btn btn-orange" onclick="regenerateRemaining()" title="Completed/started rounds are preserved; only draft/unstarted rounds are rebuilt">🔁 Regenerate Draft Rounds</button>
+       <button class="btn btn-orange" id="btn-rebuild-next" onclick="rebuildNextRound()" style="display:none" title="Rebuild next round using actual results from completed rounds">🔁 Rebuild Next Round</button>
+       <button class="btn btn-secondary" onclick="exportScheduleCSV()">📥 Export CSV</button>
+       <button class="btn btn-secondary" onclick="openLiveDisplay()" title="Full-screen court display — great for projecting at the venue">📺 Live Display</button>
+@@ -6219,6 +6219,14 @@
+ function _runOneTrial(seed) {
+   const origPlayers = [...state.players];
+ 
++  // HARD HISTORY GUARD:
++  // Best-of-N trials temporarily rebuild/translate the schedule. When rounds
++  // have already started or have scores, those historical rounds must never be
++  // translated, regenerated, or cleared as part of a trial. Capture them before
++  // every trial and restore them before the trial snapshot is scored/committed.
++  const __frozenBeforeTrial = (typeof window.pbFrozenSnapshot === 'function') ? window.pbFrozenSnapshot() : [];
++  const __frozenRoundIdxs = new Set((__frozenBeforeTrial || []).map(x => x.i));
++
+   if(seed > 0) {
+     // Only shuffle active players — inactive stay at their positions
+     const activeIdxs = state.players.map((p,i) => i).filter(i => state.players[i].active !== false && state.players[i].waitlist !== true && state.players[i].checkedIn !== false);
+@@ -6240,16 +6248,29 @@
+     // original-array positions before restoring state.players, so the
+     // schedule's teamA/teamB correctly reference the same players the
+     // algorithm actually chose, not whoever ends up at that index afterward.
+-    state.schedule.forEach(round => round.forEach(m => {
+-      if(m.teamA) m.teamA = m.teamA.map(i => shuffledToOrig[i]);
+-      if(m.teamB) m.teamB = m.teamB.map(i => shuffledToOrig[i]);
+-    }));
++    state.schedule.forEach((round, ri) => {
++      // Do not translate historical rounds. They were restored by the scheduler
++      // guard and must remain byte-for-byte as originally played/scored.
++      if(__frozenRoundIdxs.has(ri)) return;
++      round.forEach(m => {
++        if(m.teamA) m.teamA = m.teamA.map(i => shuffledToOrig[i]);
++        if(m.teamB) m.teamB = m.teamB.map(i => shuffledToOrig[i]);
++      });
++    });
+     (state.byeRounds || []).forEach((byes, ri) => {
++      if(__frozenRoundIdxs.has(ri)) return;
+       state.byeRounds[ri] = byes.map(i => shuffledToOrig[i]);
+     });
+     state.players = origPlayers;
+   } else {
+     generateSchedule();
++  }
++
++  // Restore historical rounds after every trial before we score or snapshot it.
++  // This is the final safety net that prevents Generate/Preview, Regenerate,
++  // and Fairness Optimize from erasing completed scores.
++  if(typeof window.pbRestoreFrozenHistory === 'function') {
++    window.pbRestoreFrozenHistory(__frozenBeforeTrial);
+   }
+ 
+   if(!state.schedule.length) return null;
+@@ -6329,10 +6350,16 @@
+ }
+ 
+ function _commitBestResult(bestResult, trialsRun) {
++  // Preserve completed/started rounds even if an older trial snapshot was
++  // created by a path that tried to rebuild the full schedule.
++  const __frozenBeforeCommit = (typeof window.pbFrozenSnapshot === 'function') ? window.pbFrozenSnapshot() : [];
+   restoreScheduleState(bestResult.snap);
++  if(typeof window.pbRestoreFrozenHistory === 'function') {
++    window.pbRestoreFrozenHistory(__frozenBeforeCommit);
++  }
+ 
+   const genBtn = document.getElementById('btn-generate-schedule');
+-  if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate / Preview Round'; }
++  if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Next Draft Round'; }
+ 
+   const si = document.getElementById('schedule-info');
+   if(si) {
+@@ -6378,7 +6405,7 @@
+     if(now >= deadline || perfect) {
+       if(!bestResult) {
+         // Shouldn't happen, but safety net
+-        if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate / Preview Round'; }
++        if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Next Draft Round'; }
+         toast('⚠️ Could not generate a schedule — check player count', 'err');
+         return;
+       }
+@@ -7177,7 +7204,7 @@
+ //  from the kept rounds so repeats stay minimized.
+ // ═══════════════════════════════════════════════
+ function regenerateRemaining() {
+-  if(!state.schedule.length) { toast('No schedule yet — use 🚀 Generate / Preview Round first', 'err'); return; }
++  if(!state.schedule.length) { toast('No schedule yet — use 🚀 Generate Next Draft Round first', 'err'); return; }
+ 
+   const regenMode = document.getElementById('team-mode')?.value;
+   if(regenMode === 'king') {
