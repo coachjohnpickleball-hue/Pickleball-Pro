@@ -1,0 +1,69 @@
+--- worker/src/app.html	2026-06-26 17:17:27.489391802 +0000
++++ /mnt/data/mod/worker/src/app.html	2026-06-26 17:17:30.371333872 +0000
+@@ -1539,7 +1539,7 @@
+         </div>
+       </div>
+       <div style="display:inline-flex;align-items:center;gap:0.4rem;vertical-align:middle">
+-        <button class="btn btn-primary" id="btn-generate-schedule" onclick="promptGenerateSchedule()">🚀 Generate Next Draft Round</button>
++        <button class="btn btn-primary" id="btn-generate-schedule" onclick="promptGenerateSchedule()" title="Safe mode: only generates the initial schedule. Existing/completed rounds are preserved.">🚀 Generate Initial Schedule</button>
+         <select id="gen-time-budget" title="How long to search for the best schedule" style="font-size:0.8rem;padding:0.35rem 0.5rem">
+           <option value="1000">1 sec</option>
+           <option value="3000" selected>3 sec</option>
+@@ -6029,6 +6029,21 @@
+   const pendingMatches = allMatches.length - playedMatches;
+   const hasScores      = playedMatches > 0;
+ 
++  // SAFETY GUARD:
++  // This button previously entered schedule-generation paths that could rebuild
++  // the whole tournament and wipe completed scores. Until the scheduler is fully
++  // refactored to mutate only one independent draft round, this action is allowed
++  // only before any schedule exists. Completed history must never be modified from
++  // the Schedule Builder primary button.
++  if(hasSchedule) {
++    try {
++      toast('🔒 Generate is disabled after a schedule exists. Completed rounds and scores are preserved. Use score edit/undo only for completed rounds.', 'err');
++    } catch(e) {
++      alert('Generate is disabled after a schedule exists so completed rounds and scores are preserved.');
++    }
++    return;
++  }
++
+   // Count how many complete rounds (all matches done) vs partial
+   let completedRounds = 0;
+   state.schedule.forEach(round => {
+@@ -6363,7 +6378,7 @@
+   }
+ 
+   const genBtn = document.getElementById('btn-generate-schedule');
+-  if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Next Draft Round'; }
++  if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Initial Schedule'; }
+ 
+   const si = document.getElementById('schedule-info');
+   if(si) {
+@@ -6409,7 +6424,7 @@
+     if(now >= deadline || perfect) {
+       if(!bestResult) {
+         // Shouldn't happen, but safety net
+-        if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Next Draft Round'; }
++        if(genBtn) { genBtn.disabled = false; genBtn.textContent = '🚀 Generate Initial Schedule'; }
+         toast('⚠️ Could not generate a schedule — check player count', 'err');
+         return;
+       }
+@@ -7208,7 +7223,7 @@
+ //  from the kept rounds so repeats stay minimized.
+ // ═══════════════════════════════════════════════
+ function regenerateRemaining() {
+-  if(!state.schedule.length) { toast('No schedule yet — use 🚀 Generate Next Draft Round first', 'err'); return; }
++  if(!state.schedule.length) { toast('No schedule yet — use 🚀 Generate Initial Schedule first', 'err'); return; }
+ 
+   const regenMode = document.getElementById('team-mode')?.value;
+   if(regenMode === 'king') {
+@@ -18560,7 +18575,7 @@
+       document.querySelectorAll('button').forEach(function(btn){
+         var t = (btn.textContent || '').trim();
+         if(t === '🔁 Regenerate Remaining') btn.textContent = '🔁 Regenerate Draft Rounds';
+-        if(t === '🚀 Generate / Preview Round') btn.textContent = '🚀 Generate Next Draft Round';
++        if(t === '🚀 Generate / Preview Round' || t === '🚀 Generate Next Draft Round') btn.textContent = '🚀 Generate Initial Schedule';
+       });
+     } catch(e) {}
+   }

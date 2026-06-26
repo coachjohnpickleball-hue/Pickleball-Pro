@@ -1,0 +1,132 @@
+--- a/worker/src/app.html
++++ b/worker/src/app.html
+@@ -16354,6 +16354,129 @@
+ 
+ 
+ 
++
++
++<script id="pb-final-history-safety-guard">
++/*
++  FINAL HISTORY SAFETY GUARD
++  Purpose: preserve completed/started round history until the scheduler engine is
++  refactored to generate true independent per-round snapshots.
++
++  Hard rule: once any schedule exists, no Generate / Regenerate / Optimize path
++  is allowed to rebuild tournament rounds. This prevents completed scores,
++  matchups, courts, and per-round modes from being overwritten by legacy full-
++  schedule generation paths.
++*/
++(function(){
++  if(window.__pbFinalHistorySafetyGuard) return;
++  window.__pbFinalHistorySafetyGuard = true;
++
++  function scheduleExists(){
++    return !!(window.state && Array.isArray(state.schedule) && state.schedule.length > 0);
++  }
++
++  function hasProtectedHistory(){
++    if(!scheduleExists()) return false;
++    try {
++      return (state.schedule || []).some(function(round, idx){
++        var started = state.startedRounds && typeof state.startedRounds.has === 'function' && state.startedRounds.has(idx);
++        var scored = (round || []).some(function(m){ return !!(m && (m.complete || m.scoreA !== '' || m.scoreB !== '')); });
++        return started || scored;
++      });
++    } catch(e) {
++      return true;
++    }
++  }
++
++  function blockUnsafe(actionName){
++    var msg = '🔒 ' + actionName + ' blocked. Existing/completed rounds are preserved. Start a new tournament to generate a fresh schedule.';
++    try { toast(msg, 'err'); } catch(e) { alert(msg); }
++    return false;
++  }
++
++  function wrapBlockAfterSchedule(fnName, label){
++    var old = window[fnName];
++    if(typeof old !== 'function' || old.__pbFinalHistorySafetyGuard) return;
++    var wrapped = function(){
++      if(scheduleExists()) return blockUnsafe(label);
++      return old.apply(this, arguments);
++    };
++    wrapped.__pbFinalHistorySafetyGuard = true;
++    window[fnName] = wrapped;
++  }
++
++  function wrapAlwaysBlock(fnName, label){
++    var old = window[fnName];
++    if(typeof old !== 'function' || old.__pbFinalHistorySafetyGuard) return;
++    var wrapped = function(){
++      if(scheduleExists()) return blockUnsafe(label);
++      return old.apply(this, arguments);
++    };
++    wrapped.__pbFinalHistorySafetyGuard = true;
++    window[fnName] = wrapped;
++  }
++
++  // Initial schedule generation is allowed only when there is no schedule yet.
++  wrapBlockAfterSchedule('promptGenerateSchedule', 'Generate schedule');
++  wrapBlockAfterSchedule('confirmGenerateSchedule', 'Generate schedule');
++  wrapBlockAfterSchedule('generateBestOfN', 'Generate schedule');
++  wrapBlockAfterSchedule('generateSchedule', 'Generate schedule');
++
++  // Legacy rebuild paths are unsafe because they may replace state.schedule.
++  wrapAlwaysBlock('regenerateRemaining', 'Regenerate rounds');
++  wrapAlwaysBlock('regenerateSchedulePreview', 'Regenerate preview');
++  wrapAlwaysBlock('rebuildUpcomingRounds', 'Rebuild upcoming rounds');
++  wrapAlwaysBlock('optimizeNextRoundFromFairness', 'Fairness optimize');
++  wrapAlwaysBlock('pbRegenerateRound', 'Regenerate round');
++
++  function hideUnsafeButtons(){
++    try {
++      document.querySelectorAll('button').forEach(function(btn){
++        var txt = (btn.textContent || '').trim().toLowerCase();
++        var oc = (btn.getAttribute('onclick') || '').toLowerCase();
++        var isUnsafe =
++          txt.includes('regenerate') ||
++          txt.includes('optimize next round') ||
++          oc.includes('regenerate') ||
++          oc.includes('rebuildupcomingrounds') ||
++          oc.includes('pbregenerateround') ||
++          oc.includes('optimizenextroundfromfairness');
++        if(isUnsafe){
++          btn.style.setProperty('display','none','important');
++          btn.setAttribute('aria-hidden','true');
++          btn.setAttribute('data-disabled-history-risk','true');
++        }
++      });
++
++      var genBtn = document.getElementById('btn-generate-schedule');
++      if(genBtn){
++        genBtn.textContent = scheduleExists() ? '🔒 Schedule Already Generated' : '🚀 Generate Initial Schedule';
++        genBtn.title = scheduleExists()
++          ? 'Disabled to protect completed rounds and scores. Start a new tournament to generate a fresh schedule.'
++          : 'Generate the initial schedule.';
++        if(scheduleExists()){
++          genBtn.disabled = true;
++          genBtn.style.opacity = '0.55';
++          genBtn.style.cursor = 'not-allowed';
++        }
++      }
++    } catch(e) {}
++  }
++
++  function installButtonHider(){
++    hideUnsafeButtons();
++    try {
++      var obs = new MutationObserver(hideUnsafeButtons);
++      obs.observe(document.body, { childList:true, subtree:true });
++    } catch(e) {}
++    setInterval(hideUnsafeButtons, 1500);
++  }
++
++  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installButtonHider);
++  else installButtonHider();
++})();
++</script>
++
+ </body></html>`;
+ }
+ 

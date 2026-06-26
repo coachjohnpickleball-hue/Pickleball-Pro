@@ -1,0 +1,34 @@
+--- worker/src/app.html
++++ worker/src/app.html
+@@ -17912,26 +17912,28 @@
+   }
+   function hasScoreValue(v){ return v!==undefined && v!==null && v!=='' && v!=='-' && !Number.isNaN(Number(v)); }
+   function roundHasScore(round){ return (round||[]).some(function(m){ return !!(m && (m.complete===true || hasScoreValue(m.scoreA) || hasScoreValue(m.scoreB))); }); }
+-  function isStarted(i){ return !!(state && state.startedRounds && typeof state.startedRounds.has==='function' && state.startedRounds.has(i)); }
++  function isStarted(i){ if(typeof state === 'undefined' || !state) return false; return !!(state.startedRounds && typeof state.startedRounds.has==='function' && state.startedRounds.has(i)); }
+   function roundMode(i, fallback){
++    if(typeof state === 'undefined' || !state) return fallback || getMode();
+     var meta=state.roundMeta && state.roundMeta[i];
+     if(meta && meta.mode) return meta.mode;
+     var match=((state.schedule||[])[i]||[]).find(function(m){ return m && m.scheduleMode; });
+     return (match && match.scheduleMode) || fallback || getMode();
+   }
+   function isProtected(i){
+-    if(!state || state.historyUnlocked===true) return false;
++    if(typeof state === 'undefined' || !state || state.historyUnlocked===true) return false;
+     if(isStarted(i) || roundHasScore((state.schedule||[])[i])) return true;
+     var lock=state.roundLocks && state.roundLocks[i];
+     return !!(lock && ['started','scored','complete','score-edited','history'].includes(lock.reason));
+   }
+   function firstEditableIndex(){
+     var last=-1;
++    if(typeof state === 'undefined' || !state) return 0;
+     (state.schedule||[]).forEach(function(_,i){ if(isProtected(i)) last=i; });
+     return last+1;
+   }
+   function ensureMeta(){
+-    if(!state) return;
++    if(typeof state === 'undefined' || !state || !Array.isArray(state.schedule)) return;
+     if(!Array.isArray(state.roundMeta)) state.roundMeta=[];
+     if(!Array.isArray(state.roundLocks)) state.roundLocks=[];
+     var len=(state.schedule||[]).length;

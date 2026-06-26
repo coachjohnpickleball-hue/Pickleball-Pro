@@ -1,0 +1,38 @@
+name = "pickleball-mobile-sync-v2"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# ── Import mobile.html as a raw text string ─────────────────────────────
+# src/index.js does `import MOBILE_HTML from './mobile.html'` — this rule
+# tells Wrangler to bundle that file as a text module rather than trying to
+# parse it as JS.
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# ── Durable Objects: one TournamentRoom instance per tournament code ─────
+[[durable_objects.bindings]]
+name = "TOURNAMENT_ROOM"
+class_name = "TournamentRoom"
+
+# Required the first time a Durable Object class is deployed — tells
+# Cloudflare this class needs its own storage namespace. Free-tier accounts
+# require SQLite-backed Durable Object storage (new_sqlite_classes), not the
+# older new_classes migration type. Leave this exactly as-is; do not edit
+# after the first deploy succeeds.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TournamentRoom"]
+
+# ── Custom domain routing (skip this on the free tier) ─────────────────────
+# Free accounts can't attach Worker Routes to a zone unless they own that
+# zone on Cloudflare. On the free .workers.dev setup, scorekeepers just
+# visit this Worker's own workers.dev URL directly (it serves mobile.html
+# itself — see src/index.js), and the desktop app's Mobile Sync tab is
+# configured with that same URL.
+#
+# If you later add a custom domain, uncomment and edit:
+# routes = [
+#   { pattern = "scores.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]

@@ -1,0 +1,33 @@
+{
+  "client": {
+    "id":          "coachjohn",
+    "name":        "Coach John Pickleball",
+    "adminEmail":  "coachjohnpickleball@gmail.com"
+  },
+
+  "branding": {
+    "appName":     "Pickleball Pro",
+    "logoEmoji":   "🏓",
+    "primaryColor": "#C6FF00",
+    "accentColor":  "#FF9800"
+  },
+
+  "worker": {
+    "name":        "pickleball-relay",
+    "kvNamespaceId": "faac1bcc30ef4711a9377e60ef70636d"
+  },
+
+  "limits": {
+    "maxSmsPerDay":   200,
+    "maxEmailPerDay": 500
+  },
+
+  "features": {
+    "sms":         true,
+    "email":       true,
+    "mobileSync":  true,
+    "playoffs":    true,
+    "season":      true,
+    "duprExport":  true
+  }
+}
