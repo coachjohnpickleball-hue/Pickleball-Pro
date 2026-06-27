@@ -17817,6 +17817,232 @@ function exportEndSessionSummary(){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   setTimeout(init, 600);
 })();
+
+
+/* PB_SNAPSHOT_SAVE_UI_INSIDE_EXISTING_SCRIPT_V1 */
+(function(){
+  if (window.__pbSnapshotSaveUiV1) return;
+  window.__pbSnapshotSaveUiV1 = true;
+
+  var STORE_KEY = "pb_round_snapshots_v1";
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value)); }
+    catch (e) { return value; }
+  }
+
+  function hasScoreValue(value) {
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  }
+
+  function matchHasScore(match) {
+    if (!match) return false;
+    return match.complete === true ||
+      match.completed === true ||
+      hasScoreValue(match.scoreA) ||
+      hasScoreValue(match.scoreB) ||
+      hasScoreValue(match.aScore) ||
+      hasScoreValue(match.bScore) ||
+      hasScoreValue(match.teamAScore) ||
+      hasScoreValue(match.teamBScore) ||
+      hasScoreValue(match.pointsA) ||
+      hasScoreValue(match.pointsB);
+  }
+
+  function getScoreA(match) {
+    if (!match) return null;
+    if (hasScoreValue(match.scoreA)) return match.scoreA;
+    if (hasScoreValue(match.aScore)) return match.aScore;
+    if (hasScoreValue(match.teamAScore)) return match.teamAScore;
+    if (hasScoreValue(match.pointsA)) return match.pointsA;
+    return null;
+  }
+
+  function getScoreB(match) {
+    if (!match) return null;
+    if (hasScoreValue(match.scoreB)) return match.scoreB;
+    if (hasScoreValue(match.bScore)) return match.bScore;
+    if (hasScoreValue(match.teamBScore)) return match.teamBScore;
+    if (hasScoreValue(match.pointsB)) return match.pointsB;
+    return null;
+  }
+
+  function loadSnapshots() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveSnapshots(items) {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify((items || []).slice(0, 100)));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function say(msg, type) {
+    try {
+      if (typeof toast === "function") toast(msg, type || "ok");
+      else alert(msg);
+    } catch (e) {
+      alert(msg);
+    }
+  }
+
+  function makeFingerprint(round) {
+    return JSON.stringify((round || []).map(function(match){
+      return {
+        id: match.id || null,
+        court: match.court || match.courtName || null,
+        teamA: match.teamA || null,
+        teamB: match.teamB || null,
+        scoreA: getScoreA(match),
+        scoreB: getScoreB(match),
+        complete: !!(match.complete || match.completed)
+      };
+    }));
+  }
+
+  function snapshotCompletedRounds() {
+    try {
+      if (!window.state || !Array.isArray(state.schedule)) {
+        say("No schedule found", "err");
+        return 0;
+      }
+
+      var snapshots = loadSnapshots();
+      var existing = {};
+      snapshots.forEach(function(snapshot){
+        existing[String(snapshot.roundIndex) + ":" + String(snapshot.fingerprint)] = true;
+      });
+
+      var created = 0;
+
+      state.schedule.forEach(function(round, roundIndex){
+        if (!Array.isArray(round)) return;
+
+        var scored = round.filter(matchHasScore);
+        if (!scored.length) return;
+
+        var fingerprint = makeFingerprint(round);
+        var key = String(roundIndex) + ":" + String(fingerprint);
+        if (existing[key]) return;
+
+        var startedRounds = [];
+        try {
+          if (state.startedRounds instanceof Set) startedRounds = Array.from(state.startedRounds);
+          else if (Array.isArray(state.startedRounds)) startedRounds = state.startedRounds.slice();
+        } catch (e) {}
+
+        snapshots.unshift({
+          id: "round_" + (roundIndex + 1) + "_" + Date.now(),
+          createdAt: new Date().toISOString(),
+          reason: "manual admin snapshot",
+          roundIndex: roundIndex,
+          roundNumber: roundIndex + 1,
+          scoreCount: scored.length,
+          matchCount: round.length,
+          fingerprint: fingerprint,
+          round: clone(round),
+          roundTeams: clone((state.roundTeams || [])[roundIndex] || []),
+          byeRound: clone((state.byeRounds || [])[roundIndex] || []),
+          startedRounds: startedRounds
+        });
+
+        existing[key] = true;
+        created++;
+      });
+
+      if (!saveSnapshots(snapshots)) {
+        say("Snapshot save failed", "err");
+        return 0;
+      }
+
+      renderPanel();
+
+      say(created ? "Saved " + created + " round snapshot(s)" : "No new scored rounds to snapshot", "ok");
+      return created;
+    } catch (e) {
+      console.error("snapshotCompletedRounds failed", e);
+      say("Snapshot failed", "err");
+      return 0;
+    }
+  }
+
+  function renderPanel() {
+    var list = document.getElementById("pb-snapshot-save-list");
+    if (!list) return;
+
+    var snapshots = loadSnapshots();
+
+    if (!snapshots.length) {
+      list.innerHTML = '<div style="font-size:.85rem;color:var(--txt3)">No snapshots yet. Enter scores, then click Snapshot Completed Rounds.</div>';
+      return;
+    }
+
+    list.innerHTML = snapshots.slice(0, 10).map(function(snapshot){
+      return '<div style="padding:.4rem 0;border-top:1px solid var(--border)">' +
+        '<strong>Round ' + snapshot.roundNumber + '</strong> · ' +
+        snapshot.scoreCount + '/' + snapshot.matchCount + ' scored · ' +
+        new Date(snapshot.createdAt).toLocaleString() +
+        '</div>';
+    }).join("");
+  }
+
+  function ensurePanel() {
+    if (document.getElementById("pb-snapshot-save-panel")) {
+      renderPanel();
+      return;
+    }
+
+    var admin = document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin || !admin.appendChild) return;
+
+    var div = document.createElement("div");
+    div.id = "pb-snapshot-save-panel";
+    div.className = "card";
+    div.style.marginTop = "1rem";
+
+    div.innerHTML =
+      '<div class="card-title">Round Snapshots</div>' +
+      '<p style="color:var(--txt2)">Save scored/completed rounds before regeneration.</p>' +
+      '<button type="button" class="btn btn-secondary btn-sm" id="pb-snapshot-save-btn">Snapshot Completed Rounds</button>' +
+      '<div id="pb-snapshot-save-list" style="margin-top:.75rem"></div>';
+
+    admin.appendChild(div);
+
+    var btn = document.getElementById("pb-snapshot-save-btn");
+    if (btn) btn.addEventListener("click", snapshotCompletedRounds);
+
+    renderPanel();
+  }
+
+  window.pbSnapshotCompletedRoundsLite = snapshotCompletedRounds;
+  window.pbSnapshotEnsurePanelLite = ensurePanel;
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbSnapshotSaveUiWrapped) {
+    window.showTab = function(tab) {
+      var result = oldShowTab.apply(this, arguments);
+      if (tab === "admin") setTimeout(ensurePanel, 100);
+      return result;
+    };
+    window.showTab.__pbSnapshotSaveUiWrapped = true;
+  }
+
+  setTimeout(ensurePanel, 800);
+  setTimeout(ensurePanel, 2000);
+})();
+
 </script>
 
 </body>
