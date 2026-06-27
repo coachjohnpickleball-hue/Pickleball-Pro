@@ -15,5 +15,6 @@
   },
   "devDependencies": {
     "wrangler": "^3.78.0"
-  }
+  },
+  "type": "module"
 }
