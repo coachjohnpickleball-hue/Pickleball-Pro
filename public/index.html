@@ -293,6 +293,7 @@
   }
 
 
+
   /* ── PREMIUM DASHBOARD ── */
   .dashboard-hero {
     background: radial-gradient(circle at top left, rgba(198,255,0,0.18), transparent 36%), linear-gradient(135deg, rgba(46,125,50,0.42), rgba(10,15,10,0.96));
@@ -337,6 +338,7 @@
     }
     .mobile-bottom-nav button span { display:block; font-size:1.1rem; margin-bottom:0.1rem; }
   }
+
 
 
   /* ── TV DISPLAY + PUBLIC STANDINGS ── */
@@ -1013,6 +1015,7 @@
 
 
 /* Persistent round timer shown across all app tabs */
+#global-round-timer {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -1027,6 +1030,13 @@
   box-shadow: 0 16px 40px rgba(0,0,0,.38);
   backdrop-filter: blur(12px);
 }
+#global-round-timer .grt-label { font-size:.68rem;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;font-weight:800;line-height:1; }
+#global-round-timer .grt-time { font-family:'Anton',sans-serif;font-size:1.35rem;color:var(--ball);letter-spacing:.04em;line-height:1;min-width:70px;text-align:center;cursor:pointer; }
+#global-round-timer .grt-time.warning { color:var(--ball); }
+#global-round-timer .grt-time.expired { color:var(--red); animation:blink 1s step-end infinite; }
+#global-round-timer button { border:1px solid rgba(198,255,0,.28); background:rgba(198,255,0,.10); color:var(--ball); border-radius:10px; padding:.35rem .5rem; cursor:pointer; font-weight:800; }
+#global-round-timer .grt-status { font-size:.72rem;color:var(--txt3);min-width:54px; }
+@media (max-width: 700px){ #global-round-timer{right:10px;left:10px;bottom:70px;justify-content:center;} }
 
 </style>
 
@@ -1062,22 +1072,17 @@ body.pb-non-admin a[href^="/admin/"]{
 }
 </style>
 
-<style id="pb-timer-overlay-nuker-css">
+<style id="pp-remove-old-global-timer-css">
+#global-round-timer,
+#global-timer-menu-toggle,
 #pb-floating-round-timer,
-#pb-floating-timer-show,
-[id*="floating-timer" i],
-[id*="round-timer" i],
-[id*="global-timer" i],
-[class*="floating-timer" i],
-[class*="round-timer" i],
-[class*="global-timer" i] {
+#pb-floating-timer-show {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
 </style>
-
 </head>
 <body>
 
@@ -1224,6 +1229,8 @@ body.pb-non-admin a[href^="/admin/"]{
 </header>
 
 
+
+
 <main>
 
 <!-- ══════════════════ DASHBOARD ══════════════════ -->
@@ -1276,6 +1283,7 @@ body.pb-non-admin a[href^="/admin/"]{
 </div>
 
 
+
 <!-- ══════════════════ SESSION HEALTH ══════════════════ -->
 <div id="sec-sessionhealth" class="section">
   <div class="card">
@@ -1311,6 +1319,7 @@ body.pb-non-admin a[href^="/admin/"]{
   <button onclick="showTab('standings')"><span>📊</span>Standings</button>
   <button onclick="showTab('report')"><span>⋯</span>More</button>
 </div>
+
 
 
 <!-- ══════════════════ PLAYER CHECK-IN ══════════════════ -->
@@ -2300,6 +2309,9 @@ body.pb-non-admin a[href^="/admin/"]{
 
 
 </div>
+
+
+
 
 
 <!-- ══════════════════ TOURNAMENT HISTORY ══════════════════ -->
@@ -6330,6 +6342,7 @@ function generateBestOfN() {
 
   runNextTrial();
 }
+
 
 
 // ── Mixed Mode Compliance Warning ─────────────────────────────────────
@@ -10732,6 +10745,7 @@ function renderBracketTree() {
 }
 
 
+
 // Build per-player game log from schedule
 function buildPlayerStats() {
   if(!state.players.length) return [];
@@ -11915,6 +11929,8 @@ function roundCompleteNotify() {
   showTab('sms', {target: document.querySelector('.tab-btn[onclick*="sms"]')});
   toast('📱 Head to SMS tab to send the next round notification');
 }
+
+
 
 
 // ═══════════════════════════════════════════════
@@ -16121,79 +16137,70 @@ function emBuildHtml(player) {
       </div>
     </div>
 
-<script id="pb-timer-overlay-nuker-script">
+
+
+
+<script id="pp-remove-old-global-timer-js">
 (function(){
-  function isTimerOverlay(el){
+  function removeOldTimers(){
     try {
-      if(!el || !el.matches) return false;
+      ["global-round-timer","global-timer-menu-toggle","pb-floating-round-timer","pb-floating-timer-show","pb-round-timer-menu-item"].forEach(function(id){
+        var el = document.getElementById(id);
+        if(el) el.remove();
+      });
 
-      var id = String(el.id || '').toLowerCase();
-      var cls = String(el.className || '').toLowerCase();
-      var txt = String(el.textContent || '').trim();
-      var st = window.getComputedStyle(el);
+      Array.from(document.querySelectorAll("*")).forEach(function(el){
+        var id = String(el.id || "").toLowerCase();
+        var text = String(el.textContent || "").trim();
+        var style = window.getComputedStyle(el);
 
-      if(id.includes('pb-floating-timer')) return true;
-      if(id.includes('pb-floating-round-timer')) return true;
-      if(id.includes('global-timer')) return true;
-      if(cls.includes('floating-timer')) return true;
-      if(cls.includes('round-timer')) return true;
-      if(cls.includes('global-timer')) return true;
+        if(id === "global-round-timer" || id === "pb-floating-round-timer") {
+          el.remove();
+          return;
+        }
 
-      // Catch the stubborn bottom-right timer even if it has a new/random id.
-      if(st.position === 'fixed' && /timer|round timer/i.test(txt)) return true;
-
-      return false;
-    } catch(e) {
-      return false;
-    }
-  }
-
-  function nukeTimers(){
-    try {
-      document.querySelectorAll('*').forEach(function(el){
-        if(isTimerOverlay(el)) el.remove();
+        if(style.position === "fixed" && /round timer/i.test(text)) {
+          el.remove();
+        }
       });
 
       [
-        'pb_floating_timer_visible_v1',
-        'pb_floating_timer_seconds_v1',
-        'pb_round_timer_visible_clean_v1',
-        'pb_round_timer_seconds_clean_v1',
-        'pb_safe_floating_timer_v1'
+        "pb_safe_floating_timer_v1",
+        "pb_floating_timer_visible_v1",
+        "pb_floating_timer_seconds_v1",
+        "pb_round_timer_visible_clean_v1",
+        "pb_round_timer_seconds_clean_v1"
       ].forEach(function(k){
         try { localStorage.removeItem(k); } catch(e) {}
       });
 
-      window.grtShow = function(){ nukeTimers(); };
-      window.grtHide = function(){ nukeTimers(); };
-      window.grtStart = function(){ nukeTimers(); };
-      window.grtPause = function(){ nukeTimers(); };
-      window.grtReset = function(){ nukeTimers(); };
-};
-};
+      window.grtToggleVisible = function(){ removeOldTimers(); };
+      window.grtInitFloatingTimer = function(){ removeOldTimers(); };
+      window.grtShow = function(){ removeOldTimers(); };
+      window.grtHide = function(){ removeOldTimers(); };
     } catch(e) {}
   }
 
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', nukeTimers);
+  if(document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", removeOldTimers);
   } else {
-    nukeTimers();
+    removeOldTimers();
   }
 
-  setTimeout(nukeTimers, 100);
-  setTimeout(nukeTimers, 500);
-  setTimeout(nukeTimers, 1500);
-  setTimeout(nukeTimers, 3000);
+  setTimeout(removeOldTimers, 100);
+  setTimeout(removeOldTimers, 500);
+  setTimeout(removeOldTimers, 1500);
+  setTimeout(removeOldTimers, 3000);
+  setInterval(removeOldTimers, 2000);
 
   try {
-    new MutationObserver(nukeTimers).observe(document.documentElement, {
+    new MutationObserver(removeOldTimers).observe(document.documentElement, {
       childList: true,
       subtree: true
     });
   } catch(e) {}
 })();
 </script>
-
 </body></html>`;
 }
 
@@ -16419,6 +16426,7 @@ async function tosAccept() {
 
 tosCheck();
 maybeEnterPublicMode();
+
 
 
 // ═══════════════════════════════════════════════
@@ -16836,6 +16844,9 @@ function optimizeNextRoundFromFairness() {
 }
 
 
+
+
+
 function renderCommunicationsHub() {
   try {
     const mob = document.querySelector('#sec-communications [onclick*="mobilesync"]');
@@ -16846,6 +16857,7 @@ function renderCommunicationsHub() {
     if (email) email.style.display = (window.__CLIENT__ && window.__CLIENT__.features && window.__CLIENT__.features.email === false) ? 'none' : '';
   } catch(e) { console.warn('Communications hub render warning:', e); }
 }
+
 
 
 // ═══════════════════════════════════════════════
@@ -17056,6 +17068,7 @@ function historyImportAll(event) {
   reader.readAsText(file);
   event.target.value = '';
 }
+
 
 
 // ═══════════════════════════════════════════════
@@ -17876,669 +17889,6 @@ function exportEndSessionSummary(){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   setTimeout(init, 600);
 })();
-
-
-/* === SAFE RECOVERY: ADMIN HISTORY LOCK PANEL === */
-
-// recovered: naturalProtectedRoundCount
-
-function naturalProtectedRoundCount() {
-  let lastProtected = -1;
-  (state.schedule || []).forEach((r, i) => {
-    if((r||[]).some(m => m.complete) || (state.startedRounds && state.startedRounds.has(i))) lastProtected = i;
-  });
-  return lastProtected + 1;
-}
-
-// recovered: renderHistoryLockPanel
-
-function renderHistoryLockPanel() {
-  const title = document.getElementById('history-lock-title');
-  const note = document.getElementById('history-lock-note');
-  const detail = document.getElementById('history-lock-detail');
-  const unlockBtn = document.getElementById('unlock-history-btn');
-  const relockBtn = document.getElementById('relock-history-btn');
-  const playerUnlockBtn = document.getElementById('unlock-player-mode-btn');
-  const playerRelockBtn = document.getElementById('relock-player-mode-btn');
-  const draftBtn = document.getElementById('unlock-draft-btn');
-  const protectedCount = naturalProtectedRoundCount();
-  const futureCount = Math.max(0, (state.schedule || []).length - protectedCount);
-  const playerModeOpen = state.playerModeRoundsUnlocked === true;
-  const anyUnlock = state.historyUnlocked || playerModeOpen;
-  if(title) title.textContent = state.historyUnlocked ? '🔓 Full Historical Editing Enabled' : (playerModeOpen ? '🔓 Player Mode Rounds Unlocked' : '🔒 Tournament History Locked');
-  if(note) note.textContent = state.historyUnlocked
-    ? 'Historical rounds can currently be edited or rebuilt. Re-lock when your correction is complete.'
-    : (playerModeOpen ? 'Player mode / scheduler mode changes are allowed, but completed/started rounds remain locked. New settings apply only to draft/future rounds.' : 'Completed and started rounds are protected. Mode changes apply only to future rounds.');
-  if(detail) detail.innerHTML = state.historyUnlocked
-    ? `Reason: <strong>${escHtml(state.historyUnlockReason || 'No reason entered')}</strong><br>Use this only for corrections or testing. Re-lock before continuing normal play.`
-    : (playerModeOpen
-      ? `Player mode edit reason: <strong>${escHtml(state.playerModeUnlockReason || 'No reason entered')}</strong><br>Completed scores and historical rounds remain protected. Use this to correct player mode settings for future/draft rounds, then re-lock.`
-      : `Protected rounds: <strong>${protectedCount}</strong> · Future/editable rounds: <strong>${futureCount}</strong><br>Safe default: player/mode changes will never rewrite completed history.`);
-  if(unlockBtn) unlockBtn.style.display = state.historyUnlocked ? 'none' : '';
-  if(relockBtn) relockBtn.style.display = state.historyUnlocked ? '' : 'none';
-  if(playerUnlockBtn) playerUnlockBtn.style.display = anyUnlock ? 'none' : '';
-  if(playerRelockBtn) playerRelockBtn.style.display = playerModeOpen ? '' : 'none';
-  if(draftBtn) draftBtn.style.display = anyUnlock ? 'none' : ''; 
-}
-
-// recovered: unlockCurrentDraftRound
-
-function unlockCurrentDraftRound() {
-  const progress = dashboardGetProgress();
-  const idx = progress.currentIdx;
-  if(idx == null || idx < 0 || !state.schedule[idx]) { toast('No draft/current round to unlock', 'err'); return; }
-  const hasScores = (state.schedule[idx] || []).some(m => m && m.complete);
-  if(hasScores) { toast('This round has scores. Use Edit Historical Rounds if you really need to change it.', 'err'); return; }
-  if(!state.startedRounds || !state.startedRounds.has(idx)) { toast('Current round is already editable'); return; }
-  if(!confirm(`Unlock Round ${idx + 1} draft? Completed rounds remain locked. This only allows changes to the current unpublished/unscored round.`)) return;
-  state.startedRounds.delete(idx);
-  autoSave(); renderSchedule(); renderDashboard(); renderHistoryLockPanel();
-  toast(`🔓 Round ${idx + 1} draft unlocked`);
-}
-
-// recovered: unlockPlayerModeRounds
-
-function unlockPlayerModeRounds() {
-  const protectedCount = naturalProtectedRoundCount();
-  if(!protectedCount) { toast('No locked player-mode rounds to unlock'); return; }
-  const warning = `Unlock player mode rounds?
-
-This allows player mode / scheduler mode changes while preserving completed and started rounds. Regeneration will only affect draft/future rounds unless full Edit Historical Rounds is enabled.
-
-Use this only to correct an incorrect player mode setup.
-
-Protected rounds currently: ${protectedCount}`;
-  if(!confirm(warning)) return;
-  const reason = prompt('Enter a reason for unlocking player mode rounds:', 'Correcting player mode setting');
-  if(reason === null) return;
-  state.playerModeRoundsUnlocked = true;
-  state.playerModeUnlockReason = (reason || 'No reason entered').trim();
-  autoSave(); renderHistoryLockPanel(); renderSchedule(); renderDashboard();
-  toast('🔓 Player mode unlocked for future/draft rounds — completed rounds remain locked', 'err');
-}
-
-// recovered: relockPlayerModeRounds
-
-function relockPlayerModeRounds() {
-  state.playerModeRoundsUnlocked = false;
-  state.playerModeUnlockReason = '';
-  autoSave(); renderHistoryLockPanel(); renderSchedule(); renderDashboard();
-  toast('🔒 Player mode rounds re-locked');
-}
-
-// recovered: unlockTournamentHistory
-
-function unlockTournamentHistory() {
-  const protectedCount = naturalProtectedRoundCount();
-  const warning = `Edit historical rounds?
-
-This can rebuild completed/started rounds and may change standings, opponent history, and reports. Use only for corrections or testing.
-
-Protected rounds currently: ${protectedCount}`;
-  if(!confirm(warning)) return;
-  const reason = prompt('Enter a reason for unlocking history:', 'Correction needed');
-  if(reason === null) return;
-  state.historyUnlocked = true;
-  state.historyUnlockReason = (reason || 'No reason entered').trim();
-  autoSave(); renderHistoryLockPanel();
-  toast('🔓 Editing Mode enabled — historical rounds can now be changed', 'err');
-}
-
-// recovered: relockTournamentHistory
-
-function relockTournamentHistory() {
-  state.historyUnlocked = false;
-  state.historyUnlockReason = '';
-  autoSave(); renderHistoryLockPanel(); renderSchedule(); renderDashboard();
-  toast('🔒 Tournament history locked');
-}
-
-// recovered: warnModeChangeWithLockedRounds
-
-function warnModeChangeWithLockedRounds(mode) {
-  const protectedCount = naturalProtectedRoundCount();
-  if(!protectedCount || state.historyUnlocked) return;
-  toast(`🔒 Mode changed to ${String(mode||'selected').replace(/-/g,' ')}. Rounds 1–${protectedCount} stay locked; only future rounds use the new mode.`);
-}
-
-(function(){
-  if(window.__safeHistoryLockPanelHook) return;
-  window.__safeHistoryLockPanelHook = true;
-
-  var oldShowTab = window.showTab;
-  if(typeof oldShowTab === 'function'){
-    window.showTab = function(tab, evt){
-      var res = oldShowTab.apply(this, arguments);
-      if(tab === 'admin'){
-        try { renderHistoryLockPanel(); } catch(e) {}
-      }
-      return res;
-    };
-  }
-
-  setTimeout(function(){
-    try { if(document.getElementById('sec-admin')) renderHistoryLockPanel(); } catch(e) {}
-  }, 300);
-})();
-
-
-/* === SAFE RECOVERY: SNAPSHOT VIEWER === */
-(function(){
-  if(window.__safeSnapshotViewerRecovery) return;
-  window.__safeSnapshotViewerRecovery = true;
-
-  const SNAP_KEY = 'pb_safe_round_snapshots_v1';
-
-  function safeClone(obj){
-    try { return JSON.parse(JSON.stringify(obj)); }
-    catch(e){ return obj; }
-  }
-
-  function getSnapshots(){
-    try {
-      const raw = localStorage.getItem(SNAP_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch(e){
-      return [];
-    }
-  }
-
-  function saveSnapshots(arr){
-    try {
-      localStorage.setItem(SNAP_KEY, JSON.stringify((arr || []).slice(0, 100)));
-      return true;
-    } catch(e){
-      try { toast('Could not save snapshot storage', 'err'); } catch(_) {}
-      return false;
-    }
-  }
-
-  function esc(x){
-    if(typeof escHtml === 'function') return escHtml(x);
-    return String(x ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-
-  function roundHasScore(round){
-    return Array.isArray(round) && round.some(m =>
-      m && (
-        m.complete === true ||
-        m.scoreA != null ||
-        m.scoreB != null ||
-        m.aScore != null ||
-        m.bScore != null ||
-        m.teamAScore != null ||
-        m.teamBScore != null
-      )
-    );
-  }
-
-  function roundIsComplete(round){
-    return Array.isArray(round) && round.length > 0 && round.every(m => m && m.complete === true);
-  }
-
-  function modeLabel(roundIdx){
-    try {
-      if(window.state && Array.isArray(state.roundModes) && state.roundModes[roundIdx]) return state.roundModes[roundIdx];
-      if(window.state && state.mode) return state.mode;
-    } catch(e){}
-    return '';
-  }
-
-  window.pbSnapshotRound = function(roundIdx, reason){
-    try {
-      if(!window.state || !Array.isArray(state.schedule)) {
-        try { toast('No schedule found to snapshot', 'err'); } catch(_) {}
-        return false;
-      }
-
-      roundIdx = Number(roundIdx);
-      if(!Number.isFinite(roundIdx) || roundIdx < 0 || roundIdx >= state.schedule.length) return false;
-
-      const round = state.schedule[roundIdx];
-      if(!Array.isArray(round) || !round.length) return false;
-
-      const snap = {
-        id: 'snap_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
-        createdAt: new Date().toISOString(),
-        roundIdx,
-        roundNumber: roundIdx + 1,
-        reason: reason || 'manual snapshot',
-        modeLabel: modeLabel(roundIdx),
-        complete: roundIsComplete(round),
-        hasScore: roundHasScore(round),
-        round: safeClone(round)
-      };
-
-      const arr = getSnapshots();
-      arr.unshift(snap);
-      saveSnapshots(arr);
-
-      try { pbRenderHistorySnapshots(); } catch(e) {}
-      return snap.id;
-    } catch(e){
-      console.error('pbSnapshotRound failed', e);
-      try { toast('Snapshot failed', 'err'); } catch(_) {}
-      return false;
-    }
-  };
-
-  window.pbSnapshotAllCompleted = function(reason){
-    try {
-      if(!window.state || !Array.isArray(state.schedule)) return 0;
-      let count = 0;
-
-      state.schedule.forEach((round, i) => {
-        if(roundHasScore(round) || roundIsComplete(round)){
-          if(window.pbSnapshotRound(i, reason || 'snapshot completed/scored rounds')) count++;
-        }
-      });
-
-      try { toast(count ? `📸 Saved ${count} round snapshot(s)` : 'No scored/completed rounds to snapshot'); } catch(_) {}
-      try { pbRenderHistorySnapshots(); } catch(e) {}
-      return count;
-    } catch(e){
-      console.error(e);
-      try { toast('Snapshot check failed', 'err'); } catch(_) {}
-      return 0;
-    }
-  };
-
-  window.pbViewSnapshot = function(id){
-    const snap = getSnapshots().find(s => s.id === id);
-    const box = document.getElementById('pb-snapshot-detail');
-    if(!snap || !box) return;
-
-    const matches = Array.isArray(snap.round) ? snap.round : [];
-    box.innerHTML = `
-      <div class="card" style="margin-top:.75rem">
-        <div class="card-title">👁 Snapshot Round ${esc(snap.roundNumber)}</div>
-        <div style="color:var(--txt2);font-size:.85rem;margin-bottom:.75rem">
-          ${esc(new Date(snap.createdAt).toLocaleString())} · ${esc(snap.reason || '')}
-        </div>
-        <div style="overflow:auto">
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr>
-                <th>Court</th>
-                <th>Team A</th>
-                <th>Team B</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${matches.map(m => {
-                const a = Array.isArray(m.teamA) ? m.teamA.join(' / ') : (m.teamA || m.a || '');
-                const b = Array.isArray(m.teamB) ? m.teamB.join(' / ') : (m.teamB || m.b || '');
-                const sa = m.scoreA ?? m.aScore ?? m.teamAScore ?? '';
-                const sb = m.scoreB ?? m.bScore ?? m.teamBScore ?? '';
-                return `<tr>
-                  <td>${esc(m.court || m.courtName || '')}</td>
-                  <td>${esc(a)}</td>
-                  <td>${esc(b)}</td>
-                  <td>${esc(sa)}${sa !== '' || sb !== '' ? ' - ' : ''}${esc(sb)}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap">
-          <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbRenderHistorySnapshots()">Close</button>
-          <button class="btn btn-danger btn-sm admin-lock-safe" onclick="pbRestoreSnapshot('${esc(snap.id)}')">Restore This Round</button>
-        </div>
-      </div>
-    `;
-  };
-
-  window.pbRestoreSnapshot = function(id){
-    try {
-      const snap = getSnapshots().find(s => s.id === id);
-      if(!snap || !window.state || !Array.isArray(state.schedule)) return false;
-
-      const ok = confirm(`Restore Round ${snap.roundNumber} from snapshot?\n\nThis replaces only that round.`);
-      if(!ok) return false;
-
-      state.schedule[snap.roundIdx] = safeClone(snap.round);
-
-      if(typeof autoSave === 'function') autoSave();
-      if(typeof renderSchedule === 'function') renderSchedule();
-      if(typeof renderDashboard === 'function') renderDashboard();
-      if(typeof renderStandings === 'function') renderStandings();
-
-      try { toast(`Restored Round ${snap.roundNumber} from snapshot`, 'ok'); } catch(_) {}
-      try { pbRenderHistorySnapshots(); } catch(e) {}
-      return true;
-    } catch(e){
-      console.error(e);
-      try { toast('Restore snapshot failed', 'err'); } catch(_) {}
-      return false;
-    }
-  };
-
-  window.pbRunSnapshotIntegrityCheck = function(){
-    try {
-      const snaps = getSnapshots();
-      const schedule = (window.state && Array.isArray(state.schedule)) ? state.schedule : [];
-      const scoredRounds = schedule
-        .map((r,i) => ({r,i}))
-        .filter(x => roundHasScore(x.r) || roundIsComplete(x.r));
-
-      const covered = new Set(snaps.map(s => Number(s.roundIdx)));
-      const missing = scoredRounds.filter(x => !covered.has(x.i));
-
-      if(missing.length){
-        missing.forEach(x => pbSnapshotRound(x.i, 'integrity backfill'));
-        try { toast(`🛡️ Snapshot check added ${missing.length} missing snapshot(s)`, 'ok'); } catch(_) {}
-      } else {
-        try { toast('🛡️ Snapshot check passed'); } catch(_) {}
-      }
-
-      pbRenderHistorySnapshots();
-      return {scoredRounds: scoredRounds.length, snapshots: getSnapshots().length, missing: missing.length};
-    } catch(e){
-      console.error(e);
-      try { toast('Snapshot integrity check failed', 'err'); } catch(_) {}
-      return null;
-    }
-  };
-
-  window.pbRenderHistorySnapshots = function(){
-    const list = document.getElementById('pb-snapshot-list');
-    const count = document.getElementById('pb-snapshot-count');
-    const detail = document.getElementById('pb-snapshot-detail');
-
-    if(!list) return;
-
-    const snaps = getSnapshots();
-
-    if(count) count.textContent = `${snaps.length} snapshot${snaps.length === 1 ? '' : 's'}`;
-
-    if(detail) detail.innerHTML = '';
-
-    if(!snaps.length){
-      list.innerHTML = '<div class="empty-state"><div class="big">📸</div>No snapshots yet. Run Snapshot Completed Rounds after scores are entered.</div>';
-      return;
-    }
-
-    list.innerHTML = `
-      <div style="overflow:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th>Round</th>
-              <th>Time</th>
-              <th>Mode</th>
-              <th>Reason</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${snaps.slice(0,50).map(s => `
-              <tr>
-                <td>Round ${esc(s.roundNumber)}</td>
-                <td>${esc(new Date(s.createdAt).toLocaleString())}</td>
-                <td>${esc(s.modeLabel || '')}</td>
-                <td>${esc(s.reason || '')}</td>
-                <td>
-                  <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="pbViewSnapshot('${esc(s.id)}')">👁 View</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  };
-
-  function renderIfAdmin(){
-    try {
-      if(document.getElementById('sec-admin')?.classList.contains('active')) {
-        pbRenderHistorySnapshots();
-      }
-    } catch(e){}
-  }
-
-  const oldShowTab = window.showTab;
-  if(typeof oldShowTab === 'function' && !oldShowTab.__safeSnapshotViewerWrapped){
-    window.showTab = function(tab, evt){
-      const res = oldShowTab.apply(this, arguments);
-      if(tab === 'admin') setTimeout(renderIfAdmin, 50);
-      return res;
-    };
-    window.showTab.__safeSnapshotViewerWrapped = true;
-  }
-
-  setTimeout(renderIfAdmin, 500);
-})();
-
-
-/* === SAFE RECOVERY: UNDO SCORE PANEL === */
-(function(){
-  if(window.__safeUndoScoreRecovery) return;
-  window.__safeUndoScoreRecovery = true;
-
-  function esc(x){
-    if(typeof escHtml === 'function') return escHtml(x);
-    return String(x ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-
-  function playerName(v){
-    try {
-      if(v == null) return '';
-      if(typeof v === 'object' && v.name) return v.name;
-      if(typeof v === 'number' && window.state && Array.isArray(state.players) && state.players[v]) return state.players[v].name || `Player ${v+1}`;
-      if(typeof v === 'string') return v;
-      return String(v);
-    } catch(e){
-      return String(v ?? '');
-    }
-  }
-
-  function teamLabel(team){
-    if(Array.isArray(team)) return team.map(playerName).filter(Boolean).join(' / ');
-    return playerName(team);
-  }
-
-  function getScore(m){
-    const a = m.scoreA ?? m.aScore ?? m.teamAScore ?? m.pointsA ?? m.homeScore ?? m.leftScore ?? '';
-    const b = m.scoreB ?? m.bScore ?? m.teamBScore ?? m.pointsB ?? m.awayScore ?? m.rightScore ?? '';
-    if(a === '' && b === '') return '';
-    return `${a} - ${b}`;
-  }
-
-  function hasScore(m){
-    if(!m) return false;
-    return (
-      m.complete === true ||
-      m.scoreA != null || m.scoreB != null ||
-      m.aScore != null || m.bScore != null ||
-      m.teamAScore != null || m.teamBScore != null ||
-      m.pointsA != null || m.pointsB != null ||
-      m.homeScore != null || m.awayScore != null ||
-      m.leftScore != null || m.rightScore != null
-    );
-  }
-
-  function allMatches(){
-    const out = [];
-    try {
-      if(!window.state || !Array.isArray(state.schedule)) return out;
-      state.schedule.forEach((round, ri) => {
-        if(!Array.isArray(round)) return;
-        round.forEach((m, mi) => {
-          if(!m) return;
-          out.push({roundIndex: ri, matchIndex: mi, match: m});
-        });
-      });
-    } catch(e){}
-    return out;
-  }
-
-  function matchTitle(m){
-    const a = teamLabel(m.teamA || m.a || m.left || m.team1 || m.playersA || []);
-    const b = teamLabel(m.teamB || m.b || m.right || m.team2 || m.playersB || []);
-    if(a || b) return `${a || 'Team A'} vs ${b || 'Team B'}`;
-    return `Match ${m.id ?? ''}`;
-  }
-
-  function clearScoreFields(m){
-    [
-      'scoreA','scoreB','aScore','bScore','teamAScore','teamBScore',
-      'pointsA','pointsB','homeScore','awayScore','leftScore','rightScore',
-      'winner','winnerTeam','winningTeam','loser','loserTeam','result',
-      'completedAt','scoreSavedAt','savedAt'
-    ].forEach(k => {
-      if(k in m) {
-        try { delete m[k]; } catch(e) { m[k] = null; }
-      }
-    });
-
-    m.complete = false;
-    m.completed = false;
-  }
-
-  window.undoScoreForMatch = function(matchId){
-    try {
-      const rows = allMatches();
-      const row = rows.find(x => String(x.match.id) === String(matchId));
-
-      if(!row){
-        try { toast('Could not find that match', 'err'); } catch(_) {}
-        return false;
-      }
-
-      const m = row.match;
-      const score = getScore(m);
-      const label = matchTitle(m);
-
-      const ok = confirm(`Undo score for:\n\nRound ${row.roundIndex + 1}: ${label}\n${score ? 'Score: ' + score : ''}\n\nThis keeps the teams/court assignment but clears the score.`);
-      if(!ok) return false;
-
-      try {
-        if(typeof pbSnapshotRound === 'function') {
-          pbSnapshotRound(row.roundIndex, 'before undo score');
-        }
-      } catch(e){}
-
-      clearScoreFields(m);
-
-      if(typeof autoSave === 'function') autoSave();
-      if(typeof renderSchedule === 'function') renderSchedule();
-      if(typeof renderDashboard === 'function') renderDashboard();
-      if(typeof renderStandings === 'function') renderStandings();
-      if(typeof renderReport === 'function') renderReport();
-
-      try { renderAdminUndoScores(); } catch(e){}
-      try { toast(`Score cleared for Round ${row.roundIndex + 1}`, 'ok'); } catch(_) {}
-
-      return true;
-    } catch(e){
-      console.error('undoScoreForMatch failed', e);
-      try { toast('Undo score failed', 'err'); } catch(_) {}
-      return false;
-    }
-  };
-
-  window.renderAdminUndoScores = function(){
-    const box = document.getElementById('pb-admin-undo-score-list');
-    const count = document.getElementById('pb-admin-undo-score-count');
-    if(!box) return;
-
-    const scored = allMatches().filter(x => hasScore(x.match));
-
-    if(count) count.textContent = `${scored.length} scored match${scored.length === 1 ? '' : 'es'}`;
-
-    if(!scored.length){
-      box.innerHTML = '<div class="empty-state"><div class="big">↩</div>No scored matches found.</div>';
-      return;
-    }
-
-    box.innerHTML = `
-      <div style="overflow:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr>
-              <th>Round</th>
-              <th>Court</th>
-              <th>Match</th>
-              <th>Score</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${scored.map(x => {
-              const m = x.match;
-              const id = m.id ?? `${x.roundIndex}_${x.matchIndex}`;
-              return `
-                <tr>
-                  <td>Round ${x.roundIndex + 1}</td>
-                  <td>${esc(m.court || m.courtName || '')}</td>
-                  <td>${esc(matchTitle(m))}</td>
-                  <td>${esc(getScore(m))}</td>
-                  <td>
-                    <button class="btn btn-secondary btn-sm admin-lock-safe" onclick="undoScoreForMatch('${esc(id)}')">↩ Undo Score</button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  };
-
-  const oldShowTab = window.showTab;
-  if(typeof oldShowTab === 'function' && !oldShowTab.__safeUndoScoreWrapped){
-    window.showTab = function(tab, evt){
-      const res = oldShowTab.apply(this, arguments);
-      if(tab === 'admin') setTimeout(function(){
-        try { renderAdminUndoScores(); } catch(e){}
-      }, 50);
-      return res;
-    };
-    window.showTab.__safeUndoScoreWrapped = true;
-  }
-
-  setTimeout(function(){
-    try { renderAdminUndoScores(); } catch(e){}
-  }, 600);
-})();
-
-
-/* === REMOVE OLD GLOBAL ROUND TIMER === */
-(function(){
-  function removeOldGlobalTimer(){
-    try {
-      document.getElementById('global-round-timer')?.remove();
-      document.getElementById('global-timer-menu-toggle')?.remove();
-
-      [
-        'pb_safe_floating_timer_v1',
-        'pb_floating_timer_visible_v1',
-        'pb_floating_timer_seconds_v1',
-        'pb_round_timer_visible_clean_v1',
-        'pb_round_timer_seconds_clean_v1'
-      ].forEach(function(k){
-        try { localStorage.removeItem(k); } catch(e) {}
-      });
-    } catch(e) {}
-  }
-
-  window.grtToggleVisible = function(){ removeOldGlobalTimer(); };
-  window.grtInitFloatingTimer = function(){ removeOldGlobalTimer(); };
-
-  if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removeOldGlobalTimer);
-  } else {
-    removeOldGlobalTimer();
-  }
-
-  setTimeout(removeOldGlobalTimer, 100);
-  setTimeout(removeOldGlobalTimer, 750);
-  setTimeout(removeOldGlobalTimer, 2000);
-})();
-
-
 </script>
 
 </body>
