@@ -14,7 +14,9 @@
     "test:standings": "node tests/standings/computeStandings.test.mjs",
     "test:scheduler": "node tests/scheduler/safety.test.mjs",
     "test:fairness": "node tests/fairness/analysis.test.mjs",
-    "safety:build-source": "node tools/check-build-does-not-touch-source.mjs"
+    "safety:build-source": "node tools/check-build-does-not-touch-source.mjs",
+    "preflight:staging": "node tools/preflight-staging.mjs",
+    "safe:deploy:staging": "npm run preflight:staging && npm run worker:deploy:staging"
   },
   "devDependencies": {
     "terser": "^5.31.0"
