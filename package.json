@@ -13,7 +13,8 @@
     "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs && node tests/fairness/analysis.test.mjs",
     "test:standings": "node tests/standings/computeStandings.test.mjs",
     "test:scheduler": "node tests/scheduler/safety.test.mjs",
-    "test:fairness": "node tests/fairness/analysis.test.mjs"
+    "test:fairness": "node tests/fairness/analysis.test.mjs",
+    "safety:build-source": "node tools/check-build-does-not-touch-source.mjs"
   },
   "devDependencies": {
     "terser": "^5.31.0"
