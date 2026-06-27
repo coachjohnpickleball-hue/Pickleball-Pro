@@ -19037,6 +19037,215 @@ function exportEndSessionSummary(){
   setInterval(simplifyDashboardTiles, 2500);
 })();
 
+
+/* PB_MIXED_BEST_EFFORT_ALL_PLAY_V1 */
+(function(){
+  if (window.__pbMixedBestEffortAllPlayV1) return;
+  window.__pbMixedBestEffortAllPlayV1 = true;
+
+  function currentMode() {
+    return document.getElementById("team-mode")?.value || "random";
+  }
+
+  function isMixedMode(mode) {
+    return mode === "mixed" || mode === "mixed-rated" || mode === "competitive-mixed";
+  }
+
+  function isProtectedRound(roundIdx) {
+    try {
+      if (state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(roundIdx)) return true;
+    } catch (e) {}
+
+    try {
+      return ((state.schedule || [])[roundIdx] || []).some(function(m) {
+        return m && (m.complete || m.scoreA !== "" || m.scoreB !== "");
+      });
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function playerIndexFromBye(bye) {
+    if (typeof bye === "number") return bye;
+
+    if (!bye || !state || !Array.isArray(state.players)) return -1;
+
+    if (bye.id != null) {
+      var byId = state.players.findIndex(function(p) { return p && String(p.id) === String(bye.id); });
+      if (byId >= 0) return byId;
+    }
+
+    if (bye.name) {
+      var byName = state.players.findIndex(function(p) { return p && String(p.name) === String(bye.name); });
+      if (byName >= 0) return byName;
+    }
+
+    return state.players.indexOf(bye);
+  }
+
+  function genderOf(idx) {
+    var p = state.players[idx] || {};
+    var g = String(p.gender || p.sex || "").toLowerCase();
+
+    if (g.indexOf("female") >= 0 || g === "f" || g === "woman" || g === "women") return "female";
+    if (g.indexOf("male") >= 0 || g === "m" || g === "man" || g === "men") return "male";
+
+    return "unknown";
+  }
+
+  function selectedCourtList() {
+    try {
+      if (state.selectedCourts && typeof state.selectedCourts.forEach === "function") {
+        var courts = [];
+        state.selectedCourts.forEach(function(c) { courts.push(Number(c)); });
+        courts = courts.filter(function(c) { return !isNaN(c); }).sort(function(a,b){ return a-b; });
+        if (courts.length) return courts;
+      }
+    } catch (e) {}
+
+    var maxCourts = parseInt(document.getElementById("courts-count")?.value || "0", 10);
+    if (!maxCourts || maxCourts < 1) maxCourts = 1;
+
+    return Array.from({length:maxCourts}, function(_, i){ return i + 1; });
+  }
+
+  function nextMatchId() {
+    var maxId = 0;
+
+    try {
+      (state.schedule || []).forEach(function(round) {
+        (round || []).forEach(function(m) {
+          var id = parseInt(m && m.id, 10);
+          if (!isNaN(id)) maxId = Math.max(maxId, id);
+        });
+      });
+    } catch (e) {}
+
+    return maxId + 1;
+  }
+
+  function takeMixedMatch(pool) {
+    var males = pool.filter(function(idx) { return genderOf(idx) === "male"; });
+    var females = pool.filter(function(idx) { return genderOf(idx) === "female"; });
+
+    if (males.length >= 2 && females.length >= 2) {
+      return [males[0], females[0], males[1], females[1]];
+    }
+
+    return pool.slice(0, 4);
+  }
+
+  function removeUsed(pool, used) {
+    used.forEach(function(idx) {
+      var pos = pool.indexOf(idx);
+      if (pos >= 0) pool.splice(pos, 1);
+    });
+  }
+
+  function repairMixedByesForAllPlay() {
+    if (!window.state || !Array.isArray(state.schedule)) return 0;
+
+    var mode = currentMode();
+    if (!isMixedMode(mode)) return 0;
+
+    var courts = selectedCourtList();
+    var added = 0;
+    var nextId = nextMatchId();
+
+    if (!Array.isArray(state.byeRounds)) state.byeRounds = [];
+    if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
+
+    state.schedule.forEach(function(round, roundIdx) {
+      if (!Array.isArray(round)) return;
+      if (isProtectedRound(roundIdx)) return;
+
+      var usedCourts = new Set(round.map(function(m) { return Number(m && m.court); }));
+      var openCourts = courts.filter(function(c) { return !usedCourts.has(Number(c)); });
+
+      if (!openCourts.length) return;
+
+      var byes = (state.byeRounds[roundIdx] || [])
+        .map(playerIndexFromBye)
+        .filter(function(idx) {
+          return idx >= 0 &&
+            state.players[idx] &&
+            state.players[idx].active !== false &&
+            state.players[idx].waitlist !== true &&
+            state.players[idx].checkedIn !== false;
+        });
+
+      while (byes.length >= 4 && openCourts.length) {
+        var court = openCourts.shift();
+        var four = takeMixedMatch(byes);
+        removeUsed(byes, four);
+
+        var match = {
+          id: nextId++,
+          round: roundIdx + 1,
+          court: court,
+          teamA: [four[0], four[1]],
+          teamB: [four[2], four[3]],
+          scoreA: "",
+          scoreB: "",
+          complete: false,
+          scheduleMode: mode,
+          mixedBestEffort: true
+        };
+
+        round.push(match);
+
+        if (!Array.isArray(state.roundTeams[roundIdx])) state.roundTeams[roundIdx] = [];
+        state.roundTeams[roundIdx].push([
+          state.players[four[0]],
+          state.players[four[1]]
+        ]);
+
+        added++;
+      }
+
+      state.byeRounds[roundIdx] = byes.map(function(idx) { return state.players[idx]; });
+    });
+
+    if (added) {
+      try { if (typeof applyPartnerLocksAndSync === "function") applyPartnerLocksAndSync(); } catch (e) {}
+      try { if (typeof autoSave === "function") autoSave(); } catch (e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch (e) {}
+      try { if (typeof renderTeams === "function") renderTeams(); } catch (e) {}
+      try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch (e) {}
+
+      try {
+        toast("✅ Mixed best-effort: added " + added + " extra match" + (added === 1 ? "" : "es") + " so more active players play.", "ok");
+      } catch (e) {}
+    }
+
+    return added;
+  }
+
+  window.pbRepairMixedByesForAllPlay = repairMixedByesForAllPlay;
+
+  if (typeof window.generateSchedule === "function" && !window.__pbGenerateScheduleMixedAllPlayWrappedV1) {
+    window.__pbGenerateScheduleMixedAllPlayWrappedV1 = true;
+    var originalGenerateSchedule = window.generateSchedule;
+
+    window.generateSchedule = function() {
+      var result = originalGenerateSchedule.apply(this, arguments);
+      try { repairMixedByesForAllPlay(); } catch (e) { console.warn("mixed all-play repair failed", e); }
+      return result;
+    };
+  }
+
+  if (typeof window.regenerateRemaining === "function" && !window.__pbRegenerateRemainingMixedAllPlayWrappedV1) {
+    window.__pbRegenerateRemainingMixedAllPlayWrappedV1 = true;
+    var originalRegenerateRemaining = window.regenerateRemaining;
+
+    window.regenerateRemaining = function() {
+      var result = originalRegenerateRemaining.apply(this, arguments);
+      try { repairMixedByesForAllPlay(); } catch (e) { console.warn("mixed all-play repair failed", e); }
+      return result;
+    };
+  }
+})();
+
 </script>
 
 </body>
