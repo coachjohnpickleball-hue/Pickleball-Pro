@@ -18023,8 +18023,84 @@ function exportEndSessionSummary(){
     var btn = document.getElementById("pb-snapshot-save-btn");
     if (btn) btn.addEventListener("click", snapshotCompletedRounds);
 
+    var restoreBtn = document.getElementById("pb-snapshot-restore-latest-btn");
+    if (!restoreBtn && btn && btn.parentNode) {
+      restoreBtn = document.createElement("button");
+      restoreBtn.type = "button";
+      restoreBtn.id = "pb-snapshot-restore-latest-btn";
+      restoreBtn.className = "btn btn-danger btn-sm";
+      restoreBtn.style.marginLeft = ".5rem";
+      restoreBtn.textContent = "Restore Latest Snapshot";
+      btn.parentNode.insertBefore(restoreBtn, btn.nextSibling);
+    }
+    if (restoreBtn) restoreBtn.addEventListener("click", restoreLatestSnapshot);
+
     renderPanel();
   }
+
+  
+  /* PB_SNAPSHOT_RESTORE_LATEST_CLEAN_V1 */
+  function restoreSnapshotById(id) {
+    try {
+      var snapshots = loadSnapshots();
+      var snapshot = snapshots.find(function(item) {
+        return String(item.id) === String(id);
+      });
+
+      if (!snapshot) {
+        say("Snapshot not found", "err");
+        return false;
+      }
+
+      if (!confirm("Restore Round " + snapshot.roundNumber + " from snapshot?\n\nThis replaces only that round.")) {
+        return false;
+      }
+
+      if (!window.state) {
+        say("No tournament state found", "err");
+        return false;
+      }
+
+      if (!Array.isArray(state.schedule)) state.schedule = [];
+      if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
+      if (!Array.isArray(state.byeRounds)) state.byeRounds = [];
+
+      state.schedule[snapshot.roundIndex] = clone(snapshot.round);
+      state.roundTeams[snapshot.roundIndex] = clone(snapshot.roundTeams || []);
+      state.byeRounds[snapshot.roundIndex] = clone(snapshot.byeRound || []);
+
+      try {
+        state.startedRounds = new Set(snapshot.startedRounds || []);
+      } catch (e) {}
+
+      try { if (typeof autoSave === "function") autoSave(); } catch (e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch (e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch (e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch (e) {}
+      try { if (typeof renderTeams === "function") renderTeams(); } catch (e) {}
+
+      renderPanel();
+      say("Restored Round " + snapshot.roundNumber + " snapshot", "ok");
+      return true;
+    } catch (e) {
+      console.error("restoreSnapshotById failed", e);
+      say("Restore failed", "err");
+      return false;
+    }
+  }
+
+  function restoreLatestSnapshot() {
+    var snapshots = loadSnapshots();
+    if (!snapshots.length) {
+      say("No snapshots found", "err");
+      return false;
+    }
+    return restoreSnapshotById(snapshots[0].id);
+  }
+
+  window.pbRestoreRoundSnapshotLite = restoreSnapshotById;
+  window.pbRestoreLatestRoundSnapshotLite = restoreLatestSnapshot;
+
 
   window.pbSnapshotCompletedRoundsLite = snapshotCompletedRounds;
   window.pbSnapshotEnsurePanelLite = ensurePanel;
