@@ -18169,6 +18169,402 @@ function exportEndSessionSummary(){
   setTimeout(ensurePanel, 2000);
 })();
 
+
+/* PB_REGEN_REMAINING_MODE_RESTAMP_V1 */
+(function(){
+  if (window.__pbRegenRemainingModeRestampV1) return;
+  window.__pbRegenRemainingModeRestampV1 = true;
+
+  function currentSelectedMode() {
+    return document.getElementById("team-mode")?.value || "random";
+  }
+
+  function labelForMode(mode) {
+    var labels = {
+      random: "🎩 Chapeau / Hat Draw",
+      dupr: "🏆 DUPR Session (aggregate cap, balanced teams)",
+      mixed: "Mixed",
+      "mixed-rated": "Mixed + Similar Rating",
+      "competitive-mixed": "Competitive Mixed",
+      balanced: "Balanced",
+      equalizer: "Equalizer",
+      progressive: "Progressive",
+      snake: "Snake Draft",
+      pods: "Pods",
+      crossover: "Crossover",
+      "roundrobin-partners": "Round Robin Partners",
+      mexicano: "Mexicano",
+      americano: "Americano",
+      "rr-playoff": "Round Robin + Playoff",
+      "fixed-teams": "Fixed Teams"
+    };
+    return labels[mode] || mode;
+  }
+
+  function protectedCountSafe() {
+    try {
+      if (typeof protectedRoundCount === "function") return protectedRoundCount();
+    } catch (e) {}
+
+    try {
+      var count = 0;
+      (state.schedule || []).forEach(function(round, idx) {
+        var hasScore = (round || []).some(function(m) {
+          return m && (m.complete || m.scoreA !== "" || m.scoreB !== "");
+        });
+        var started = state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx);
+        if (hasScore || started) count = Math.max(count, idx + 1);
+      });
+      return count;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function futureSignature(keep) {
+    try {
+      return JSON.stringify((state.schedule || []).slice(keep).map(function(round) {
+        return (round || []).map(function(m) {
+          return {
+            id: m && m.id,
+            round: m && m.round,
+            court: m && m.court,
+            teamA: m && m.teamA,
+            teamB: m && m.teamB,
+            scheduleMode: m && m.scheduleMode
+          };
+        });
+      }));
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function restampFutureRounds(mode, keep) {
+    if (!window.state || !Array.isArray(state.schedule)) return false;
+
+    if (!Array.isArray(state.roundMeta)) state.roundMeta = [];
+
+    for (var i = keep; i < state.schedule.length; i++) {
+      state.roundMeta[i] = Object.assign({}, state.roundMeta[i] || {}, {
+        mode: mode,
+        modeLabel: labelForMode(mode),
+        createdAt: new Date().toISOString(),
+        generatedAfterLockedRound: keep,
+        round: i + 1
+      });
+
+      (state.schedule[i] || []).forEach(function(m) {
+        if (m) m.scheduleMode = mode;
+      });
+    }
+
+    try { if (typeof autoSave === "function") autoSave(); } catch (e) {}
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch (e) {}
+    try { if (typeof renderTeams === "function") renderTeams(); } catch (e) {}
+    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch (e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch (e) {}
+
+    return true;
+  }
+
+  window.pbRestampFutureRoundsWithSelectedMode = function() {
+    return restampFutureRounds(currentSelectedMode(), protectedCountSafe());
+  };
+
+  if (typeof window.regenerateRemaining === "function") {
+    var originalRegenerateRemaining = window.regenerateRemaining;
+
+    window.regenerateRemaining = function() {
+      var selectedMode = currentSelectedMode();
+      var keep = protectedCountSafe();
+      var before = futureSignature(keep);
+
+      var result = originalRegenerateRemaining.apply(this, arguments);
+
+      var after = futureSignature(keep);
+      if (after !== before) {
+        restampFutureRounds(selectedMode, keep);
+        try {
+          toast("✅ Future rounds set to " + labelForMode(selectedMode), "ok");
+        } catch (e) {}
+      }
+
+      return result;
+    };
+  }
+})();
+
+
+/* PB_SCHEDULE_ACTION_CLEANUP_V1 */
+/* PB_SCHEDULE_ACTION_CLEANUP_V2 */
+(function(){
+  if (window.__pbScheduleActionCleanupV1) return;
+  window.__pbScheduleActionCleanupV1 = true;
+
+  function textOf(el) {
+    return (el && (el.innerText || el.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isInsideAdmin(el) {
+    var node = el;
+    while (node && node !== document.body) {
+      var id = String(node.id || "").toLowerCase();
+      var cls = String(node.className || "").toLowerCase();
+      if (id === "admin" || id === "sec-admin" || id.indexOf("admin") >= 0 || cls.indexOf("admin") >= 0) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function isAllowedMainAction(label) {
+    var t = label.toLowerCase();
+    return (
+      t.indexOf("generate schedule") >= 0 ||
+      t.indexOf("regenerate remaining") >= 0 ||
+      t.indexOf("preview & publish") >= 0 ||
+      t.indexOf("regenerate preview") >= 0 ||
+      t.indexOf("publish / start") >= 0 ||
+      t.indexOf("start round") >= 0
+    );
+  }
+
+  function isAdvancedOrDuplicateAction(label) {
+    var t = label.toLowerCase();
+
+    if (isAllowedMainAction(label)) return false;
+
+    return (
+      t.indexOf("regenerate draft") >= 0 ||
+      t.indexOf("draft rounds only") >= 0 ||
+      t.indexOf("rebuild upcoming") >= 0 ||
+      t.indexOf("rebuild next") >= 0 ||
+      t.indexOf("rebuild next round") >= 0 ||
+      t.indexOf("rebuild future") >= 0 ||
+      t.indexOf("rebuild remaining") >= 0 ||
+      t.indexOf("full rebuild") >= 0 ||
+      t.indexOf("unsafe rebuild") >= 0 ||
+      t.indexOf("force rebuild") >= 0 ||
+      t.indexOf("rebuild schedule") >= 0
+    );
+  }
+
+  function cleanupScheduleActions() {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn"));
+    var seenRegenerateRemaining = false;
+
+    buttons.forEach(function(btn) {
+      var label = textOf(btn);
+      if (!label) return;
+
+      var lower = label.toLowerCase();
+
+      if (lower.indexOf("regenerate remaining") >= 0) {
+        if (seenRegenerateRemaining && !isInsideAdmin(btn)) {
+          btn.style.display = "none";
+          btn.setAttribute("data-pb-hidden-advanced-action", "duplicate-regenerate-remaining");
+          return;
+        }
+
+        seenRegenerateRemaining = true;
+        btn.title = "Safe regenerate: completed/started rounds stay locked. Only future rounds are rebuilt.";
+        return;
+      }
+
+      if (isAdvancedOrDuplicateAction(label) && !isInsideAdmin(btn)) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-advanced-action", "true");
+      }
+    });
+
+    var regen = buttons.find(function(btn) {
+      return textOf(btn).toLowerCase().indexOf("regenerate remaining") >= 0 && btn.style.display !== "none";
+    });
+
+    if (regen && !document.getElementById("pb-safe-regenerate-note")) {
+      var note = document.createElement("div");
+      note.id = "pb-safe-regenerate-note";
+      note.style.fontSize = ".82rem";
+      note.style.color = "var(--txt3)";
+      note.style.marginTop = ".35rem";
+      note.textContent = "Safe regenerate keeps completed/started rounds locked and rebuilds only future rounds.";
+      regen.parentNode && regen.parentNode.insertBefore(note, regen.nextSibling);
+    }
+  }
+
+  window.pbCleanupScheduleActions = cleanupScheduleActions;
+
+  document.addEventListener("DOMContentLoaded", cleanupScheduleActions);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderScheduleCleanupWrappedV1) {
+    window.__pbRenderScheduleCleanupWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { cleanupScheduleActions(); } catch (e) {}
+      return result;
+    };
+  }
+
+  setTimeout(cleanupScheduleActions, 300);
+  setTimeout(cleanupScheduleActions, 1000);
+})();
+
+
+/* PB_PREVIEW_REGEN_POLISH_V1 */
+(function(){
+  if (window.__pbPreviewRegenPolishV1) return;
+  window.__pbPreviewRegenPolishV1 = true;
+
+  function textOf(el) {
+    return (el && (el.innerText || el.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function polishPreviewRegenerate() {
+    Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn")).forEach(function(btn) {
+      var label = textOf(btn).toLowerCase();
+
+      if (label.indexOf("regenerate preview") >= 0) {
+        btn.textContent = "🔄 Try Different Draft";
+        btn.title = "Creates a different unpublished draft round. Published/started rounds stay locked.";
+        btn.classList.remove("btn-orange", "btn-danger", "btn-primary");
+        btn.classList.add("btn-secondary");
+        btn.style.opacity = "0.78";
+        btn.style.fontSize = "0.85rem";
+        btn.style.padding = "0.45rem 0.7rem";
+        btn.setAttribute("data-pb-preview-secondary-action", "true");
+      }
+    });
+  }
+
+  window.pbPolishPreviewRegenerate = polishPreviewRegenerate;
+
+  document.addEventListener("DOMContentLoaded", polishPreviewRegenerate);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderSchedulePreviewPolishWrappedV1) {
+    window.__pbRenderSchedulePreviewPolishWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { polishPreviewRegenerate(); } catch (e) {}
+      return result;
+    };
+  }
+
+  setTimeout(polishPreviewRegenerate, 300);
+  setTimeout(polishPreviewRegenerate, 1000);
+})();
+
+
+/* PB_PREVIEW_MODE_LABEL_POLISH_V1 */
+(function(){
+  if (window.__pbPreviewModeLabelPolishV1) return;
+  window.__pbPreviewModeLabelPolishV1 = true;
+
+  function currentMode() {
+    return document.getElementById("team-mode")?.value || "random";
+  }
+
+  function modeLabel(mode) {
+    var labels = {
+      random: "🎩 Chapeau / Hat Draw",
+      dupr: "🏆 DUPR Session",
+      mixed: "Mixed",
+      "mixed-rated": "Mixed + Similar Rating",
+      "competitive-mixed": "Competitive Mixed",
+      balanced: "Balanced",
+      equalizer: "Equalizer",
+      progressive: "Progressive",
+      snake: "Snake Draft",
+      pods: "Pods",
+      crossover: "Crossover",
+      "roundrobin-partners": "Round Robin Partners",
+      mexicano: "Mexicano",
+      americano: "Americano",
+      "rr-playoff": "Round Robin + Playoff",
+      king: "King of the Court",
+      shootout: "Shootout / King-Queen",
+      "fixed-teams": "Fixed Teams"
+    };
+    return labels[mode] || mode;
+  }
+
+  function textOf(el) {
+    return (el && (el.innerText || el.textContent) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function polishPreviewModeLabel() {
+    var mode = currentMode();
+    var label = modeLabel(mode);
+
+    Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
+      var txt = textOf(el);
+
+      if (/^👀 Preview & Publish Round \d+/.test(txt)) {
+        var clean = txt.replace(/\s+·\s+.*$/, "");
+        el.textContent = clean + " · " + label;
+        el.setAttribute("data-pb-preview-mode-label", mode);
+      }
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn")).forEach(function(btn) {
+      var txt = textOf(btn).toLowerCase();
+      var onclick = String(btn.getAttribute("onclick") || "").toLowerCase();
+
+      if (txt.indexOf("regenerate preview") >= 0 || onclick.indexOf("regenerateschedulepreview") >= 0) {
+        btn.textContent = "🔄 Try Different Draft";
+        btn.title = "Creates a different unpublished draft round using the current Schedule Mode. Published/started rounds stay locked.";
+        btn.classList.remove("btn-orange", "btn-danger", "btn-primary");
+        btn.classList.add("btn-secondary");
+        btn.style.opacity = "0.78";
+        btn.style.fontSize = "0.85rem";
+        btn.style.padding = "0.45rem 0.7rem";
+      }
+    });
+  }
+
+  window.pbPolishPreviewModeLabel = polishPreviewModeLabel;
+
+  document.addEventListener("DOMContentLoaded", polishPreviewModeLabel);
+  document.addEventListener("change", function(e) {
+    if (e && e.target && e.target.id === "team-mode") {
+      setTimeout(polishPreviewModeLabel, 50);
+      setTimeout(polishPreviewModeLabel, 300);
+    }
+  });
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderSchedulePreviewModeWrappedV1) {
+    window.__pbRenderSchedulePreviewModeWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { polishPreviewModeLabel(); } catch (e) {}
+      setTimeout(polishPreviewModeLabel, 50);
+      return result;
+    };
+  }
+
+  var originalRegeneratePreview = window.regenerateSchedulePreview;
+  if (typeof originalRegeneratePreview === "function" && !window.__pbRegeneratePreviewModeWrappedV1) {
+    window.__pbRegeneratePreviewModeWrappedV1 = true;
+    window.regenerateSchedulePreview = function() {
+      var result = originalRegeneratePreview.apply(this, arguments);
+      try { polishPreviewModeLabel(); } catch (e) {}
+      setTimeout(polishPreviewModeLabel, 50);
+      setTimeout(polishPreviewModeLabel, 300);
+      return result;
+    };
+  }
+
+  setInterval(polishPreviewModeLabel, 1500);
+  setTimeout(polishPreviewModeLabel, 300);
+  setTimeout(polishPreviewModeLabel, 1000);
+})();
+
 </script>
 
 </body>
