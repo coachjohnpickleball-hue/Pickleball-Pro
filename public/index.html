@@ -18724,6 +18724,319 @@ function exportEndSessionSummary(){
   setInterval(polishNextStepCard, 2000);
 })();
 
+
+/* PB_NAV_AND_ACTION_SIMPLIFY_V1 */
+/* PB_NAV_RIGHT_MENU_RESTORE_V1 */
+(function(){
+  if (window.__pbNavAndActionSimplifyV1) return;
+  window.__pbNavAndActionSimplifyV1 = true;
+
+  function cleanText(el) {
+    return (el && (el.innerText || el.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function setTextKeepingIcon(el, text) {
+    if (!el) return;
+    el.textContent = text;
+  }
+
+  function looksTopNavItem(el) {
+    if (!el) return false;
+    var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    var txt = cleanText(el);
+    if (!txt) return false;
+
+    var tag = String(el.tagName || "").toLowerCase();
+    var cls = String(el.className || "").toLowerCase();
+
+    return (
+      tag === "button" ||
+      tag === "a" ||
+      cls.indexOf("nav") >= 0 ||
+      cls.indexOf("tab") >= 0 ||
+      cls.indexOf("menu") >= 0 ||
+      (rect && rect.top < 160)
+    );
+  }
+
+  function isMainScheduleButton(el) {
+    var node = el;
+    while (node && node !== document.body) {
+      var id = String(node.id || "").toLowerCase();
+      if (id === "sec-schedule" || id === "schedule" || id.indexOf("schedule") >= 0) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function softenSecondaryAction(btn) {
+    btn.classList.remove("btn-orange", "btn-danger", "btn-primary");
+    btn.classList.add("btn-secondary");
+    btn.style.opacity = "0.72";
+    btn.style.fontSize = "0.84rem";
+    btn.style.padding = "0.42rem 0.65rem";
+    btn.setAttribute("data-pb-secondary-action", "true");
+  }
+
+  function simplifyTopNavigation() {
+    var navItems = Array.prototype.slice.call(document.querySelectorAll("button, a, .nav-item, .tab, .menu-item"));
+
+    var adminKept = false;
+
+    navItems.forEach(function(el) {
+      if (!looksTopNavItem(el)) return;
+
+      var txt = cleanText(el);
+      var lower = txt.toLowerCase();
+
+      if (lower === "🏠 home" || lower === "home") {
+        setTextKeepingIcon(el, "🏠 Dashboard");
+        return;
+      }
+
+      if (lower.indexOf("schedule builder") >= 0) {
+        setTextKeepingIcon(el, "📅 Schedule");
+        return;
+      }
+
+      if (lower.indexOf("communications") >= 0 || lower.indexOf("📲 communications") >= 0) {
+        el.style.display = "none";
+        el.setAttribute("data-pb-hidden-nav", "communications");
+        return;
+      }
+
+      if (lower.indexOf("more") >= 0 || lower.indexOf("menu") >= 0) {
+        el.style.display = "";
+        el.removeAttribute("data-pb-hidden-nav");
+        el.removeAttribute("data-pb-admin-nav");
+
+        if (lower.indexOf("more") >= 0) {
+          setTextKeepingIcon(el, "⋯ More");
+        } else if (lower.indexOf("menu") >= 0) {
+          setTextKeepingIcon(el, "👤 Menu");
+        }
+
+        return;
+      }
+    });
+  }
+
+  function simplifyScheduleActions() {
+    Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn")).forEach(function(btn) {
+      var txt = cleanText(btn);
+      var lower = txt.toLowerCase();
+
+      if (!txt) return;
+
+      if (lower.indexOf("rebuild next round") >= 0 || lower.indexOf("rebuild next") >= 0) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-advanced-action", "rebuild-next-round");
+        return;
+      }
+
+      if (lower.indexOf("regenerate preview") >= 0) {
+        btn.textContent = "🔄 Try Different Draft";
+        softenSecondaryAction(btn);
+        btn.title = "Creates a different unpublished draft round. Published/started rounds stay locked.";
+        return;
+      }
+
+      if (
+        isMainScheduleButton(btn) &&
+        (
+          lower.indexOf("export csv") >= 0 ||
+          lower.indexOf("live display") >= 0 ||
+          lower.indexOf("announce") >= 0
+        )
+      ) {
+        softenSecondaryAction(btn);
+      }
+
+      if (lower.indexOf("regenerate remaining") >= 0) {
+        btn.title = "Safe regenerate: completed/started rounds stay locked. Only future rounds are rebuilt.";
+      }
+    });
+  }
+
+  function simplifyCopy() {
+    Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
+      var txt = cleanText(el);
+
+      if (txt === "Tournament Director Assistant" || txt === "🧠 Tournament Director Assistant") {
+        el.textContent = "Next Step";
+      }
+
+      if (txt === "Guides the tournament director to the next best action and flags anything that needs attention.") {
+        el.textContent = "Shows the next useful action.";
+      }
+
+      if (txt === "🚀 Do It For Me" || txt === "Do It For Me") {
+        el.style.display = "none";
+        el.setAttribute("data-pb-hidden-risky-action", "true");
+      }
+    });
+  }
+
+  function simplifyUI() {
+    simplifyTopNavigation();
+    simplifyScheduleActions();
+    simplifyCopy();
+  }
+
+  window.pbSimplifyOperatorUI = simplifyUI;
+
+  document.addEventListener("DOMContentLoaded", simplifyUI);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderScheduleSimplifyWrappedV1) {
+    window.__pbRenderScheduleSimplifyWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { simplifyUI(); } catch (e) {}
+      setTimeout(simplifyUI, 50);
+      return result;
+    };
+  }
+
+  setTimeout(simplifyUI, 300);
+  setTimeout(simplifyUI, 1000);
+  setInterval(simplifyUI, 2500);
+})();
+
+
+/* PB_DASHBOARD_TILE_SIMPLIFY_V1 */
+(function(){
+  if (window.__pbDashboardTileSimplifyV1) return;
+  window.__pbDashboardTileSimplifyV1 = true;
+
+  function textOf(el) {
+    return (el && (el.innerText || el.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function closestTile(el) {
+    var node = el;
+    while (node && node !== document.body) {
+      var cls = String(node.className || "").toLowerCase();
+      var role = String(node.getAttribute && node.getAttribute("role") || "").toLowerCase();
+      if (
+        cls.indexOf("card") >= 0 ||
+        cls.indexOf("tile") >= 0 ||
+        cls.indexOf("quick") >= 0 ||
+        cls.indexOf("shortcut") >= 0 ||
+        role === "button"
+      ) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return el;
+  }
+
+  function isHomeOrDashboardArea(el) {
+    var node = el;
+    while (node && node !== document.body) {
+      var id = String(node.id || "").toLowerCase();
+      var cls = String(node.className || "").toLowerCase();
+
+      if (
+        id.indexOf("home") >= 0 ||
+        id.indexOf("dashboard") >= 0 ||
+        cls.indexOf("dashboard") >= 0 ||
+        cls.indexOf("quick") >= 0
+      ) {
+        return true;
+      }
+
+      if (
+        id.indexOf("schedule") >= 0 ||
+        id.indexOf("admin") >= 0 ||
+        id.indexOf("standings") >= 0 ||
+        id.indexOf("players") >= 0
+      ) {
+        return false;
+      }
+
+      node = node.parentElement;
+    }
+
+    return false;
+  }
+
+  function shouldHideTile(txt) {
+    var t = txt.toLowerCase();
+
+    return (
+      t.indexOf("director assistant") >= 0 ||
+      t.indexOf("tournament director assistant") >= 0 ||
+      t.indexOf("courts assign and view courts") >= 0 ||
+      t.indexOf("tv display") >= 0 ||
+      t.indexOf("big leaderboard") >= 0 ||
+      t.indexOf("check-in") >= 0 ||
+      t.indexOf("active, arrived, absent") >= 0 ||
+      t.indexOf("player lookup") >= 0 ||
+      t.indexOf("find court, partner") >= 0 ||
+      t.indexOf("end session") >= 0 ||
+      t.indexOf("history save and review") >= 0 ||
+      t.indexOf("admin lock") >= 0 ||
+      t.indexOf("terms settings") >= 0 ||
+      t.indexOf("undo score") >= 0
+    );
+  }
+
+  function simplifyDashboardTiles() {
+    if (!document.body) return;
+
+    Array.prototype.slice.call(document.querySelectorAll("a, button, .card, .tile, .quick-card, .shortcut-card, [role='button']")).forEach(function(el) {
+      var txt = textOf(el);
+      if (!txt) return;
+
+      if (!isHomeOrDashboardArea(el)) return;
+
+      if (shouldHideTile(txt)) {
+        var tile = closestTile(el);
+        tile.style.display = "none";
+        tile.setAttribute("data-pb-hidden-dashboard-extra", "true");
+      }
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
+      var txt = textOf(el);
+
+      if (txt === "🧠 Director Assistant" || txt === "Director Assistant") {
+        el.style.display = "none";
+        el.setAttribute("data-pb-hidden-dashboard-extra", "director-assistant");
+      }
+
+      if (txt === "📅 Schedule") {
+        el.setAttribute("data-pb-primary-dashboard-action", "true");
+      }
+    });
+  }
+
+  window.pbSimplifyDashboardTiles = simplifyDashboardTiles;
+
+  document.addEventListener("DOMContentLoaded", simplifyDashboardTiles);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderScheduleDashboardSimplifyWrappedV1) {
+    window.__pbRenderScheduleDashboardSimplifyWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { simplifyDashboardTiles(); } catch (e) {}
+      setTimeout(simplifyDashboardTiles, 50);
+      return result;
+    };
+  }
+
+  setTimeout(simplifyDashboardTiles, 300);
+  setTimeout(simplifyDashboardTiles, 1000);
+  setInterval(simplifyDashboardTiles, 2500);
+})();
+
 </script>
 
 </body>
