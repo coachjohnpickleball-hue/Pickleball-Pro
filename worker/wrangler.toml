@@ -17,7 +17,7 @@ CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
 MAX_SMS_PER_DAY = "200"
 MAX_EMAIL_PER_DAY = "500"
 BLOCKED_USERS = ""
-ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com,johnmergulhao@gmail.com"
 
 # Deploy with: npx wrangler deploy --env rally
 # This targets the existing Cloudflare Worker/environment named rally.
@@ -41,7 +41,7 @@ CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
 MAX_SMS_PER_DAY = "200"
 MAX_EMAIL_PER_DAY = "500"
 BLOCKED_USERS = ""
-ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com,johnmergulhao@gmail.com"
 
 
 # Deploy with: npx wrangler deploy --env staging
@@ -68,5 +68,5 @@ CURRENT_TERMS_EFFECTIVE_DATE = "June 24, 2026"
 MAX_SMS_PER_DAY = "50"
 MAX_EMAIL_PER_DAY = "100"
 BLOCKED_USERS = ""
-ADMIN_EMAILS = "coachjohnpickleball@gmail.com"
+ADMIN_EMAILS = "coachjohnpickleball@gmail.com,johnmergulhao@gmail.com"
 ENVIRONMENT = "staging"

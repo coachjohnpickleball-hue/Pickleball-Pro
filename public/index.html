@@ -1073,6 +1073,7 @@ body.pb-non-admin a[href^="/admin/"]{
 </style>
 </head>
 <body>
+
 <script id="admin-hard-hide-early">
 (function(){
   function isAdmin(){ return !!(window.__ACCESS__ && window.__ACCESS__.isAdmin); }
@@ -1202,8 +1203,9 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="user-dropdown-item" onclick="document.getElementById('load-file').click()">📂 Load tournament</button>
       <button class="user-dropdown-item" onclick="openBackupModal()">📦 Backup &amp; restore</button>
       <button class="user-dropdown-item" onclick="printSchedule()">🖨 Print schedule</button>
-      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access log</button>
-      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">📄 Terms settings</button>
+      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/users','_blank')">🛡️ User Access</button>
+      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access Log</button>
+      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">⚙️ Terms Settings</button>
       <button class="user-dropdown-item" style="display:none" id="undo-btn" onclick="undoLastScore()">↩ Undo last score</button>
       <div class="user-dropdown-divider"></div>
       <button class="user-dropdown-item danger" onclick="promptResetTournament()">↺ Reset tournament</button>
@@ -1236,7 +1238,7 @@ body.pb-non-admin a[href^="/admin/"]{
       <div class="dashboard-primary-actions">
         <button class="btn btn-primary dashboard-start-btn" onclick="dashboardPrimaryAction()" id="dash-primary-action">⚡ Generate Schedule</button>
         <button class="btn btn-secondary" onclick="showTab('schedule')">Record Score</button>
-        <button class="btn btn-secondary" onclick="showTab('display')">📺 TV Mode</button>
+        <button class="btn btn-secondary" onclick="showTab('display')">📺 Live Display</button>
       </div>
     </div>
     <div class="dashboard-kpis">
@@ -1253,13 +1255,14 @@ body.pb-non-admin a[href^="/admin/"]{
       </div>
     </div>
     <div id="tournament-timeline-home" style="margin-top:1rem"></div>
-    <div class="quick-action-grid">
+    <div class="quick-action-grid quick-action-grid-clean">
       <button class="quick-action" onclick="showTab('players')"><span class="quick-action-icon">👥</span><div class="quick-action-title">Players</div><div class="quick-action-note">Add, import, search roster</div></button>
       <button class="quick-action" onclick="showTab('courts')"><span class="quick-action-icon">🏓</span><div class="quick-action-title">Courts</div><div class="quick-action-note">Assign and view courts</div></button>
       <button class="quick-action" onclick="showTab('schedule')"><span class="quick-action-icon">📅</span><div class="quick-action-title">Schedule</div><div class="quick-action-note">Rounds and score entry</div></button>
       <button class="quick-action" onclick="showTab('schedule')"><span class="quick-action-icon">📅</span><div class="quick-action-title">Schedule Builder</div><div class="quick-action-note">Presets, rules, warnings and generation</div></button>
       <button class="quick-action" onclick="showTab('standings')"><span class="quick-action-icon">📊</span><div class="quick-action-title">Standings</div><div class="quick-action-note">Leaderboard and results</div></button>
-      <button class="quick-action" onclick="showTab('display')"><span class="quick-action-icon">📺</span><div class="quick-action-title">TV Display</div><div class="quick-action-note">Big leaderboard for club screens</div></button>
+      <button class="quick-action" onclick="showTab('communications')"><span class="quick-action-icon">📲</span><div class="quick-action-title">Communications</div><div class="quick-action-note">Mobile sync, SMS, email</div></button>
+      <button class="quick-action" onclick="showTab('display')"><span class="quick-action-icon">📺</span><div class="quick-action-title">Live Display</div><div class="quick-action-note">Big live display for club screens</div></button>
       <button class="quick-action premium-added" onclick="recordNextScore()"><span class="quick-action-icon">📝</span><div class="quick-action-title">Next Score</div><div class="quick-action-note">Jump to the next unfinished match</div></button>
       <button class="quick-action premium-added" onclick="showTab('checkin')"><span class="quick-action-icon">✅</span><div class="quick-action-title">Check-In</div><div class="quick-action-note">Active, arrived, absent players</div></button>
       <button class="quick-action premium-added" onclick="showTab('fairness')"><span class="quick-action-icon">⚖️</span><div class="quick-action-title">Fairness</div><div class="quick-action-note">Repeats, sit-outs, court balance</div></button>
@@ -1268,7 +1271,6 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="quick-action premium-added" onclick="showTab('endsession')"><span class="quick-action-icon">🏁</span><div class="quick-action-title">End Session</div><div class="quick-action-note">Summary, archive, export</div></button>
       <button class="quick-action premium-added" onclick="showTab('history')"><span class="quick-action-icon">🏆</span><div class="quick-action-title">History</div><div class="quick-action-note">Save and review past events</div></button>
       <button class="quick-action premium-added" data-admin-only onclick="showTab('admin')"><span class="quick-action-icon">🔒</span><div class="quick-action-title">Admin Lock</div><div class="quick-action-note">Prevent accidental edits live</div></button>
-      <button class="quick-action premium-added" data-admin-only onclick="window.open('/admin/terms-settings','_blank')"><span class="quick-action-icon">📄</span><div class="quick-action-title">Terms Settings</div><div class="quick-action-note">Change agreement version</div></button>
       <button class="quick-action premium-added" onclick="undoLastScore()"><span class="quick-action-icon">↩</span><div class="quick-action-title">Undo Score</div><div class="quick-action-note">Reverse the last score entry</div></button>
     </div>
   </div>
@@ -1958,7 +1960,7 @@ body.pb-non-admin a[href^="/admin/"]{
 <!-- ══════════════════ TV / PUBLIC DISPLAY ══════════════════ -->
 <div id="sec-display" class="section">
   <div class="card">
-    <div class="card-title">📺 TV Display &amp; Public Standings</div>
+    <div class="card-title">📺 Live Display &amp; Public Standings</div>
     <div class="display-tools-grid">
       <div class="display-preview">
         <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem">
@@ -2065,9 +2067,8 @@ body.pb-non-admin a[href^="/admin/"]{
       </div>
     </div>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
-      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Open Access Log</button>
-      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/tos-status','_blank')">📄 TOS Status</button>
-      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">📄 Terms Settings</button>
+      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/users','_blank')">🛡️ User Access</button>
+      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access Log</button>
     </div>
     <div style="color:var(--txt3);font-size:.82rem;line-height:1.55;margin-top:.7rem">Allowed while locked: navigation, TV/public displays, copy links, refresh, fullscreen, admin reports, and this unlock button.</div>
   </div>
@@ -9816,7 +9817,7 @@ function setTvViewMode(mode) {
   if(mode !== 'courts' && mode !== 'standings') mode = 'courts';
   try { localStorage.setItem(TV_VIEW_MODE_KEY, mode); } catch(e) {}
   renderDisplayTools();
-  toast(mode === 'courts' ? 'TV Display: Court assignments' : 'TV Display: Player standings');
+  toast(mode === 'courts' ? 'Live Display: Court assignments' : 'Live Display: Player standings');
 }
 
 function updateTvViewButtons() {

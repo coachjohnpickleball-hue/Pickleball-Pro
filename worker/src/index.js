@@ -353,6 +353,33 @@ async function acceptTerms(){
 </script></main></body></html>`;
 }
 
+
+function pbDecodeAccessJwtEmail(request) {
+  const jwt =
+    request.headers.get('cf-access-jwt-assertion') ||
+    request.headers.get('Cf-Access-Jwt-Assertion') ||
+    '';
+
+  if (!jwt || jwt.split('.').length < 2) return '';
+
+  try {
+    const payloadPart = jwt.split('.')[1];
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+    const json = atob(padded);
+    const payload = JSON.parse(json);
+
+    return String(
+      payload.email ||
+      payload.common_name ||
+      payload.sub ||
+      ''
+    ).toLowerCase();
+  } catch (err) {
+    return '';
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
