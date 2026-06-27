@@ -10,13 +10,14 @@
     "worker:dev:staging": "cd worker && npm run dev:staging",
     "worker:deploy:rally": "cd worker && npm run deploy:rally",
     "worker:deploy:staging": "cd worker && npm run deploy:staging",
-    "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs && node tests/fairness/analysis.test.mjs",
+    "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs && node tests/fairness/analysis.test.mjs && npm run test:snapshots",
     "test:standings": "node tests/standings/computeStandings.test.mjs",
     "test:scheduler": "node tests/scheduler/safety.test.mjs",
     "test:fairness": "node tests/fairness/analysis.test.mjs",
     "safety:build-source": "node tools/check-build-does-not-touch-source.mjs",
     "preflight:staging": "node tools/preflight-staging.mjs",
-    "safe:deploy:staging": "npm run preflight:staging && npm run worker:deploy:staging"
+    "safe:deploy:staging": "npm run preflight:staging && npm run worker:deploy:staging",
+    "test:snapshots": "node tests/snapshots/roundSnapshots.test.mjs"
   },
   "devDependencies": {
     "terser": "^5.31.0"
