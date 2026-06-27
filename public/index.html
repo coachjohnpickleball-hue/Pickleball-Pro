@@ -17975,58 +17975,7 @@ function exportEndSessionSummary(){
     }
   }
 
-  
-  /* PB_SNAPSHOT_RESTORE_UI_V1 */
-  function restoreSnapshotById(id) {
-    try {
-      var snapshots = loadSnapshots();
-      var snapshot = snapshots.find(function(item){ return item.id === id; });
-
-      if (!snapshot) {
-        say("Snapshot not found", "err");
-        return false;
-      }
-
-      if (!confirm("Restore Round " + snapshot.roundNumber + " from snapshot?\\n\\nThis replaces only that round.")) {
-        return false;
-      }
-
-      if (!window.state) {
-        say("No tournament state found", "err");
-        return false;
-      }
-
-      if (!Array.isArray(state.schedule)) state.schedule = [];
-      if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
-      if (!Array.isArray(state.byeRounds)) state.byeRounds = [];
-
-      state.schedule[snapshot.roundIndex] = clone(snapshot.round);
-      state.roundTeams[snapshot.roundIndex] = clone(snapshot.roundTeams || []);
-      state.byeRounds[snapshot.roundIndex] = clone(snapshot.byeRound || []);
-
-      try {
-        state.startedRounds = new Set(snapshot.startedRounds || []);
-      } catch (e) {}
-
-      try { if (typeof autoSave === "function") autoSave(); } catch (e) {}
-      try { if (typeof renderSchedule === "function") renderSchedule(); } catch (e) {}
-      try { if (typeof renderStandings === "function") renderStandings(); } catch (e) {}
-      try { if (typeof renderDashboard === "function") renderDashboard(); } catch (e) {}
-      try { if (typeof renderTeams === "function") renderTeams(); } catch (e) {}
-
-      renderPanel();
-      say("Restored Round " + snapshot.roundNumber + " snapshot", "ok");
-      return true;
-    } catch (e) {
-      console.error("restoreSnapshotById failed", e);
-      say("Restore failed", "err");
-      return false;
-    }
-  }
-
-  window.pbRestoreRoundSnapshotLite = restoreSnapshotById;
-
-function renderPanel() {
+  function renderPanel() {
     var list = document.getElementById("pb-snapshot-save-list");
     if (!list) return;
 
@@ -18038,11 +17987,10 @@ function renderPanel() {
     }
 
     list.innerHTML = snapshots.slice(0, 10).map(function(snapshot){
-      return '<div style="padding:.4rem 0;border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap">' +
-        '<span><strong>Round ' + snapshot.roundNumber + '</strong> · ' +
+      return '<div style="padding:.4rem 0;border-top:1px solid var(--border)">' +
+        '<strong>Round ' + snapshot.roundNumber + '</strong> · ' +
         snapshot.scoreCount + '/' + snapshot.matchCount + ' scored · ' +
-        new Date(snapshot.createdAt).toLocaleString() + '</span>' +
-        '<button type="button" class="btn btn-danger btn-sm" onclick="pbRestoreRoundSnapshotLite(\\'' + snapshot.id + '\\')">Restore</button>' +
+        new Date(snapshot.createdAt).toLocaleString() +
         '</div>';
     }).join("");
   }
