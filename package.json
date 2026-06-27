@@ -10,9 +10,10 @@
     "worker:dev:staging": "cd worker && npm run dev:staging",
     "worker:deploy:rally": "cd worker && npm run deploy:rally",
     "worker:deploy:staging": "cd worker && npm run deploy:staging",
-    "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs",
+    "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs && node tests/fairness/analysis.test.mjs",
     "test:standings": "node tests/standings/computeStandings.test.mjs",
-    "test:scheduler": "node tests/scheduler/safety.test.mjs"
+    "test:scheduler": "node tests/scheduler/safety.test.mjs",
+    "test:fairness": "node tests/fairness/analysis.test.mjs"
   },
   "devDependencies": {
     "terser": "^5.31.0"
