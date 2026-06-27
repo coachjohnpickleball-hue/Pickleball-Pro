@@ -16451,31 +16451,41 @@ function fairnessPlayerName(i) {
   return p && p.name ? p.name : '?';
 }
 function pairNames(key) { return key.split('|').map(fairnessPlayerName).join(' / '); }
-function buildFairnessAnalysis() {
+function fairnessPlayerNameFromPlayers(players, i) {
+  const p = (players || [])[parseInt(i,10)];
+  return p && p.name ? p.name : '?';
+}
+
+function buildFairnessAnalysisFromData({ players = [], schedule = [], byeRounds = [] } = {}) {
   const partner = {}, opponent = {}, sits = {}, playerCourtUse = {}, courtTotals = {}, spreads = [], gameSpreads = [];
-  const players = state.players || [];
+
   players.forEach((p,i)=>{ sits[i]=0; playerCourtUse[i]={}; });
 
-  (state.byeRounds || []).forEach(arr => (arr || []).forEach(i => { sits[i] = (sits[i] || 0) + 1; }));
+  (byeRounds || []).forEach(arr => (arr || []).forEach(i => { sits[i] = (sits[i] || 0) + 1; }));
 
-  (state.schedule || []).forEach((round, rIdx) => (round || []).forEach((m, mIdx) => {
+  (schedule || []).forEach((round, rIdx) => (round || []).forEach((m, mIdx) => {
     if(!m || !Array.isArray(m.teamA) || !Array.isArray(m.teamB)) return;
+
     const court = m.court || (mIdx + 1);
     courtTotals[court] = (courtTotals[court] || 0) + 1;
+
     const all = [].concat(m.teamA, m.teamB);
     all.forEach(i => {
       if(sits[i] == null) sits[i] = 0;
       playerCourtUse[i] = playerCourtUse[i] || {};
       playerCourtUse[i][court] = (playerCourtUse[i][court] || 0) + 1;
     });
+
     if(m.teamA.length > 1) {
       const k = fairnessPairKey(m.teamA[0], m.teamA[1]);
       partner[k] = (partner[k] || 0) + 1;
     }
+
     if(m.teamB.length > 1) {
       const k = fairnessPairKey(m.teamB[0], m.teamB[1]);
       partner[k] = (partner[k] || 0) + 1;
     }
+
     m.teamA.forEach(a => m.teamB.forEach(b => {
       const k = fairnessPairKey(a,b);
       opponent[k] = (opponent[k] || 0) + 1;
@@ -16484,25 +16494,36 @@ function buildFairnessAnalysis() {
     const avgA = m.teamA.length ? (m.teamA.reduce((sum,i)=>sum+pRating(players[i]),0) / m.teamA.length) : 0;
     const avgB = m.teamB.length ? (m.teamB.reduce((sum,i)=>sum+pRating(players[i]),0) / m.teamB.length) : 0;
     const spread = Math.abs(avgA-avgB);
+
     spreads.push(spread);
     gameSpreads.push({ round: rIdx + 1, court, spread, teamA: m.teamA, teamB: m.teamB });
   }));
 
   const repeatsP = Object.entries(partner).filter(([k,c])=>c>1).sort((a,b)=>b[1]-a[1]);
   const repeatsO = Object.entries(opponent).filter(([k,c])=>c>1).sort((a,b)=>b[1]-a[1]);
-  const sitEntries = Object.entries(sits).map(([i,c])=>({ idx: parseInt(i,10), name: fairnessPlayerName(i), c: Number(c)||0 })).sort((a,b)=>b.c-a.c || a.name.localeCompare(b.name));
+
+  const sitEntries = Object.entries(sits)
+    .map(([i,c])=>({ idx: parseInt(i,10), name: fairnessPlayerNameFromPlayers(players, i), c: Number(c)||0 }))
+    .sort((a,b)=>b.c-a.c || a.name.localeCompare(b.name));
+
   const sitVals = sitEntries.map(x=>x.c);
   const maxSit = sitVals.length ? Math.max(...sitVals) : 0;
   const minSit = sitVals.length ? Math.min(...sitVals) : 0;
   const sitGap = maxSit - minSit;
+
   const sitDistribution = sitEntries.reduce((acc,x)=>{ acc[x.c]=(acc[x.c]||0)+1; return acc; }, {});
   const mostSat = sitEntries.filter(x=>x.c===maxSit && maxSit>0);
   const leastSat = sitEntries.filter(x=>x.c===minSit);
+
   const avgSpread = spreads.length ? spreads.reduce((a,b)=>a+b,0)/spreads.length : 0;
   const bestSpread = spreads.length ? Math.min(...spreads) : 0;
   const worstSpread = spreads.length ? Math.max(...spreads) : 0;
   const worstGames = gameSpreads.slice().sort((a,b)=>b.spread-a.spread).slice(0,5);
-  const courtEntries = Object.entries(courtTotals).map(([court,count])=>({ court, count })).sort((a,b)=>String(a.court).localeCompare(String(b.court), undefined, {numeric:true}));
+
+  const courtEntries = Object.entries(courtTotals)
+    .map(([court,count])=>({ court, count }))
+    .sort((a,b)=>String(a.court).localeCompare(String(b.court), undefined, {numeric:true}));
+
   const courtVals = courtEntries.map(x=>x.count);
   const courtGap = courtVals.length ? Math.max(...courtVals)-Math.min(...courtVals) : 0;
 
@@ -16513,6 +16534,7 @@ function buildFairnessAnalysis() {
   score -= Math.min(10, Math.max(0, courtGap - 1) * 4);
   score -= Math.min(20, Math.max(0, avgSpread - 0.75) * 10);
   score = Math.max(0, Math.round(score));
+
   let grade = score >= 90 ? 'Excellent' : score >= 75 ? 'Good' : score >= 60 ? 'Needs attention' : 'Poor';
 
   const recommendations = [];
@@ -16524,6 +16546,14 @@ function buildFairnessAnalysis() {
   if(!recommendations.length) recommendations.push('Schedule looks balanced based on current data.');
 
   return { partner, opponent, repeatsP, repeatsO, sits, sitEntries, sitDistribution, mostSat, leastSat, playerCourtUse, courtEntries, courtGap, maxSit, minSit, sitGap, avgSpread, bestSpread, worstSpread, worstGames, games: spreads.length, score, grade, recommendations };
+}
+
+function buildFairnessAnalysis() {
+  return buildFairnessAnalysisFromData({
+    players: state.players || [],
+    schedule: state.schedule || [],
+    byeRounds: state.byeRounds || []
+  });
 }
 function fairnessBar(score) {
   return `<div style="height:10px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden;margin-top:.35rem"><div style="height:100%;width:${Math.max(0,Math.min(100,score))}%;background:linear-gradient(90deg,var(--lime),var(--green));border-radius:999px"></div></div>`;
