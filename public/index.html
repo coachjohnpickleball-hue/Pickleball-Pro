@@ -17975,14 +17975,50 @@ function exportEndSessionSummary(){
     }
   }
 
+  
+  /* PB_SNAPSHOT_RESTORE_SELECT_DROPDOWN_V2 */
+  function syncRestoreSelect() {
+    var select = document.getElementById("pb-snapshot-restore-select");
+    if (!select) return;
+
+    var snapshots = loadSnapshots();
+    var previousValue = select.value;
+
+    if (!snapshots.length) {
+      select.innerHTML = '<option value="">No backups yet</option>';
+      return;
+    }
+
+    select.innerHTML = snapshots.slice(0, 50).map(function(snapshot) {
+      var label = "Round " + snapshot.roundNumber + " — " +
+        snapshot.scoreCount + "/" + snapshot.matchCount + " scored — " +
+        new Date(snapshot.createdAt).toLocaleString();
+
+      return '<option value="' + String(snapshot.id).replace(/"/g, "&quot;") + '">' + label + '</option>';
+    }).join("");
+
+    if (previousValue) select.value = previousValue;
+  }
+
+  function restoreSelectedSnapshot() {
+    var select = document.getElementById("pb-snapshot-restore-select");
+    if (!select || !select.value) {
+      say("Choose a backup round to restore", "err");
+      return false;
+    }
+    return restoreSnapshotById(select.value);
+  }
+
+
   function renderPanel() {
+    syncRestoreSelect();
     var list = document.getElementById("pb-snapshot-save-list");
     if (!list) return;
 
     var snapshots = loadSnapshots();
 
     if (!snapshots.length) {
-      list.innerHTML = '<div style="font-size:.85rem;color:var(--txt3)">No snapshots yet. Enter scores, then click Snapshot Completed Rounds.</div>';
+      list.innerHTML = '<div style="font-size:.85rem;color:var(--txt3)">No snapshots yet. Enter scores, then click Backup Completed Rounds.</div>';
       return;
     }
 
@@ -18022,7 +18058,7 @@ function exportEndSessionSummary(){
     div.style.marginTop = "1rem";
 
     div.innerHTML =
-      '<div class="card-title">Round Snapshots</div>' +
+      '<div class="card-title">Round Backup / Restore</div>' +
       '<p style="color:var(--txt2)">Backup scored/completed rounds before regeneration. Restore any saved round from the list below.</p>' +
       '<button type="button" class="btn btn-secondary btn-sm" id="pb-snapshot-save-btn">Snapshot Completed Rounds</button>' +
       '<div id="pb-snapshot-save-list" style="margin-top:.75rem"></div>';
@@ -18032,17 +18068,28 @@ function exportEndSessionSummary(){
     var btn = document.getElementById("pb-snapshot-save-btn");
     if (btn) btn.addEventListener("click", snapshotCompletedRounds);
 
-    var restoreBtn = document.getElementById("pb-snapshot-restore-latest-btn");
-    if (!restoreBtn && btn && btn.parentNode) {
-      restoreBtn = document.createElement("button");
-      restoreBtn.type = "button";
-      restoreBtn.id = "pb-snapshot-restore-latest-btn";
-      restoreBtn.className = "btn btn-danger btn-sm";
-      restoreBtn.style.marginLeft = ".5rem";
-      restoreBtn.textContent = "Restore Latest Snapshot";
-      btn.parentNode.insertBefore(restoreBtn, btn.nextSibling);
+    var oldLatestBtn = document.getElementById("pb-snapshot-restore-latest-btn");
+    if (oldLatestBtn && oldLatestBtn.parentNode) oldLatestBtn.parentNode.removeChild(oldLatestBtn);
+
+    var restoreWrap = document.getElementById("pb-snapshot-restore-selected-wrap");
+    if (!restoreWrap && btn && btn.parentNode) {
+      restoreWrap = document.createElement("div");
+      restoreWrap.id = "pb-snapshot-restore-selected-wrap";
+      restoreWrap.style.marginTop = ".75rem";
+      restoreWrap.style.paddingTop = ".75rem";
+      restoreWrap.style.borderTop = "1px solid var(--border)";
+      restoreWrap.innerHTML =
+        '<label style="display:block;font-size:.85rem;color:var(--txt2);margin-bottom:.35rem">Select Backup to Restore</label>' +
+        '<select id="pb-snapshot-restore-select" style="min-width:260px;max-width:100%;padding:.45rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)"></select>' +
+        '<button type="button" class="btn btn-danger btn-sm" id="pb-snapshot-restore-selected-btn" style="margin-left:.5rem">Restore Selected Round</button>';
+
+      btn.parentNode.insertBefore(restoreWrap, btn.nextSibling);
     }
-    if (restoreBtn) restoreBtn.addEventListener("click", restoreLatestSnapshot);
+
+    var restoreSelectedBtn = document.getElementById("pb-snapshot-restore-selected-btn");
+    if (restoreSelectedBtn) restoreSelectedBtn.addEventListener("click", restoreSelectedSnapshot);
+
+    syncRestoreSelect();
 
     renderPanel();
   }
@@ -18109,6 +18156,7 @@ function exportEndSessionSummary(){
 
   window.pbRestoreRoundSnapshotLite = restoreSnapshotById;
   window.pbRestoreLatestRoundSnapshotLite = restoreLatestSnapshot;
+  window.pbRestoreSelectedRoundSnapshotLite = restoreSelectedSnapshot;
 
 
   window.pbSnapshotCompletedRoundsLite = snapshotCompletedRounds;
