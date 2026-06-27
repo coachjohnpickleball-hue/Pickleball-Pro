@@ -1120,7 +1120,7 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="tab-btn" onclick="showTab('players', event)">👥 Players <span class="nav-caret">▾</span></button>
       <div class="nav-menu">
         <button class="tab-btn" onclick="showTab('players', event)">Player Roster</button>
-        <button class="tab-btn" onclick="showTab('schedule', event)">Teams</button>
+        <button class="tab-btn" onclick="showTab('teams', event)">Teams</button>
       </div>
     </div>
     <div class="nav-group" data-tabs="schedule courts">
@@ -1144,7 +1144,7 @@ body.pb-non-admin a[href^="/admin/"]{
     <div class="nav-group" data-tabs="display public checkin selfcheckin playerportaltools playerportal fairness history admin report playerstats">
       <button class="tab-btn" onclick="showTab('report', event)">⋯ More <span class="nav-caret">▾</span></button>
       <div class="nav-menu">
-        <button class="tab-btn" onclick="showTab('display', event)">TV / Public Display</button>
+        <button class="tab-btn" onclick="showTab('display', event)">Live Display / Public Display</button>
         <button class="tab-btn" onclick="showTab('public', event)">Public Standings Preview</button>
         <button class="tab-btn" onclick="showTab('checkin', event)">Player Check-In</button>
         <button class="tab-btn" onclick="showTab('selfcheckin', event)">Self Check-In QR</button>
@@ -1176,6 +1176,7 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/users','_blank')">🛡️ User Access</button>
       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access Log</button>
       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">⚙️ Terms Settings</button>
+      <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/tos-status','_blank')">📄 Acceptance Status</button>
       <button class="user-dropdown-item" style="display:none" id="undo-btn" onclick="undoLastScore()">↩ Undo last score</button>
       <div class="user-dropdown-divider"></div>
       <button class="user-dropdown-item danger" onclick="promptResetTournament()">↺ Reset tournament</button>
@@ -2039,6 +2040,8 @@ body.pb-non-admin a[href^="/admin/"]{
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/users','_blank')">🛡️ User Access</button>
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access Log</button>
+      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">⚙️ Terms Settings</button>
+      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/tos-status','_blank')">📄 Acceptance Status</button>
     </div>
     <div style="color:var(--txt3);font-size:.82rem;line-height:1.55;margin-top:.7rem">Allowed while locked: navigation, TV/public displays, copy links, refresh, fullscreen, admin reports, and this unlock button.</div>
   </div>
@@ -2836,6 +2839,7 @@ body.pb-non-admin a[href^="/admin/"]{
 
   </div>
 </div>
+
 
 </main>
 
