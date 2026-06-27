@@ -109,6 +109,12 @@ async function build() {
       });
       if (out.error) throw out.error;
       minified = out.code;
+
+      // Critical HTML safety:
+      // A literal </script> inside minified JavaScript closes the surrounding
+      // inline script tag in the browser, causing the rest of the JS to render
+      // as visible page text. Keep it escaped inside generated app.html.
+      minified = minified.replace(/<\/script/gi, '<\\/script');
     } catch (e) {
       console.error('  ✗ Minify failed for one block, leaving it unminified:', e.message);
       minified = code;
