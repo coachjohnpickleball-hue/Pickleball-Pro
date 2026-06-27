@@ -13,7 +13,8 @@
     "test": "node tests/scheduler/safety.test.mjs && node tests/standings/computeStandings.test.mjs && node tests/fairness/analysis.test.mjs",
     "test:standings": "node tests/standings/computeStandings.test.mjs",
     "test:scheduler": "node tests/scheduler/safety.test.mjs",
-    "test:fairness": "node tests/fairness/analysis.test.mjs"
+    "test:fairness": "node tests/fairness/analysis.test.mjs",
+    "postbuild": "node scripts/remove-old-timer.js"
   },
   "devDependencies": {
     "terser": "^5.31.0"
