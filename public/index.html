@@ -18565,6 +18565,165 @@ function exportEndSessionSummary(){
   setTimeout(polishPreviewModeLabel, 1000);
 })();
 
+
+/* PB_FAIRNESS_COPY_POLISH_V1 */
+(function(){
+  if (window.__pbFairnessCopyPolishV1) return;
+  window.__pbFairnessCopyPolishV1 = true;
+
+  function textOf(el) {
+    return (el && (el.innerText || el.textContent) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function replaceTextNode(node) {
+    if (!node || node.nodeType !== 3 || !node.nodeValue) return;
+
+    node.nodeValue = node.nodeValue
+      .replace(/Tournament Director Assistance/g, "Fairness Review")
+      .replace(/Director Assistance/g, "Fairness Review")
+      .replace(/Fairness · Action needed/g, "Fairness · Review")
+      .replace(/Action needed/g, "Review")
+      .replace(/Preview stays collapsed until you open it\./g, "Review the draft, then publish when ready.")
+      .replace(/Preview is collapsed\. Open it only when you want to review court assignments before publishing\./g, "Open the preview to review the draft before publishing.");
+  }
+
+  function polishFairnessCopy() {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(replaceTextNode);
+
+    Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
+      var txt = textOf(el);
+
+      if (txt === "Tournament Director Assistance" || txt === "Director Assistance") {
+        el.textContent = "Fairness Review";
+      }
+
+      if (txt === "Fairness · Action needed") {
+        el.textContent = "Fairness · Review";
+      }
+    });
+  }
+
+  window.pbPolishFairnessCopy = polishFairnessCopy;
+
+  document.addEventListener("DOMContentLoaded", polishFairnessCopy);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderScheduleFairnessCopyWrappedV1) {
+    window.__pbRenderScheduleFairnessCopyWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { polishFairnessCopy(); } catch (e) {}
+      setTimeout(polishFairnessCopy, 50);
+      return result;
+    };
+  }
+
+  setTimeout(polishFairnessCopy, 300);
+  setTimeout(polishFairnessCopy, 1000);
+  setInterval(polishFairnessCopy, 2000);
+})();
+
+
+/* PB_NEXT_STEP_CARD_POLISH_V1 */
+(function(){
+  if (window.__pbNextStepCardPolishV1) return;
+  window.__pbNextStepCardPolishV1 = true;
+
+  function cleanText(txt) {
+    return (txt || "").replace(/\s+/g, " ").trim();
+  }
+
+  function polishTextNode(node) {
+    if (!node || node.nodeType !== 3 || !node.nodeValue) return;
+
+    node.nodeValue = node.nodeValue
+      .replace(/🧠\s*Tournament Director Assistant/g, "Next Step")
+      .replace(/Tournament Director Assistant/g, "Next Step")
+      .replace(/Guides the tournament director to the next best action and flags anything that needs attention\./g, "Shows the next useful action.")
+      .replace(/Next recommended action:/g, "Next:")
+      .replace(/Why this action\?/g, "Why")
+      .replace(/Needs attention/g, "Also noticed")
+      .replace(/Enter Missing Scores/g, "Enter Scores")
+      .replace(/Open Fairness/g, "Fairness")
+      .replace(/Open Schedule/g, "Schedule");
+  }
+
+  function polishNextStepCard() {
+    if (!document.body) return;
+
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(polishTextNode);
+
+    var nextStepHeaders = [];
+
+    Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
+      var txt = cleanText(el.innerText || el.textContent);
+
+      if (txt === "Next Step") {
+        nextStepHeaders.push(el);
+      }
+
+      if (txt === "🚀 Do It For Me" || txt === "Do It For Me") {
+        el.style.display = "none";
+        el.setAttribute("data-pb-hidden-risky-action", "true");
+      }
+
+      if (txt === "📝 Enter Missing Scores" || txt === "Enter Missing Scores") {
+        el.textContent = "Enter Scores";
+      }
+
+      if (txt === "View Details") {
+        el.textContent = "Details";
+      }
+
+      if (txt === "Why") {
+        el.style.color = "var(--txt3)";
+        el.style.fontSize = ".85rem";
+      }
+
+      if (txt === "Also noticed") {
+        el.style.color = "var(--txt2)";
+        el.style.fontWeight = "700";
+      }
+    });
+
+    nextStepHeaders.forEach(function(el, idx) {
+      if (idx === 0) {
+        el.textContent = "Next Step";
+      } else {
+        el.style.display = "none";
+        el.setAttribute("data-pb-hidden-duplicate-next-step", "true");
+      }
+    });
+  }
+
+  window.pbPolishNextStepCard = polishNextStepCard;
+
+  document.addEventListener("DOMContentLoaded", polishNextStepCard);
+
+  var originalRenderSchedule = window.renderSchedule;
+  if (typeof originalRenderSchedule === "function" && !window.__pbRenderScheduleNextStepPolishWrappedV1) {
+    window.__pbRenderScheduleNextStepPolishWrappedV1 = true;
+    window.renderSchedule = function() {
+      var result = originalRenderSchedule.apply(this, arguments);
+      try { polishNextStepCard(); } catch (e) {}
+      setTimeout(polishNextStepCard, 50);
+      return result;
+    };
+  }
+
+  setTimeout(polishNextStepCard, 300);
+  setTimeout(polishNextStepCard, 1000);
+  setInterval(polishNextStepCard, 2000);
+})();
+
 </script>
 
 </body>
