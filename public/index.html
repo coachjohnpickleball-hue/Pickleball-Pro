@@ -17986,13 +17986,22 @@ function exportEndSessionSummary(){
       return;
     }
 
+    /* PB_SNAPSHOT_RESTORE_SELECT_CLEAN_V1 */
     list.innerHTML = snapshots.slice(0, 10).map(function(snapshot){
-      return '<div style="padding:.4rem 0;border-top:1px solid var(--border)">' +
-        '<strong>Round ' + snapshot.roundNumber + '</strong> · ' +
+      var safeId = String(snapshot.id).replace(/"/g, "&quot;");
+      return '<div style="padding:.4rem 0;border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap">' +
+        '<span><strong>Round ' + snapshot.roundNumber + '</strong> · ' +
         snapshot.scoreCount + '/' + snapshot.matchCount + ' scored · ' +
-        new Date(snapshot.createdAt).toLocaleString() +
+        new Date(snapshot.createdAt).toLocaleString() + '</span>' +
+        '<button type="button" class="btn btn-danger btn-sm pb-restore-snapshot-btn" data-snapshot-id="' + safeId + '">Restore This Round</button>' +
         '</div>';
     }).join("");
+
+    list.querySelectorAll(".pb-restore-snapshot-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        restoreSnapshotById(btn.getAttribute("data-snapshot-id"));
+      });
+    });
   }
 
   function ensurePanel() {
@@ -18014,7 +18023,7 @@ function exportEndSessionSummary(){
 
     div.innerHTML =
       '<div class="card-title">Round Snapshots</div>' +
-      '<p style="color:var(--txt2)">Save scored/completed rounds before regeneration.</p>' +
+      '<p style="color:var(--txt2)">Backup scored/completed rounds before regeneration. Restore any saved round from the list below.</p>' +
       '<button type="button" class="btn btn-secondary btn-sm" id="pb-snapshot-save-btn">Snapshot Completed Rounds</button>' +
       '<div id="pb-snapshot-save-list" style="margin-top:.75rem"></div>';
 
