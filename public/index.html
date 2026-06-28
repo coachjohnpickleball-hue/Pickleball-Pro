@@ -1858,6 +1858,22 @@ body.pb-non-admin a[href^="/admin/"]{
     <!-- DUPR Session config -->
     <div id="dupr-config" style="display:none; background:rgba(66,165,245,0.07); border:1px solid rgba(66,165,245,0.3); border-radius:10px; padding:1rem; margin-bottom:0.75rem;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--blue);margin-bottom:0.75rem;">🏆 DUPR Session Settings</div>
+      <!-- PB_DUPR_SESSION_FORMAT_OPTIONS_V1 -->
+      <div class="form-row" style="margin-bottom:0.75rem">
+        <div class="form-group" style="min-width:230px">
+          <label>DUPR Session Format</label>
+          <select id="dupr-session-format" onchange="pbDuprSessionFormatChanged()" style="width:100%">
+            <option value="open">Open / All players</option>
+            <option value="separate">Separate Men &amp; Women</option>
+            <option value="male">Men only</option>
+            <option value="female">Women only</option>
+            <option value="mixed">Standard Mixed</option>
+          </select>
+          <div class="muted" id="dupr-session-format-note" style="font-size:0.78rem;margin-top:0.35rem">
+            Open uses all checked-in active players.
+          </div>
+        </div>
+      </div>
       <div class="form-row" style="margin-bottom:0.75rem">
         <div class="form-group">
           <label>Match within range <span style="color:var(--txt3);font-weight:400;font-size:0.72rem">(tolerance)</span></label>
@@ -20353,6 +20369,729 @@ function exportEndSessionSummary(){
 
 
 /* PB_COMMS_BUTTON_STYLE_MATCH_V1 */
+
+
+
+/* PB_DUPR_SESSION_FORMAT_OPTIONS_V1_REMOVED */
+
+
+
+
+
+/* PB_DUPR_SESSION_SEPARATE_MEN_WOMEN_V1_REMOVED */
+
+
+
+
+
+/* PB_DUPR_SEPARATE_MW_DIRECT_GENERATOR_V2_REMOVED */
+
+
+
+
+/* PB_DUPR_SEPARATE_MW_CLEAN_DIRECT_V3 */
+(function(){
+  function pbNormGenderV3(g){
+    g = String(g || "").trim().toLowerCase();
+    if (["male", "m", "man", "men", "boy"].includes(g)) return "male";
+    if (["female", "f", "woman", "women", "girl", "lady"].includes(g)) return "female";
+    return "";
+  }
+
+  function pbActiveIdxByGenderV3(gender){
+    var want = pbNormGenderV3(gender);
+    return (state.players || []).map(function(p, idx){ return {p:p, idx:idx}; })
+      .filter(function(x){
+        return x.p &&
+          x.p.active !== false &&
+          x.p.waitlist !== true &&
+          x.p.checkedIn !== false &&
+          pbNormGenderV3(x.p.gender) === want;
+      })
+      .map(function(x){ return x.idx; });
+  }
+
+  function pbPlayerNameV3(idx){
+    return state.players[idx] && state.players[idx].name ? state.players[idx].name : ("Player " + (idx + 1));
+  }
+
+  function pbRatingV3(idx){
+    var p = state.players[idx] || {};
+    var v = parseFloat(p.clubRating || p.dupr || p.rating || 0);
+    if (typeof pRating === "function") {
+      try { v = pRating(p); } catch(e) {}
+    }
+    return isNaN(v) ? 0 : v;
+  }
+
+  function pbCourtsV3(){
+    var courts = [];
+    try {
+      courts = Array.from(state.selectedCourts || []).sort(function(a,b){ return Number(a)-Number(b); });
+    } catch(e) {}
+
+    if (!courts.length) {
+      var n = parseInt(document.getElementById("courts-count")?.value || "0", 10);
+      for (var i=1; i<=n; i++) courts.push(i);
+    }
+    return courts;
+  }
+
+  function pbRoundsV3(){
+    var ids = ["rounds-count", "round-count", "num-rounds", "rounds"];
+    for (var i=0; i<ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      var n = parseInt(el?.value || el?.textContent || "0", 10);
+      if (n > 0) return Math.min(20, Math.max(1, n));
+    }
+    return 4;
+  }
+
+  function pbRotateV3(arr, shift){
+    if (!arr.length) return arr.slice();
+    shift = shift % arr.length;
+    return arr.slice(shift).concat(arr.slice(0, shift));
+  }
+
+  function pbPairsV3(indexes, roundNo){
+    var list = indexes.slice().sort(function(a,b){
+      return pbRatingV3(b) - pbRatingV3(a) || pbPlayerNameV3(a).localeCompare(pbPlayerNameV3(b));
+    });
+
+    list = pbRotateV3(list, roundNo - 1);
+
+    var pairs = [];
+    while (list.length >= 2) {
+      pairs.push([list.shift(), list.pop()]);
+    }
+    return pairs;
+  }
+
+  function pbBuildDivisionV3(indexes, courts, label, roundNo, nextId){
+    var courtCount = Math.min(courts.length, Math.floor(indexes.length / 4));
+    var playingCount = courtCount * 4;
+
+    var rotated = pbRotateV3(indexes.slice(), (roundNo - 1) * 2);
+    var playing = rotated.slice(0, playingCount);
+    var byes = rotated.slice(playingCount);
+
+    var pairs = pbPairsV3(playing, roundNo);
+    var matches = [];
+
+    for (var c=0; c<courtCount; c++) {
+      if (pairs.length < 2) break;
+
+      var a = pairs.shift();
+      var b = pairs.shift();
+
+      matches.push({
+        id: nextId++,
+        round: roundNo,
+        court: courts[c],
+        teamA: a,
+        teamB: b,
+        scoreA: "",
+        scoreB: "",
+        complete: false,
+        scheduleMode: "dupr",
+        duprDivision: label,
+        podLabel: label
+      });
+    }
+
+    return { matches: matches, byes: byes, nextId: nextId };
+  }
+
+  function pbSplitCourtsV3(menCount, womenCount, courts){
+    var menMax = Math.floor(menCount / 4);
+    var womenMax = Math.floor(womenCount / 4);
+
+    if (menMax < 1 || womenMax < 1 || courts.length < 2) return null;
+
+    var best = null;
+
+    for (var m=1; m<=Math.min(menMax, courts.length-1); m++) {
+      var w = Math.min(womenMax, courts.length - m);
+      if (w < 1) continue;
+
+      var used = m + w;
+      if (!best || used > best.used) {
+        best = { menCount:m, womenCount:w, used:used };
+      }
+    }
+
+    if (!best) return null;
+
+    return {
+      men: courts.slice(0, best.menCount),
+      women: courts.slice(best.menCount, best.menCount + best.womenCount)
+    };
+  }
+
+  function pbRebuildTeamsV3(){
+    state.roundTeams = (state.schedule || []).map(function(round){
+      var teams = [];
+      (round || []).forEach(function(m){
+        if (!m || !Array.isArray(m.teamA) || !Array.isArray(m.teamB)) return;
+        teams.push([state.players[m.teamA[0]], state.players[m.teamA[1]]]);
+        teams.push([state.players[m.teamB[0]], state.players[m.teamB[1]]]);
+      });
+      return teams;
+    });
+
+    state.teams = [];
+    state.roundTeams.forEach(function(rt){
+      rt.forEach(function(t){ state.teams.push(t); });
+    });
+  }
+
+  function pbPatchScheduleNumberLabelsV3(){
+    // If a renderer displays raw indexes somewhere, convert common team labels after render.
+    try {
+      document.querySelectorAll("td, .team, .team-name, .match-team, .court-team").forEach(function(el){
+        var txt = (el.textContent || "").trim();
+        if (/^\d+\s*[+/&]\s*\d+$/.test(txt)) {
+          var nums = txt.split(/[+/&]/).map(function(x){ return parseInt(x.trim(),10); });
+          if (nums.length === 2) {
+            var a = state.players[nums[0]] ? nums[0] : nums[0] - 1;
+            var b = state.players[nums[1]] ? nums[1] : nums[1] - 1;
+            if (state.players[a] && state.players[b]) {
+              el.textContent = pbPlayerNameV3(a) + " / " + pbPlayerNameV3(b);
+            }
+          }
+        }
+      });
+    } catch(e) {}
+  }
+
+  function pbRenderAllV3(){
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { pbPatchScheduleNumberLabelsV3(); } catch(e) {}
+    try { if (typeof renderTeams === "function") renderTeams(); } catch(e) {}
+    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof smsPopRounds === "function") smsPopRounds(); } catch(e) {}
+    try { if (typeof autoSave === "function") autoSave(); } catch(e) {}
+  }
+
+  window.pbGenerateSeparateMenWomenDUPRNow = function(){
+    if (!window.state || !Array.isArray(state.players)) {
+      alert("No tournament state found.");
+      return false;
+    }
+
+    var men = pbActiveIdxByGenderV3("male");
+    var women = pbActiveIdxByGenderV3("female");
+    var courts = pbCourtsV3();
+
+    if (men.length < 4 || women.length < 4) {
+      alert(
+        "Separate Men/Women DUPR needs at least 4 checked-in men and 4 checked-in women.\n\n" +
+        "Current detected:\n" +
+        men.length + " men\n" +
+        women.length + " women\n\n" +
+        "Check the Players table gender column. It must be Male or Female."
+      );
+      return false;
+    }
+
+    var split = pbSplitCourtsV3(men.length, women.length, courts);
+    if (!split) {
+      alert("Need at least 2 selected courts and enough same-gender groups of 4.");
+      return false;
+    }
+
+    var rounds = pbRoundsV3();
+    var nextId = 1;
+    var schedule = [];
+    var byes = [];
+
+    for (var r=1; r<=rounds; r++) {
+      var menData = pbBuildDivisionV3(men, split.men, "Men", r, nextId);
+      nextId = menData.nextId;
+
+      var womenData = pbBuildDivisionV3(women, split.women, "Women", r, nextId);
+      nextId = womenData.nextId;
+
+      schedule.push(menData.matches.concat(womenData.matches));
+      byes.push(menData.byes.concat(womenData.byes));
+    }
+
+    state.schedule = schedule;
+    state.byeRounds = byes;
+    state.startedRounds = new Set();
+    state.notifiedRounds = new Set();
+
+    pbRebuildTeamsV3();
+    pbRenderAllV3();
+
+    var used = split.men.length + split.women.length;
+    var sitting = men.length + women.length - used * 4;
+
+    if (typeof toast === "function") {
+      toast("Separate Men/Women DUPR created: " + split.men.length + " men court(s), " + split.women.length + " women court(s). " + sitting + " sitting each round.");
+    } else {
+      alert("Separate Men/Women DUPR created.");
+    }
+
+    return true;
+  };
+
+  window.pbSeparateMWDebugV3 = function(){
+    var men = pbActiveIdxByGenderV3("male");
+    var women = pbActiveIdxByGenderV3("female");
+    var courts = pbCourtsV3();
+    return {
+      detectedMen: men.map(function(i){ return pbPlayerNameV3(i); }),
+      detectedWomen: women.map(function(i){ return pbPlayerNameV3(i); }),
+      menCount: men.length,
+      womenCount: women.length,
+      selectedCourts: courts,
+      split: pbSplitCourtsV3(men.length, women.length, courts),
+      note: "Strict separate divisions require full groups of 4. 12 players total can use at most 3 courts; 6 men + 6 women can use only 2 courts."
+    };
+  };
+
+  function pbInstallDirectButtonV3(){
+    var mode = document.getElementById("team-mode");
+    if (!mode) return;
+
+    if (document.getElementById("pb-generate-separate-mw-dupr-btn")) return;
+
+    var btn = document.createElement("button");
+    btn.id = "pb-generate-separate-mw-dupr-btn";
+    btn.className = "btn btn-primary";
+    btn.type = "button";
+    btn.textContent = "Generate Separate Men/Women DUPR";
+    btn.onclick = function(ev){
+      ev.preventDefault();
+      pbGenerateSeparateMenWomenDUPRNow();
+    };
+
+    var note = document.createElement("div");
+    note.className = "muted";
+    note.style.fontSize = ".78rem";
+    note.style.marginTop = ".35rem";
+    note.textContent = "Uses men-only courts and women-only courts. Requires groups of 4 per division.";
+
+    var wrap = document.createElement("div");
+    wrap.className = "form-group";
+    wrap.style.minWidth = "260px";
+    wrap.appendChild(document.createElement("label")).textContent = "Separate DUPR";
+    wrap.appendChild(btn);
+    wrap.appendChild(note);
+
+    var modeGroup = mode.closest(".form-group") || mode.parentElement;
+    if (modeGroup && modeGroup.parentElement) {
+      modeGroup.parentElement.insertBefore(wrap, modeGroup.nextSibling);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(pbInstallDirectButtonV3, 100);
+    setTimeout(pbInstallDirectButtonV3, 700);
+  });
+
+  setTimeout(pbInstallDirectButtonV3, 500);
+})();
+
+
+
+/* PB_DUPR_OVERFLOW_SWITCH_V5 */
+(function(){
+  function normGender(g){
+    g = String(g || "").trim().toLowerCase();
+    if (["male", "m", "man", "men", "boy"].includes(g)) return "male";
+    if (["female", "f", "woman", "women", "girl", "lady"].includes(g)) return "female";
+    return "";
+  }
+
+  function allowOverflow(){
+    var el = document.getElementById("pb-dupr-overflow-toggle");
+    if (!el) return true;
+    return !!el.checked;
+  }
+
+  function saveOverflowSetting(){
+    try {
+      localStorage.setItem("pbDuprAllowOverflowV5", allowOverflow() ? "1" : "0");
+    } catch(e) {}
+    updateOverflowText();
+  }
+
+  function activeIndexes(){
+    return (state.players || []).map(function(p, idx){ return { p:p, idx:idx }; })
+      .filter(function(x){
+        return x.p &&
+          x.p.active !== false &&
+          x.p.waitlist !== true &&
+          x.p.checkedIn !== false;
+      });
+  }
+
+  function byGender(gender){
+    var want = normGender(gender);
+    return activeIndexes()
+      .filter(function(x){ return normGender(x.p.gender) === want; })
+      .map(function(x){ return x.idx; });
+  }
+
+  function playerName(idx){
+    return state.players[idx] && state.players[idx].name ? state.players[idx].name : ("Player " + (idx + 1));
+  }
+
+  function rating(idx){
+    var p = state.players[idx] || {};
+    try {
+      if (typeof pRating === "function") return pRating(p);
+    } catch(e) {}
+    var v = parseFloat(p.clubRating || p.dupr || p.rating || 0);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function courts(){
+    var c = [];
+    try {
+      c = Array.from(state.selectedCourts || []).sort(function(a,b){ return Number(a) - Number(b); });
+    } catch(e) {}
+
+    if (!c.length) {
+      var n = parseInt(document.getElementById("courts-count")?.value || "0", 10);
+      for (var i = 1; i <= n; i++) c.push(i);
+    }
+
+    return c;
+  }
+
+  function rounds(){
+    var ids = ["rounds-count", "round-count", "num-rounds", "rounds"];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      var n = parseInt(el?.value || el?.textContent || "0", 10);
+      if (n > 0) return Math.max(1, Math.min(20, n));
+    }
+    return 4;
+  }
+
+  function rotate(arr, shift){
+    var a = arr.slice();
+    if (!a.length) return a;
+    shift = shift % a.length;
+    return a.slice(shift).concat(a.slice(0, shift));
+  }
+
+  function makePairs(indexes, roundNo){
+    var list = indexes.slice().sort(function(a,b){
+      return rating(b) - rating(a) || playerName(a).localeCompare(playerName(b));
+    });
+
+    list = rotate(list, roundNo - 1);
+
+    var pairs = [];
+    while (list.length >= 2) {
+      pairs.push([list.shift(), list.pop()]);
+    }
+    return pairs;
+  }
+
+  function makeMatchesFromPlayers(indexes, courtList, label, roundNo, nextId){
+    var maxCourts = Math.min(courtList.length, Math.floor(indexes.length / 4));
+    var playingCount = maxCourts * 4;
+
+    var rotated = rotate(indexes, (roundNo - 1) * 2);
+    var playing = rotated.slice(0, playingCount);
+    var leftover = rotated.slice(playingCount);
+
+    var pairs = makePairs(playing, roundNo);
+    var matches = [];
+
+    for (var c = 0; c < maxCourts; c++) {
+      if (pairs.length < 2) break;
+
+      var a = pairs.shift();
+      var b = pairs.shift();
+
+      matches.push({
+        id: nextId++,
+        round: roundNo,
+        court: courtList[c],
+        teamA: a,
+        teamB: b,
+        scoreA: "",
+        scoreB: "",
+        complete: false,
+        scheduleMode: "dupr",
+        duprDivision: label,
+        podLabel: label
+      });
+    }
+
+    return {
+      matches: matches,
+      leftover: leftover,
+      nextId: nextId
+    };
+  }
+
+  function splitCourts(menCount, womenCount, courtList, useOverflow){
+    var totalCourts = courtList.length;
+    var menFull = Math.floor(menCount / 4);
+    var womenFull = Math.floor(womenCount / 4);
+
+    if (menFull < 1 || womenFull < 1 || totalCourts < 2) return null;
+
+    var best = null;
+
+    for (var m = 1; m <= Math.min(menFull, totalCourts - 1); m++) {
+      for (var w = 1; w <= Math.min(womenFull, totalCourts - m); w++) {
+        var baseUsed = m + w;
+        var overflowPlayers = menCount + womenCount - (baseUsed * 4);
+        var overflowCourts = useOverflow ? Math.min(totalCourts - baseUsed, Math.floor(overflowPlayers / 4)) : 0;
+        var totalUsed = baseUsed + overflowCourts;
+        var sitting = menCount + womenCount - (totalUsed * 4);
+
+        var score = totalUsed * 1000 - sitting * 10;
+
+        // Keep divisions reasonably balanced when scores are otherwise close.
+        score -= Math.abs(m - w);
+
+        if (!best || score > best.score) {
+          best = {
+            menCourts: m,
+            womenCourts: w,
+            overflowCourts: overflowCourts,
+            totalUsed: totalUsed,
+            sitting: sitting,
+            score: score
+          };
+        }
+      }
+    }
+
+    return best;
+  }
+
+  function rebuildRoundTeams(){
+    state.roundTeams = (state.schedule || []).map(function(round){
+      var teams = [];
+      (round || []).forEach(function(m){
+        if (!m || !Array.isArray(m.teamA) || !Array.isArray(m.teamB)) return;
+        teams.push([state.players[m.teamA[0]], state.players[m.teamA[1]]]);
+        teams.push([state.players[m.teamB[0]], state.players[m.teamB[1]]]);
+      });
+      return teams;
+    });
+
+    state.teams = [];
+    state.roundTeams.forEach(function(rt){
+      rt.forEach(function(t){ state.teams.push(t); });
+    });
+  }
+
+  function renderAll(){
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof renderTeams === "function") renderTeams(); } catch(e) {}
+    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof smsPopRounds === "function") smsPopRounds(); } catch(e) {}
+    try { if (typeof autoSave === "function") autoSave(); } catch(e) {}
+  }
+
+  window.pbGenerateSeparateMenWomenDUPRNow = function(){
+    if (!window.state || !Array.isArray(state.players)) {
+      alert("No tournament state found.");
+      return false;
+    }
+
+    var men = byGender("male");
+    var women = byGender("female");
+    var courtList = courts();
+    var useOverflow = allowOverflow();
+
+    if (men.length < 4 || women.length < 4) {
+      alert(
+        "Separate Men/Women DUPR needs at least 4 checked-in men and 4 checked-in women.\n\n" +
+        "Detected:\n" +
+        men.length + " men\n" +
+        women.length + " women"
+      );
+      return false;
+    }
+
+    var split = splitCourts(men.length, women.length, courtList, useOverflow);
+
+    if (!split || split.totalUsed < 1) {
+      alert("Could not create Separate Men/Women DUPR. Check selected courts and checked-in players.");
+      return false;
+    }
+
+    var rCount = rounds();
+    var schedule = [];
+    var byeRounds = [];
+    var nextId = 1;
+
+    for (var r = 1; r <= rCount; r++) {
+      var roundMatches = [];
+      var byes = [];
+
+      var courtCursor = 0;
+
+      var menCourts = courtList.slice(courtCursor, courtCursor + split.menCourts);
+      courtCursor += split.menCourts;
+
+      var womenCourts = courtList.slice(courtCursor, courtCursor + split.womenCourts);
+      courtCursor += split.womenCourts;
+
+      var overflowCourts = courtList.slice(courtCursor, courtCursor + split.overflowCourts);
+
+      var menData = makeMatchesFromPlayers(men, menCourts, "Men", r, nextId);
+      nextId = menData.nextId;
+
+      var womenData = makeMatchesFromPlayers(women, womenCourts, "Women", r, nextId);
+      nextId = womenData.nextId;
+
+      if (useOverflow && split.overflowCourts > 0) {
+        var overflowPool = menData.leftover.concat(womenData.leftover);
+        overflowPool = rotate(overflowPool, r - 1);
+
+        var overflowData = makeMatchesFromPlayers(overflowPool, overflowCourts, "Overflow", r, nextId);
+        nextId = overflowData.nextId;
+
+        roundMatches = menData.matches.concat(womenData.matches, overflowData.matches);
+        byes = overflowData.leftover;
+      } else {
+        roundMatches = menData.matches.concat(womenData.matches);
+        byes = menData.leftover.concat(womenData.leftover);
+      }
+
+      schedule.push(roundMatches);
+      byeRounds.push(byes);
+    }
+
+    state.schedule = schedule;
+    state.byeRounds = byeRounds;
+    state.startedRounds = new Set();
+    state.notifiedRounds = new Set();
+
+    rebuildRoundTeams();
+    renderAll();
+    saveOverflowSetting();
+
+    var activeTotal = men.length + women.length;
+    var usedPerRound = split.totalUsed * 4;
+    var sitting = Math.max(0, activeTotal - usedPerRound);
+
+    var msg = (useOverflow ? "Overflow ON: " : "Overflow OFF: ") +
+      "Separate DUPR created — " +
+      split.menCourts + " men court(s), " +
+      split.womenCourts + " women court(s), " +
+      split.overflowCourts + " overflow court(s). " +
+      sitting + " sitting each round.";
+
+    if (typeof toast === "function") toast(msg);
+    else alert(msg);
+
+    return true;
+  };
+
+  window.pbSeparateMWDebugV5 = function(){
+    var men = byGender("male");
+    var women = byGender("female");
+    var courtList = courts();
+    var useOverflow = allowOverflow();
+
+    return {
+      allowOverflow: useOverflow,
+      menCount: men.length,
+      womenCount: women.length,
+      selectedCourts: courtList,
+      split: splitCourts(men.length, women.length, courtList, useOverflow),
+      totalPlayers: men.length + women.length,
+      maxPossibleCourtsByPlayerCount: Math.floor((men.length + women.length) / 4),
+      explanation: useOverflow
+        ? "Overflow ON fills an extra DUPR court with leftover players when possible."
+        : "Overflow OFF keeps strict men-only and women-only courts, so leftover players may sit."
+    };
+  };
+
+  function updateOverflowText(){
+    var note = document.getElementById("pb-dupr-overflow-note");
+    if (!note) return;
+
+    note.textContent = allowOverflow()
+      ? "ON: leftover players can form an overflow DUPR court so fewer people sit."
+      : "OFF: only men-only and women-only courts are created; leftovers sit.";
+  }
+
+  function installSwitch(){
+    var btn = document.getElementById("pb-generate-separate-mw-dupr-btn");
+    var mode = document.getElementById("team-mode");
+    if (!btn && !mode) return;
+
+    if (!btn && mode) {
+      var modeGroup = mode.closest(".form-group") || mode.parentElement;
+      var wrap = document.createElement("div");
+      wrap.className = "form-group";
+      wrap.style.minWidth = "280px";
+      wrap.innerHTML = ''
+        + '<label>Separate DUPR</label>'
+        + '<button id="pb-generate-separate-mw-dupr-btn" class="btn btn-primary" type="button">Generate Separate DUPR</button>';
+      if (modeGroup && modeGroup.parentElement) modeGroup.parentElement.insertBefore(wrap, modeGroup.nextSibling);
+      btn = document.getElementById("pb-generate-separate-mw-dupr-btn");
+    }
+
+    if (btn) {
+      btn.textContent = "Generate Separate DUPR";
+      btn.onclick = function(ev){
+        ev.preventDefault();
+        pbGenerateSeparateMenWomenDUPRNow();
+      };
+    }
+
+    if (document.getElementById("pb-dupr-overflow-toggle")) {
+      updateOverflowText();
+      return;
+    }
+
+    var parent = btn ? (btn.closest(".form-group") || btn.parentElement) : null;
+    if (!parent) return;
+
+    var checked = true;
+    try {
+      var saved = localStorage.getItem("pbDuprAllowOverflowV5");
+      if (saved === "0") checked = false;
+    } catch(e) {}
+
+    var box = document.createElement("label");
+    box.style.cssText = "display:flex;align-items:center;gap:.45rem;margin-top:.55rem;font-size:.85rem;font-weight:700;cursor:pointer;";
+    box.innerHTML = ''
+      + '<input type="checkbox" id="pb-dupr-overflow-toggle" ' + (checked ? "checked" : "") + '>'
+      + '<span>Allow overflow court</span>';
+
+    var note = document.createElement("div");
+    note.id = "pb-dupr-overflow-note";
+    note.className = "muted";
+    note.style.cssText = "font-size:.78rem;margin-top:.25rem;max-width:320px;";
+
+    parent.appendChild(box);
+    parent.appendChild(note);
+
+    document.getElementById("pb-dupr-overflow-toggle").addEventListener("change", saveOverflowSetting);
+
+    updateOverflowText();
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(installSwitch, 100);
+    setTimeout(installSwitch, 700);
+  });
+
+  setTimeout(installSwitch, 500);
+  setTimeout(installSwitch, 1500);
+})();
+
 </script>
 
 </body>
