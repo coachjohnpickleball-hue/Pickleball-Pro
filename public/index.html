@@ -1290,15 +1290,20 @@ body.pb-non-admin a[href^="/admin/"]{
         <button class="tab-btn" onclick="showTab('season', event)">Season Rankings</button>
       </div>
     </div>
-    <div class="nav-group" data-tabs="communications mobilesync sms email">
-    <button class="nav-group-btn">📲 Communications ▾</button>
+    
+
+      <!-- PB_COMMS_BEFORE_MORE_DROPDOWN_V1 -->
+  <div class="nav-group" data-tabs="communications mobilesync sms email">
+    <button class="nav-group-btn">📲 Comms ▾</button>
     <div class="nav-menu">
+      <button class="tab-btn" onclick="showTab('communications', event)">Communications Hub</button>
       <button class="tab-btn" onclick="showTab('mobilesync', event)">Mobile Sync</button>
       <button class="tab-btn" onclick="showTab('sms', event)">SMS</button>
       <button class="tab-btn" onclick="showTab('email', event)">Email</button>
     </div>
   </div>
-    <div class="nav-group" data-tabs="display public checkin selfcheckin playerportaltools playerportal fairness history admin report playerstats mobilesync sms email">
+
+<div class="nav-group" data-tabs="display public checkin selfcheckin playerportaltools playerportal fairness history admin report playerstats">
       <button class="tab-btn" onclick="showTab('report', event)">⋯ More <span class="nav-caret">▾</span></button>
       <div class="nav-menu">
         <button class="tab-btn" onclick="showTab('display', event)">TV / Public Display</button>
@@ -1317,11 +1322,7 @@ body.pb-non-admin a[href^="/admin/"]{
       </div>
     </div>
   </nav>
-
-
-  
-
-  <!-- User / actions menu — right side -->
+<!-- User / actions menu — right side -->
   <div class="user-menu-wrap">
     <button class="user-menu-btn" aria-label="Account and actions">
       👤 Menu <span class="chevron">▾</span>
@@ -1396,7 +1397,19 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="quick-action premium-added" onclick="recordNextScore()"><span class="quick-action-icon">📝</span><div class="quick-action-title">Next Score</div><div class="quick-action-note">Jump to the next unfinished match</div></button>
       <button class="quick-action premium-added" onclick="showTab('checkin')"><span class="quick-action-icon">✅</span><div class="quick-action-title">Check-In</div><div class="quick-action-note">Active, arrived, absent players</div></button>
       <button class="quick-action premium-added" onclick="showTab('fairness')"><span class="quick-action-icon">⚖️</span><div class="quick-action-title">Fairness</div><div class="quick-action-note">Repeats, sit-outs, court balance</div></button>
-      <button class="quick-action premium-added" onclick="showTab('playerlookup')"><span class="quick-action-icon">🔍</span><div class="quick-action-title">Player Lookup</div><div class="quick-action-note">Find court, partner, rank, waits</div></button>
+      <button class="quick-action premium-added" onclick="showTab('playerlookup')"><span class="quick-action-icon">🔍</span><div class="quick-action-title">Player Lookup</div><div class="quick-action-note">Find court, partner, rank, waits</div>
+
+      <!-- PB_STATIC_COMMUNICATIONS_PANEL_V1 -->
+      <div class="card pb-static-communications-panel" style="display:block; margin-top:16px; border:2px solid rgba(59,130,246,.45);">
+        <div class="card-title">📲 Communications Hub</div>
+        <div class="muted" style="margin-bottom:12px;">Critical tools for Mobile Sync, SMS, and Email.</div>
+        <div class="row" style="gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="showTab('communications', event)">Open Hub</button>
+          <button class="btn btn-secondary btn-sm" onclick="showTab('mobilesync', event)">Mobile Sync</button>
+          <button class="btn btn-secondary btn-sm" onclick="showTab('sms', event)">SMS</button>
+          <button class="btn btn-secondary btn-sm" onclick="showTab('email', event)">Email</button>
+        </div>
+      </div></button>
       <button class="quick-action premium-added" onclick="showTab('sessionhealth')"><span class="quick-action-icon">🧠</span><div class="quick-action-title">Next Step</div><div class="quick-action-note">Next action and issues</div></button>
       <button class="quick-action premium-added" onclick="showTab('endsession')"><span class="quick-action-icon">🏁</span><div class="quick-action-title">End Session</div><div class="quick-action-note">Summary, archive, export</div></button>
       <button class="quick-action premium-added" onclick="showTab('history')"><span class="quick-action-icon">🏆</span><div class="quick-action-title">History</div><div class="quick-action-note">Save and review past events</div></button>
@@ -20169,6 +20182,12 @@ function exportEndSessionSummary(){
 /* PB_COMMUNICATIONS_MENU_DROPDOWN_FIX_V2 */
 
 /* PB_FORCE_COMMUNICATIONS_MENU_CLEAN_V1 */
+
+
+
+/* PB_CRITICAL_COMMUNICATIONS_VISIBLE_V1_REMOVED */
+
+
 </script>
 
 </body>
