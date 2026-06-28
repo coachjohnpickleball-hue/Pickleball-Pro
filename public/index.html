@@ -1291,9 +1291,14 @@ body.pb-non-admin a[href^="/admin/"]{
       </div>
     </div>
     <div class="nav-group" data-tabs="communications mobilesync sms email">
-      <button class="tab-btn" onclick="showTab('communications', event)">📲 Communications</button>
+    <button class="nav-group-btn">📲 Communications ▾</button>
+    <div class="nav-menu">
+      <button class="tab-btn" onclick="showTab('mobilesync', event)">Mobile Sync</button>
+      <button class="tab-btn" onclick="showTab('sms', event)">SMS</button>
+      <button class="tab-btn" onclick="showTab('email', event)">Email</button>
     </div>
-    <div class="nav-group" data-tabs="display public checkin selfcheckin playerportaltools playerportal fairness history admin report playerstats">
+  </div>
+    <div class="nav-group" data-tabs="display public checkin selfcheckin playerportaltools playerportal fairness history admin report playerstats mobilesync sms email">
       <button class="tab-btn" onclick="showTab('report', event)">⋯ More <span class="nav-caret">▾</span></button>
       <div class="nav-menu">
         <button class="tab-btn" onclick="showTab('display', event)">TV / Public Display</button>
@@ -1312,6 +1317,9 @@ body.pb-non-admin a[href^="/admin/"]{
       </div>
     </div>
   </nav>
+
+
+  
 
   <!-- User / actions menu — right side -->
   <div class="user-menu-wrap">
@@ -20149,6 +20157,18 @@ function exportEndSessionSummary(){
   }
 })();
 
+
+/* PB_MORE_COMMUNICATION_LINKS_V1 */
+
+/* PB_MORE_COMMUNICATION_LINKS_V2 */
+
+/* PB_MENU_COMMUNICATION_LINKS_STABLE_V1 */
+
+/* PB_TOP_COMMS_MENU_V1 */
+
+/* PB_COMMUNICATIONS_MENU_DROPDOWN_FIX_V2 */
+
+/* PB_FORCE_COMMUNICATIONS_MENU_CLEAN_V1 */
 </script>
 
 </body>
