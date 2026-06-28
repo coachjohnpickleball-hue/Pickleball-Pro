@@ -1149,6 +1149,12 @@ html body #global-round-timer.pb-global-timer-hidden {
   cursor: pointer !important;
 }
 
+
+/* PB_HIDE_DUPLICATE_DASHBOARD_SCHEDULE_V1 */
+.quick-action.pb-hide-duplicate-dashboard-schedule {
+  display: none !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -20023,6 +20029,61 @@ function exportEndSessionSummary(){
       return result;
     };
     window.renderSessionHealthDashboard.__pbNextStepCopyWrapped = true;
+  }
+})();
+
+
+
+/* PB_HIDE_DUPLICATE_DASHBOARD_SCHEDULE_V1 */
+(function(){
+  if (window.__pbHideDuplicateDashboardScheduleV1) return;
+  window.__pbHideDuplicateDashboardScheduleV1 = true;
+
+  function hideDuplicateDashboardSchedule() {
+    document.querySelectorAll(".quick-action").forEach(function(btn){
+      var titleEl = btn.querySelector(".quick-action-title");
+      var title = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+      var onclick = btn.getAttribute("onclick") || "";
+
+      var isScheduleTile =
+        onclick.indexOf("showTab('schedule") >= 0 ||
+        onclick.indexOf('showTab("schedule') >= 0 ||
+        title === "schedule" ||
+        title === "schedule builder" ||
+        title === "games" ||
+        title === "schedule / games" ||
+        title === "schedule/games" ||
+        title === "build schedule";
+
+      if (isScheduleTile) {
+        btn.classList.add("pb-hide-duplicate-dashboard-schedule");
+        btn.setAttribute("data-pb-duplicate-dashboard-schedule", "1");
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", hideDuplicateDashboardSchedule);
+  setTimeout(hideDuplicateDashboardSchedule, 250);
+  setTimeout(hideDuplicateDashboardSchedule, 1000);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbHideDuplicateScheduleWrapped) {
+    window.showTab = function() {
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(hideDuplicateDashboardSchedule, 50);
+      return result;
+    };
+    window.showTab.__pbHideDuplicateScheduleWrapped = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbHideDuplicateScheduleWrapped) {
+    window.renderDashboard = function() {
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(hideDuplicateDashboardSchedule, 50);
+      return result;
+    };
+    window.renderDashboard.__pbHideDuplicateScheduleWrapped = true;
   }
 })();
 
