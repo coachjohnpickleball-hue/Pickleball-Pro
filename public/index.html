@@ -6341,7 +6341,7 @@ function generateBestOfN() {
 // ── Mixed Mode Compliance Warning ─────────────────────────────────────
 // Mixed mode is intentionally best-effort: it should warn when 100% mixed
 // pairings are not possible, but it should NOT put players on standby just
-// to satisfy the mixed rule perfectly.
+// to satisfy the mixed best-effort perfectly.
 function isMixedModeValue(mode) {
   return mode === 'mixed' || mode === 'mixed-rated' || mode === 'competitive-mixed';
 }
@@ -6397,7 +6397,7 @@ function renderMixedModeWarning() {
   }).join('');
   box.innerHTML = `
     <div style="font-weight:800;color:var(--ball);margin-bottom:4px">⚠️ Mixed Mode Warning</div>
-    <div><strong>${report.ok} of ${report.matches.length}</strong> matches satisfy mixed rules (${report.pct}%).</div>
+    <div><strong>${report.ok} of ${report.matches.length}</strong> matches satisfy mixed best-efforts (${report.pct}%).</div>
     <div style="color:var(--txt2);margin-top:3px">No players were put on standby just to force 100% mixed compliance. The app used the best available schedule and flagged the affected courts.</div>
     ${report.reason ? `<div style="color:var(--txt3);margin-top:3px">Reason: ${escHtml(report.reason)}</div>` : ''}
     ${affected ? `<details style="margin-top:7px"><summary style="cursor:pointer;color:var(--lime);font-weight:700">Review affected courts</summary>${affected}${report.failed.length>8?`<div style="margin-top:3px;color:var(--txt3)">+${report.failed.length-8} more affected match${report.failed.length-8===1?'':'es'}</div>`:''}</details>` : ''}
@@ -8378,7 +8378,7 @@ function renderSchedule() {
             const mixedModeActive = isMixedModeValue(document.getElementById('team-mode')?.value || '');
             const mixedCompliance = mixedModeActive ? matchMixedCompliance(m) : { ok: true, reason: '' };
             const mixedStatus = mixedModeActive && !mixedCompliance.ok
-              ? `<div style="margin-top:3px;background:rgba(249,168,37,0.16);color:var(--ball);border:1px solid rgba(249,168,37,0.4);border-radius:4px;padding:2px 6px;font-size:0.66rem;font-weight:800;white-space:nowrap" title="${escHtml(mixedCompliance.reason)}">⚠️ Mixed rule</div>`
+              ? `<div style="margin-top:3px;background:rgba(249,168,37,0.16);color:var(--ball);border:1px solid rgba(249,168,37,0.4);border-radius:4px;padding:2px 6px;font-size:0.66rem;font-weight:800;white-space:nowrap" title="${escHtml(mixedCompliance.reason)}">⚠️ Mixed best-effort</div>`
               : '';
             return `<tr id="match-${m.id}" style="${hasRepeats || (mixedModeActive && !mixedCompliance.ok)?'background:rgba(249,168,37,0.035)':''}">
               <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--txt3)">#${m.id+1}</td>
@@ -17497,7 +17497,7 @@ function exportEndSessionSummary(){
     var score = a && a.score != null ? a.score : null;
     var label = score == null ? ['⚪','Not analyzed'] : sbFairnessLabel(score);
     var mixed = sbMixed();
-    var mixedLine = mixed && mixed.total ? (mixed.pct === 100 ? '✅ Mixed compliance: 100%' : '⚠️ Mixed compliance: '+mixed.pct+'% · best available schedule') : 'Mixed rules: not applicable';
+    var mixedLine = mixed && mixed.total ? (mixed.pct === 100 ? '✅ Mixed compliance: 100%' : '⚠️ Mixed compliance: '+mixed.pct+'% · best available schedule') : 'Mixed best-efforts: not applicable';
     var bye = (state.byeRounds && state.byeRounds[idx]) ? state.byeRounds[idx] : [];
     var rows = round.slice(0,8).map(function(m){
       return '<tr><td style="padding:.45rem .55rem">'+sbEsc(m.court || '')+'</td><td style="padding:.45rem .55rem;font-weight:800">'+sbEsc(sbTeamName(m.teamA))+'</td><td style="padding:.45rem .55rem;font-weight:800">'+sbEsc(sbTeamName(m.teamB))+'</td></tr>';
@@ -19386,6 +19386,8 @@ function exportEndSessionSummary(){
 
 
 /* PB_SCHEDULE_CONTROLS_CLEANUP_V1 */
+
+/* PB_MIXED_WARNING_COPY_CLEANUP_V1 */
 </script>
 
 </body>
