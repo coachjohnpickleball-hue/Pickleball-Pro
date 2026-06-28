@@ -17382,7 +17382,7 @@ function ppHealthHtml(compact){
       </div>
     </div>
     <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-primary" onclick="ppDoItForMe()">🚀 Do It For Me</button><span style="align-self:center;color:var(--txt3);font-size:.82rem">${escHtml(actionLabel)}</span>
+      <button class="btn btn-primary" onclick="ppDoItForMe()">🚀 Apply Suggested Step</button><span style="align-self:center;color:var(--txt3);font-size:.82rem">${escHtml(actionLabel)}</span>
       <button class="btn btn-secondary btn-sm" onclick="showTab('sessionhealth')">View Details</button>
       <button class="btn btn-secondary btn-sm" onclick="showTab('fairness')">Open Fairness</button>
       <button class="btn btn-secondary btn-sm" onclick="showTab('schedule')">Open Schedule</button>
@@ -18931,7 +18931,7 @@ function exportEndSessionSummary(){
         nextStepHeaders.push(el);
       }
 
-      if (txt === "🚀 Do It For Me" || txt === "Do It For Me") {
+      if (txt === "🚀 Apply Suggested Step" || txt === "Apply Suggested Step") {
         el.style.display = "none";
         el.setAttribute("data-pb-hidden-risky-action", "true");
       }
@@ -19133,7 +19133,7 @@ function exportEndSessionSummary(){
         el.textContent = "Shows the next useful action.";
       }
 
-      if (txt === "🚀 Do It For Me" || txt === "Do It For Me") {
+      if (txt === "🚀 Apply Suggested Step" || txt === "Apply Suggested Step") {
         el.style.display = "none";
         el.setAttribute("data-pb-hidden-risky-action", "true");
       }
@@ -19950,6 +19950,80 @@ function exportEndSessionSummary(){
   setTimeout(initTimerDragging, 1000);
   setInterval(initTimerDragging, 2000);
   window.addEventListener('resize', syncTimerDragPosition);
+})();
+
+
+
+/* PB_NEXT_STEP_COPY_CLEANUP_V1 */
+(function(){
+  if (window.__pbNextStepCopyCleanupV1) return;
+  window.__pbNextStepCopyCleanupV1 = true;
+
+  function cleanTextNode(el) {
+    if (!el || !el.textContent) return;
+
+    var txt = el.textContent.trim();
+
+    if (txt === "Tournament Director Assistant" || txt === "Director Assistant" || txt === "🧠 Tournament Director Assistant" || txt === "🧠 Director Assistant") {
+      el.textContent = txt.indexOf("🧠") >= 0 ? "🧠 Next Step" : "Next Step";
+      return;
+    }
+
+    if (txt === "Do It For Me" || txt === "Do it for me" || txt === "🧠 Do It For Me" || txt === "✨ Do It For Me") {
+      el.textContent = txt.indexOf("🧠") >= 0 ? "🧠 Apply Suggested Step" : "Apply Suggested Step";
+    }
+  }
+
+  function cleanNextStepCopy() {
+    document.querySelectorAll("h1,h2,h3,.card-title,.quick-action-title,button,a,label,span,div").forEach(function(el){
+      cleanTextNode(el);
+
+      if (el.textContent && el.textContent.indexOf("Do It For Me") >= 0) {
+        el.textContent = el.textContent.replace(/Do It For Me/g, "Apply Suggested Step");
+      }
+
+      if (el.title && el.title.indexOf("Do It For Me") >= 0) {
+        el.title = el.title.replace(/Do It For Me/g, "Apply Suggested Step");
+      }
+
+      var aria = el.getAttribute && el.getAttribute("aria-label");
+      if (aria && aria.indexOf("Do It For Me") >= 0) {
+        el.setAttribute("aria-label", aria.replace(/Do It For Me/g, "Apply Suggested Step"));
+      }
+    });
+
+    document.querySelectorAll('button[onclick*="ppDoItForMe"],button[id*="do-it"],button[class*="do-it"]').forEach(function(btn){
+      if (btn.textContent && /do it for me/i.test(btn.textContent)) {
+        btn.textContent = "Apply Suggested Step";
+      }
+      btn.title = "Apply the recommended next step";
+      btn.setAttribute("aria-label", "Apply the recommended next step");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", cleanNextStepCopy);
+  setTimeout(cleanNextStepCopy, 250);
+  setTimeout(cleanNextStepCopy, 1000);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbNextStepCopyWrapped) {
+    window.showTab = function() {
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(cleanNextStepCopy, 50);
+      return result;
+    };
+    window.showTab.__pbNextStepCopyWrapped = true;
+  }
+
+  var oldRenderSessionHealthDashboard = window.renderSessionHealthDashboard;
+  if (typeof oldRenderSessionHealthDashboard === "function" && !oldRenderSessionHealthDashboard.__pbNextStepCopyWrapped) {
+    window.renderSessionHealthDashboard = function() {
+      var result = oldRenderSessionHealthDashboard.apply(this, arguments);
+      setTimeout(cleanNextStepCopy, 50);
+      return result;
+    };
+    window.renderSessionHealthDashboard.__pbNextStepCopyWrapped = true;
+  }
 })();
 
 </script>
