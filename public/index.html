@@ -1093,6 +1093,42 @@ html body #global-round-timer.pb-global-timer-hidden {
   }
 }
 
+
+
+
+
+/* PB_GLOBAL_TIMER_FLOATING_SHOW_BUTTON_V2 */
+#global-timer-floating-show-btn {
+  position: fixed !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: 2147483001 !important;
+  display: none !important;
+  align-items: center !important;
+  gap: .4rem !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  background: var(--surface, #111827) !important;
+  color: var(--lime, #c6ff00) !important;
+  box-shadow: 0 16px 42px rgba(0,0,0,.32) !important;
+  border-radius: 999px !important;
+  padding: .65rem .9rem !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+#global-timer-floating-show-btn.pb-visible {
+  display: inline-flex !important;
+}
+
+@media (max-width: 700px) {
+  #global-timer-floating-show-btn {
+    right: 10px !important;
+    bottom: 70px !important;
+  }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -11657,6 +11693,68 @@ setInterval(function(){
   }
 }, 2000);
 
+
+
+// PB_GLOBAL_TIMER_FLOATING_SHOW_BUTTON_V2
+function pbEnsureFloatingTimerShowButton() {
+  let b = document.getElementById('global-timer-floating-show-btn');
+
+  if (!b) {
+    b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'global-timer-floating-show-btn';
+    b.textContent = '⏱ Show Timer';
+    b.title = 'Show timer';
+    b.onclick = function(ev) {
+      if (typeof pbShowGlobalTimer === 'function') {
+        pbShowGlobalTimer(ev);
+      } else if (typeof pbSetGlobalTimerVisible === 'function') {
+        pbSetGlobalTimerVisible(true);
+      }
+      setTimeout(pbSyncFloatingTimerShowButton, 20);
+    };
+    document.body.appendChild(b);
+  }
+
+  return b;
+}
+
+function pbSyncFloatingTimerShowButton() {
+  const timer = document.getElementById('global-round-timer');
+  const floatingBtn = pbEnsureFloatingTimerShowButton();
+  const menuBtn = document.getElementById('global-timer-menu-btn');
+
+  const hidden = !!(timer && timer.classList.contains('pb-global-timer-hidden'));
+
+  floatingBtn.classList.toggle('pb-visible', hidden);
+
+  if (menuBtn) {
+    menuBtn.textContent = hidden ? '⏱ Show Timer' : '⏱ Hide Timer';
+  }
+}
+
+(function(){
+  function wrapSetVisibleWhenReady() {
+    const oldSetVisible = window.pbSetGlobalTimerVisible;
+
+    if (typeof oldSetVisible === 'function' && !oldSetVisible.__pbFloatingShowWrappedV2) {
+      window.pbSetGlobalTimerVisible = function(visible) {
+        const result = oldSetVisible.apply(this, arguments);
+        setTimeout(pbSyncFloatingTimerShowButton, 20);
+        return result;
+      };
+      window.pbSetGlobalTimerVisible.__pbFloatingShowWrappedV2 = true;
+    }
+
+    pbSyncFloatingTimerShowButton();
+  }
+
+  document.addEventListener('DOMContentLoaded', wrapSetVisibleWhenReady);
+  setTimeout(wrapSetVisibleWhenReady, 250);
+  setTimeout(wrapSetVisibleWhenReady, 1000);
+  setInterval(pbSyncFloatingTimerShowButton, 1000);
+})();
+
 //  MATCH TIMER
 // ═══════════════════════════════════════════════
 var _timerInterval = null;
@@ -16271,8 +16369,6 @@ function emBuildHtml(player) {
         <p style="font-size:12px;color:#999;margin:20px 0 0;text-align:center">Thanks for playing! 🏓</p>
       </div>
     </div>
-
-
 
 </body></html>`;
 }
