@@ -1610,7 +1610,7 @@ body.pb-non-admin a[href^="/admin/"]{
         </select>
       </div>
       <button class="btn btn-orange" onclick="regenerateRemaining()" title="Keep played rounds, rebuild future rounds with current active players">🔁 Regenerate Remaining</button>
-      <button class="btn btn-orange" id="btn-rebuild-next" onclick="rebuildNextRound()" style="display:none" title="Rebuild next round using actual results from completed rounds">🔁 Rebuild Next Round</button>
+      <button class="btn btn-orange" id="btn-rebuild-next" onclick="rebuildNextRound()" style="display:none!important" hidden aria-hidden="true" title="Advanced rebuild hidden from main schedule view">🔁 Rebuild Next Round</button>
       <button class="btn btn-secondary" onclick="exportScheduleCSV()">📥 Export CSV</button>
       <button class="btn btn-secondary" onclick="openLiveDisplay()" title="Full-screen court display — great for projecting at the venue">📺 Live Display</button>
       <button class="btn btn-secondary" onclick="ldOpenAnnouncePrompt()" title="Post a message banner to the live display" style="background:rgba(198,255,0,0.1);border-color:rgba(198,255,0,0.3);color:var(--lime)">📢 Announce</button>
@@ -1859,7 +1859,7 @@ body.pb-non-admin a[href^="/admin/"]{
         </div>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;flex-shrink:0">
           <button class="btn btn-secondary btn-sm" id="round-complete-sms-btn" style="display:none" onclick="roundCompleteNotify()">📱 Notify Players</button>
-          <button class="btn btn-orange btn-sm" id="round-complete-rebuild-btn" style="display:none" onclick="roundCompleteRebuild()">🔁 Rebuild Next Round</button>
+          <button class="btn btn-orange btn-sm" id="round-complete-rebuild-btn" style="display:none!important" hidden aria-hidden="true" onclick="roundCompleteRebuild()">🔁 Rebuild Next Round</button>
           <button class="btn btn-primary btn-sm" id="round-complete-view-btn" onclick="roundCompleteViewNext()">▶ View Next Round</button>
           <button class="btn btn-secondary btn-sm" onclick="dismissRoundComplete()">✕</button>
         </div>
@@ -17530,7 +17530,7 @@ function exportEndSessionSummary(){
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap">'+
         '<button class="btn btn-secondary btn-sm" onclick="toggleSchedulePreviewDetails()">'+(expanded?'▴ Hide Preview':'▾ Show Preview')+'</button>'+
         '<button class="btn btn-primary btn-sm" onclick="publishSchedulePreview()">✅ Publish / Start Round</button>'+
-        '<button class="btn btn-orange btn-sm" onclick="regenerateSchedulePreview()">🔄 Regenerate Preview</button>'+
+        '<button class="btn btn-orange btn-sm" onclick="regenerateSchedulePreview()">🔄 Try Different Draft</button>'+
         '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'schedule-container\') && document.getElementById(\'schedule-container\').scrollIntoView({behavior:\'smooth\'});">View Full Schedule</button>'+ 
         (started ? '<span style="align-self:center;color:var(--lime);font-weight:800;font-size:.82rem">Already started</span>' : '')+
       '</div>'+ 
@@ -19258,6 +19258,8 @@ function exportEndSessionSummary(){
 
 
 
+
+/* PB_SCHEDULE_REBUILD_BUTTON_HIDE_V1 */
 </script>
 
 </body>
