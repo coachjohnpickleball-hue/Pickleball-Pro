@@ -1041,6 +1041,13 @@
 
 
 
+
+
+/* PB_DASHBOARD_MORE_ONLY_CLEAN_V1 */
+.quick-action.pb-more-only-action {
+  display: none !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -1250,7 +1257,7 @@ body.pb-non-admin a[href^="/admin/"]{
     </div>
     <div id="session-health-home" style="margin-top:1rem">
       <div class="premium-panel director-assistant" style="border:1px solid rgba(198,255,0,.22);border-radius:18px;padding:1rem;background:linear-gradient(135deg,rgba(198,255,0,.08),rgba(255,255,255,.025));box-shadow:0 12px 35px rgba(0,0,0,.18)">
-        <div style="font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ball);font-weight:800">🧠 Tournament Director Assistant</div>
+        <div style="font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ball);font-weight:800">🧠 Next Step</div>
         <div style="font-size:1.2rem;font-weight:900;color:var(--txt);margin-top:.25rem">Loading session status…</div>
         <div style="color:var(--txt2);margin-top:.25rem">The assistant will recommend the next best action once the app finishes loading.</div>
       </div>
@@ -1267,7 +1274,7 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="quick-action premium-added" onclick="showTab('checkin')"><span class="quick-action-icon">✅</span><div class="quick-action-title">Check-In</div><div class="quick-action-note">Active, arrived, absent players</div></button>
       <button class="quick-action premium-added" onclick="showTab('fairness')"><span class="quick-action-icon">⚖️</span><div class="quick-action-title">Fairness</div><div class="quick-action-note">Repeats, sit-outs, court balance</div></button>
       <button class="quick-action premium-added" onclick="showTab('playerlookup')"><span class="quick-action-icon">🔍</span><div class="quick-action-title">Player Lookup</div><div class="quick-action-note">Find court, partner, rank, waits</div></button>
-      <button class="quick-action premium-added" onclick="showTab('sessionhealth')"><span class="quick-action-icon">🧠</span><div class="quick-action-title">Director Assistant</div><div class="quick-action-note">Next action and issues</div></button>
+      <button class="quick-action premium-added" onclick="showTab('sessionhealth')"><span class="quick-action-icon">🧠</span><div class="quick-action-title">Next Step</div><div class="quick-action-note">Next action and issues</div></button>
       <button class="quick-action premium-added" onclick="showTab('endsession')"><span class="quick-action-icon">🏁</span><div class="quick-action-title">End Session</div><div class="quick-action-note">Summary, archive, export</div></button>
       <button class="quick-action premium-added" onclick="showTab('history')"><span class="quick-action-icon">🏆</span><div class="quick-action-title">History</div><div class="quick-action-note">Save and review past events</div></button>
       <button class="quick-action premium-added" data-admin-only onclick="showTab('admin')"><span class="quick-action-icon">🔒</span><div class="quick-action-title">Admin Lock</div><div class="quick-action-note">Prevent accidental edits live</div></button>
@@ -1282,7 +1289,7 @@ body.pb-non-admin a[href^="/admin/"]{
 <!-- ══════════════════ SESSION HEALTH ══════════════════ -->
 <div id="sec-sessionhealth" class="section">
   <div class="card">
-    <h2>🧠 Tournament Director Assistant</h2>
+    <h2>🧠 Next Step</h2>
     <p style="color:var(--txt2);margin-top:-.35rem">Guides the tournament director to the next best action and flags anything that needs attention.</p>
     <div id="session-health-detail"></div>
   </div>
@@ -17104,7 +17111,7 @@ function ppHealthHtml(compact){
   return `<div class="premium-panel director-assistant" style="border:1px solid rgba(198,255,0,.22);border-radius:18px;padding:1rem;background:linear-gradient(135deg,rgba(198,255,0,.08),rgba(255,255,255,.025));box-shadow:0 12px 35px rgba(0,0,0,.18)">
     <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
       <div>
-        <div style="font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ball);font-weight:800">🧠 Tournament Director Assistant</div>
+        <div style="font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ball);font-weight:800">🧠 Next Step</div>
         <div style="font-size:1.35rem;font-weight:900;color:var(--txt);margin-top:.25rem">${escHtml(h.status)}</div>
         <div style="color:var(--txt2);margin-top:.25rem"><strong>Next recommended action:</strong> ${escHtml(h.next)}</div>
       </div>
@@ -17139,8 +17146,8 @@ function renderSessionHealthDashboard(){
   if(detail) detail.innerHTML = ppHealthHtml(false);
 }
 
-// Ensure the Home-page Director Assistant appears after all enhancement scripts have loaded.
-try { renderSessionHealthDashboard(); renderTournamentTimeline(); } catch(e) { console.warn('Director Assistant initial render skipped:', e); }
+// Ensure the Home-page Next Step appears after all enhancement scripts have loaded.
+try { renderSessionHealthDashboard(); renderTournamentTimeline(); } catch(e) { console.warn('Next Step initial render skipped:', e); }
 setTimeout(function(){ try { renderSessionHealthDashboard(); renderTournamentTimeline(); } catch(e){} }, 250);
 setTimeout(function(){ try { renderSessionHealthDashboard(); renderTournamentTimeline(); } catch(e){} }, 1000);
 
@@ -18646,8 +18653,8 @@ function exportEndSessionSummary(){
     if (!node || node.nodeType !== 3 || !node.nodeValue) return;
 
     node.nodeValue = node.nodeValue
-      .replace(/🧠\s*Tournament Director Assistant/g, "Next Step")
-      .replace(/Tournament Director Assistant/g, "Next Step")
+      .replace(/🧠\s*Next Step/g, "Next Step")
+      .replace(/Next Step/g, "Next Step")
       .replace(/Guides the tournament director to the next best action and flags anything that needs attention\./g, "Shows the next useful action.")
       .replace(/Next recommended action:/g, "Next:")
       .replace(/Why this action\?/g, "Why")
@@ -18868,7 +18875,7 @@ function exportEndSessionSummary(){
     Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
       var txt = cleanText(el);
 
-      if (txt === "Tournament Director Assistant" || txt === "🧠 Tournament Director Assistant") {
+      if (txt === "Next Step" || txt === "🧠 Next Step") {
         el.textContent = "Next Step";
       }
 
@@ -19010,7 +19017,7 @@ function exportEndSessionSummary(){
     Array.prototype.slice.call(document.querySelectorAll("*")).forEach(function(el) {
       var txt = textOf(el);
 
-      if (txt === "🧠 Director Assistant" || txt === "Director Assistant") {
+      if (txt === "🧠 Next Step" || txt === "Next Step") {
         el.style.display = "none";
         el.setAttribute("data-pb-hidden-dashboard-extra", "director-assistant");
       }
@@ -19388,6 +19395,66 @@ function exportEndSessionSummary(){
 /* PB_SCHEDULE_CONTROLS_CLEANUP_V1 */
 
 /* PB_MIXED_WARNING_COPY_CLEANUP_V1 */
+
+
+
+
+/* PB_DASHBOARD_MORE_ONLY_CLEAN_V1 */
+(function(){
+  if (window.__pbDashboardMoreOnlyCleanV1) return;
+  window.__pbDashboardMoreOnlyCleanV1 = true;
+
+  function removeDuplicatedMenuItems() {
+    document.querySelectorAll('[data-pb-dashboard-menu-polish="1"]').forEach(function(el){
+      el.remove();
+    });
+  }
+
+  function simplifyHomeQuickActions() {
+    var hideTitles = new Set([
+      "TV Display",
+      "Live Display",
+      "Check-In",
+      "Player Lookup",
+      "Next Step",
+      "End Session",
+      "History",
+      "Admin Lock",
+      "Terms Settings",
+      "Undo Score"
+    ]);
+
+    document.querySelectorAll(".quick-action").forEach(function(btn){
+      var titleEl = btn.querySelector(".quick-action-title");
+      var title = titleEl ? titleEl.textContent.trim() : "";
+
+      if (hideTitles.has(title)) {
+        btn.classList.add("pb-more-only-action");
+        btn.setAttribute("data-pb-more-only", "1");
+      }
+    });
+  }
+
+  function applyMoreOnlyCleanup() {
+    removeDuplicatedMenuItems();
+    simplifyHomeQuickActions();
+  }
+
+  document.addEventListener("DOMContentLoaded", applyMoreOnlyCleanup);
+  setTimeout(applyMoreOnlyCleanup, 250);
+  setTimeout(applyMoreOnlyCleanup, 1000);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbDashboardMoreOnlyWrapped) {
+    window.showTab = function() {
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(applyMoreOnlyCleanup, 50);
+      return result;
+    };
+    window.showTab.__pbDashboardMoreOnlyWrapped = true;
+  }
+})();
+
 </script>
 
 </body>
