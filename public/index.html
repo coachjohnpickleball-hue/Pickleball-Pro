@@ -1048,6 +1048,51 @@
   display: none !important;
 }
 
+
+/* PB_GLOBAL_TIMER_FLOAT_HIDE_FINAL_V2 */
+html body #global-round-timer {
+  position: fixed !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: 2147483000 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  box-shadow: 0 16px 42px rgba(0,0,0,.32) !important;
+}
+
+html body #global-round-timer.pb-global-timer-hidden {
+  display: none !important;
+}
+
+#global-round-timer .pb-global-timer-close {
+  border: 1px solid rgba(255,255,255,.18) !important;
+  background: rgba(255,255,255,.08) !important;
+  color: var(--txt2, #fff) !important;
+  min-width: 30px !important;
+  padding: .35rem .55rem !important;
+  border-radius: .55rem !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+#global-round-timer .pb-global-timer-close:hover {
+  background: rgba(255,255,255,.16) !important;
+}
+
+@media (max-width: 700px) {
+  html body #global-round-timer {
+    right: 10px !important;
+    left: 10px !important;
+    bottom: 70px !important;
+    top: auto !important;
+    justify-content: center !important;
+  }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -1210,6 +1255,7 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="user-dropdown-item" onclick="saveTournament()">💾 Save tournament</button>
       <button class="user-dropdown-item" onclick="historyArchiveCurrent()">🏆 Archive tournament</button>
       <button class="user-dropdown-item" onclick="document.getElementById('load-file').click()">📂 Load tournament</button>
+      <button class="user-dropdown-item" id="global-timer-menu-btn" onclick="pbToggleGlobalTimer(event)">⏱ Hide Timer</button>
       <button class="user-dropdown-item" onclick="openBackupModal()">📦 Backup &amp; restore</button>
       <button class="user-dropdown-item" onclick="printSchedule()">🖨 Print schedule</button>
       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access log</button>
@@ -1230,6 +1276,7 @@ body.pb-non-admin a[href^="/admin/"]{
   <button type="button" onclick="toggleTimer()" id="global-timer-toggle">▶</button>
   <button type="button" onclick="resetTimer()">↺</button>
   <span id="global-timer-status" class="grt-status">Ready</span>
+  <button type="button" id="global-timer-close-btn" class="pb-global-timer-close" onclick="pbHideGlobalTimer(event)" title="Hide timer">×</button>
 </div>
 
 
@@ -11522,6 +11569,93 @@ function printSchedule() {
 }
 
 // ═══════════════════════════════════════════════
+
+
+// PB_GLOBAL_TIMER_FLOAT_HIDE_FINAL_V2
+function pbForceGlobalTimerFloat() {
+  const t = document.getElementById('global-round-timer');
+  if (!t) return false;
+
+  t.style.setProperty('position', 'fixed', 'important');
+  t.style.setProperty('right', '18px', 'important');
+  t.style.setProperty('bottom', window.matchMedia('(max-width: 700px)').matches ? '70px' : '18px', 'important');
+  t.style.setProperty('left', window.matchMedia('(max-width: 700px)').matches ? '10px' : 'auto', 'important');
+  t.style.setProperty('top', 'auto', 'important');
+  t.style.setProperty('z-index', '2147483000', 'important');
+  t.style.setProperty('visibility', 'visible', 'important');
+  t.style.setProperty('opacity', '1', 'important');
+  t.style.setProperty('pointer-events', 'auto', 'important');
+  t.setAttribute('data-pb-floating-timer', 'true');
+
+  return true;
+}
+
+function pbSetGlobalTimerVisible(visible) {
+  const t = document.getElementById('global-round-timer');
+  const menuBtn = document.getElementById('global-timer-menu-btn');
+
+  if (t) {
+    t.classList.toggle('pb-global-timer-hidden', !visible);
+    if (visible) pbForceGlobalTimerFloat();
+  }
+
+  if (menuBtn) {
+    menuBtn.textContent = visible ? '⏱ Hide Timer' : '⏱ Show Timer';
+    menuBtn.title = visible ? 'Hide floating timer' : 'Show floating timer';
+  }
+
+  try {
+    sessionStorage.setItem('pbGlobalTimerVisible', visible ? '1' : '0');
+  } catch(e) {}
+}
+
+function pbHideGlobalTimer(ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  pbSetGlobalTimerVisible(false);
+}
+
+function pbShowGlobalTimer(ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  pbSetGlobalTimerVisible(true);
+}
+
+function pbToggleGlobalTimer(ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  const t = document.getElementById('global-round-timer');
+  const hidden = !!(t && t.classList.contains('pb-global-timer-hidden'));
+  pbSetGlobalTimerVisible(hidden);
+}
+
+function pbInitGlobalTimerFloatHide() {
+  let visible = true;
+
+  try {
+    visible = sessionStorage.getItem('pbGlobalTimerVisible') !== '0';
+  } catch(e) {}
+
+  pbForceGlobalTimerFloat();
+  pbSetGlobalTimerVisible(visible);
+}
+
+document.addEventListener('DOMContentLoaded', pbInitGlobalTimerFloatHide);
+setTimeout(pbInitGlobalTimerFloatHide, 250);
+setTimeout(pbInitGlobalTimerFloatHide, 1000);
+setInterval(function(){
+  const t = document.getElementById('global-round-timer');
+  if (t && !t.classList.contains('pb-global-timer-hidden')) {
+    pbForceGlobalTimerFloat();
+  }
+}, 2000);
 
 //  MATCH TIMER
 // ═══════════════════════════════════════════════
