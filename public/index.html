@@ -1041,42 +1041,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-/* PB_GLOBAL_TIMER_FORCE_FLOAT_V1 */
-html body #global-round-timer {
-  position: fixed !important;
-  right: 18px !important;
-  bottom: 18px !important;
-  left: auto !important;
-  top: auto !important;
-  z-index: 2147483000 !important;
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  transform: translateZ(0) !important;
-  pointer-events: auto !important;
-  box-shadow: 0 16px 42px rgba(0,0,0,.32) !important;
-}
-
-@media (max-width: 700px) {
-  html body #global-round-timer {
-    right: 10px !important;
-    left: 10px !important;
-    bottom: 70px !important;
-    top: auto !important;
-    justify-content: center !important;
-  }
-}
-
 </style>
 
 <style id="premium-functions-css">
@@ -11551,94 +11515,6 @@ function printSchedule() {
 }
 
 // ═══════════════════════════════════════════════
-
-
-
-// PB_GLOBAL_TIMER_FLOAT_MENU_SIMPLE_V1
-function setGlobalTimerFloatVisible(visible) {
-  const timer = document.getElementById('global-round-timer');
-  const menuBtn = document.getElementById('global-timer-float-menu');
-
-  if (timer) {
-    timer.classList.toggle('grt-hidden', !visible);
-  }
-
-  if (menuBtn) {
-    menuBtn.textContent = visible ? '⏱ Hide Timer' : '⏱ Show Timer';
-    menuBtn.title = visible ? 'Hide floating timer' : 'Show floating timer';
-  }
-
-  try {
-    sessionStorage.setItem('pbGlobalTimerFloatVisible', visible ? '1' : '0');
-  } catch(e) {}
-}
-
-function hideGlobalTimerFloat(ev) {
-  if (ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-  }
-  setGlobalTimerFloatVisible(false);
-}
-
-function showGlobalTimerFloat(ev) {
-  if (ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-  }
-  setGlobalTimerFloatVisible(true);
-}
-
-function toggleGlobalTimerFloat(ev) {
-  if (ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-  }
-
-  const timer = document.getElementById('global-round-timer');
-  const hidden = !!(timer && timer.classList.contains('grt-hidden'));
-  setGlobalTimerFloatVisible(hidden);
-}
-
-function initGlobalTimerFloat() {
-  let visible = true;
-
-  try {
-    visible = sessionStorage.getItem('pbGlobalTimerFloatVisible') !== '0';
-  } catch(e) {}
-
-  setGlobalTimerFloatVisible(visible);
-}
-
-document.addEventListener('DOMContentLoaded', initGlobalTimerFloat);
-setTimeout(initGlobalTimerFloat, 250);
-setTimeout(initGlobalTimerFloat, 1000);
-
-
-// PB_GLOBAL_TIMER_FORCE_FLOAT_V1
-function forceGlobalTimerFloat() {
-  const t = document.getElementById('global-round-timer');
-  if (!t) return false;
-
-  t.style.setProperty('position', 'fixed', 'important');
-  t.style.setProperty('right', '18px', 'important');
-  t.style.setProperty('bottom', window.matchMedia('(max-width: 700px)').matches ? '70px' : '18px', 'important');
-  t.style.setProperty('left', window.matchMedia('(max-width: 700px)').matches ? '10px' : 'auto', 'important');
-  t.style.setProperty('top', 'auto', 'important');
-  t.style.setProperty('z-index', '2147483000', 'important');
-  t.style.setProperty('display', 'flex', 'important');
-  t.style.setProperty('visibility', 'visible', 'important');
-  t.style.setProperty('opacity', '1', 'important');
-  t.style.setProperty('transform', 'translateZ(0)', 'important');
-  t.setAttribute('data-pb-forced-floating-timer', 'true');
-
-  return true;
-}
-
-document.addEventListener('DOMContentLoaded', forceGlobalTimerFloat);
-setTimeout(forceGlobalTimerFloat, 250);
-setTimeout(forceGlobalTimerFloat, 1000);
-setInterval(forceGlobalTimerFloat, 2000);
 
 //  MATCH TIMER
 // ═══════════════════════════════════════════════
