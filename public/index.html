@@ -1129,6 +1129,26 @@ html body #global-round-timer.pb-global-timer-hidden {
   }
 }
 
+
+/* PB_GLOBAL_TIMER_DRAGGABLE_V1 */
+#global-round-timer.pb-timer-draggable,
+#global-timer-floating-show-btn.pb-timer-draggable {
+  cursor: grab !important;
+  user-select: none !important;
+  touch-action: none !important;
+}
+
+#global-round-timer.pb-timer-dragging,
+#global-timer-floating-show-btn.pb-timer-dragging {
+  cursor: grabbing !important;
+}
+
+#global-round-timer.pb-timer-draggable button,
+#global-round-timer.pb-timer-draggable input,
+#global-round-timer.pb-timer-draggable select {
+  cursor: pointer !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -19683,6 +19703,253 @@ function exportEndSessionSummary(){
     };
     window.showTab.__pbDashboardMoreOnlyWrapped = true;
   }
+})();
+
+
+
+// PB_GLOBAL_TIMER_DRAGGABLE_V1
+(function(){
+  if (window.__pbGlobalTimerDraggableV1) return;
+  window.__pbGlobalTimerDraggableV1 = true;
+
+  const POS_KEY = 'pbGlobalTimerDraggablePositionV1';
+  const PAD = 10;
+
+  function readTimerPos() {
+    try {
+      const raw = localStorage.getItem(POS_KEY);
+      if (!raw) return null;
+      const pos = JSON.parse(raw);
+      if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return null;
+      return pos;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  function saveTimerPos(x, y) {
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify({ x: Math.round(x), y: Math.round(y) }));
+    } catch(e) {}
+  }
+
+  function clampTimerPos(x, y, el) {
+    const rect = el.getBoundingClientRect();
+    const w = rect.width || 260;
+    const h = rect.height || 54;
+    const maxX = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxY = Math.max(PAD, window.innerHeight - h - PAD);
+
+    return {
+      x: Math.min(Math.max(PAD, x), maxX),
+      y: Math.min(Math.max(PAD, y), maxY)
+    };
+  }
+
+  function applyTimerPos(el, x, y) {
+    if (!el) return;
+
+    const pos = clampTimerPos(x, y, el);
+
+    el.style.setProperty('position', 'fixed', 'important');
+    el.style.setProperty('left', pos.x + 'px', 'important');
+    el.style.setProperty('top', pos.y + 'px', 'important');
+    el.style.setProperty('right', 'auto', 'important');
+    el.style.setProperty('bottom', 'auto', 'important');
+    el.style.setProperty('z-index', el.id === 'global-timer-floating-show-btn' ? '2147483001' : '2147483000', 'important');
+  }
+
+  function applySavedTimerPos(el) {
+    const pos = readTimerPos();
+    if (!pos || !el) return false;
+    applyTimerPos(el, pos.x, pos.y);
+    return true;
+  }
+
+  function getCurrentTimerElement() {
+    const timer = document.getElementById('global-round-timer');
+    const showBtn = document.getElementById('global-timer-floating-show-btn');
+
+    if (timer && !timer.classList.contains('pb-global-timer-hidden')) return timer;
+    if (showBtn && showBtn.classList.contains('pb-visible')) return showBtn;
+
+    return timer || showBtn || null;
+  }
+
+  function syncTimerDragPosition() {
+    const timer = document.getElementById('global-round-timer');
+    const showBtn = document.getElementById('global-timer-floating-show-btn');
+
+    if (timer) {
+      timer.classList.add('pb-timer-draggable');
+      applySavedTimerPos(timer);
+    }
+
+    if (showBtn) {
+      showBtn.classList.add('pb-timer-draggable');
+      applySavedTimerPos(showBtn);
+    }
+  }
+
+  function isInteractiveInsideTimer(target, el) {
+    if (!target || !el) return false;
+
+    if (el.id === 'global-timer-floating-show-btn') return false;
+
+    return !!target.closest('button,input,select,textarea,a,label');
+  }
+
+  function makeTimerDraggable(el) {
+    if (!el || el.__pbTimerDraggableV1) return;
+
+    el.__pbTimerDraggableV1 = true;
+    el.classList.add('pb-timer-draggable');
+
+    el.addEventListener('click', function(ev) {
+      if (el.__pbSuppressTimerClick) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        el.__pbSuppressTimerClick = false;
+      }
+    }, true);
+
+    el.addEventListener('pointerdown', function(ev) {
+      if (ev.button !== undefined && ev.button !== 0) return;
+      if (isInteractiveInsideTimer(ev.target, el)) return;
+
+      const startRect = el.getBoundingClientRect();
+      const startX = ev.clientX;
+      const startY = ev.clientY;
+
+      let dragging = false;
+
+      function move(moveEv) {
+        const dx = moveEv.clientX - startX;
+        const dy = moveEv.clientY - startY;
+
+        if (!dragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+
+        dragging = true;
+        moveEv.preventDefault();
+
+        const next = clampTimerPos(startRect.left + dx, startRect.top + dy, el);
+
+        applyTimerPos(el, next.x, next.y);
+        saveTimerPos(next.x, next.y);
+
+        const other = el.id === 'global-round-timer'
+          ? document.getElementById('global-timer-floating-show-btn')
+          : document.getElementById('global-round-timer');
+
+        if (other) applyTimerPos(other, next.x, next.y);
+      }
+
+      function up(upEv) {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+
+        el.classList.remove('pb-timer-dragging');
+
+        if (dragging) {
+          upEv.preventDefault();
+          el.__pbSuppressTimerClick = true;
+          setTimeout(function(){ el.__pbSuppressTimerClick = false; }, 100);
+        }
+      }
+
+      el.classList.add('pb-timer-dragging');
+
+      try { el.setPointerCapture(ev.pointerId); } catch(e) {}
+
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', up, { passive: false });
+      document.addEventListener('pointercancel', up, { passive: false });
+    }, { passive: false });
+  }
+
+  function initTimerDragging() {
+    if (typeof pbEnsureFloatingTimerShowButton === 'function') {
+      pbEnsureFloatingTimerShowButton();
+    }
+
+    makeTimerDraggable(document.getElementById('global-round-timer'));
+    makeTimerDraggable(document.getElementById('global-timer-floating-show-btn'));
+    syncTimerDragPosition();
+  }
+
+  const oldForceFloat = window.pbForceGlobalTimerFloat;
+  if (typeof oldForceFloat === 'function' && !oldForceFloat.__pbTimerDraggableWrapped) {
+    window.pbForceGlobalTimerFloat = function() {
+      const result = oldForceFloat.apply(this, arguments);
+      const timer = document.getElementById('global-round-timer');
+      if (timer && readTimerPos()) applySavedTimerPos(timer);
+      return result;
+    };
+    window.pbForceGlobalTimerFloat.__pbTimerDraggableWrapped = true;
+  }
+
+  const oldEnsureShowButton = window.pbEnsureFloatingTimerShowButton;
+  if (typeof oldEnsureShowButton === 'function' && !oldEnsureShowButton.__pbTimerDraggableWrapped) {
+    window.pbEnsureFloatingTimerShowButton = function() {
+      const btn = oldEnsureShowButton.apply(this, arguments);
+      makeTimerDraggable(btn);
+      if (btn && readTimerPos()) applySavedTimerPos(btn);
+      return btn;
+    };
+    window.pbEnsureFloatingTimerShowButton.__pbTimerDraggableWrapped = true;
+  }
+
+  const oldSyncShowButton = window.pbSyncFloatingTimerShowButton;
+  if (typeof oldSyncShowButton === 'function' && !oldSyncShowButton.__pbTimerDraggableWrapped) {
+    window.pbSyncFloatingTimerShowButton = function() {
+      const result = oldSyncShowButton.apply(this, arguments);
+      setTimeout(initTimerDragging, 20);
+      return result;
+    };
+    window.pbSyncFloatingTimerShowButton.__pbTimerDraggableWrapped = true;
+  }
+
+  window.pbResetTimerDragPosition = function() {
+    try { localStorage.removeItem(POS_KEY); } catch(e) {}
+
+    const timer = document.getElementById('global-round-timer');
+    const btn = document.getElementById('global-timer-floating-show-btn');
+
+    [timer, btn].forEach(function(el) {
+      if (!el) return;
+      el.style.removeProperty('left');
+      el.style.removeProperty('top');
+      el.style.setProperty('right', window.matchMedia('(max-width: 700px)').matches ? '10px' : '18px', 'important');
+      el.style.setProperty('bottom', window.matchMedia('(max-width: 700px)').matches ? '70px' : '18px', 'important');
+    });
+
+    if (typeof pbForceGlobalTimerFloat === 'function') pbForceGlobalTimerFloat();
+    if (typeof pbSyncFloatingTimerShowButton === 'function') pbSyncFloatingTimerShowButton();
+  };
+
+  window.pbTimerDragStatus = function() {
+    const active = getCurrentTimerElement();
+    const timer = document.getElementById('global-round-timer');
+    const btn = document.getElementById('global-timer-floating-show-btn');
+    const pos = readTimerPos();
+
+    return {
+      draggableInstalled: true,
+      savedPosition: pos,
+      activeElement: active ? active.id : null,
+      timerDraggable: !!(timer && timer.__pbTimerDraggableV1),
+      showButtonDraggable: !!(btn && btn.__pbTimerDraggableV1),
+      timerHidden: !!(timer && timer.classList.contains('pb-global-timer-hidden')),
+      showButtonVisible: !!(btn && btn.classList.contains('pb-visible'))
+    };
+  };
+
+  document.addEventListener('DOMContentLoaded', initTimerDragging);
+  setTimeout(initTimerDragging, 250);
+  setTimeout(initTimerDragging, 1000);
+  setInterval(initTimerDragging, 2000);
+  window.addEventListener('resize', syncTimerDragPosition);
 })();
 
 </script>
