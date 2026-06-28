@@ -19260,6 +19260,130 @@ function exportEndSessionSummary(){
 
 
 /* PB_SCHEDULE_REBUILD_BUTTON_HIDE_V1 */
+
+/* PB_TIMER_TIME_CORRECTION_V1 */
+(function(){
+  if (window.__pbTimerTimeCorrectionV1) return;
+  window.__pbTimerTimeCorrectionV1 = true;
+
+  function safeTimerMinutes() {
+    const input = document.getElementById('timer-minutes');
+    let mins = parseInt(input && input.value ? input.value : '11', 10);
+
+    if (!Number.isFinite(mins) || mins < 1) mins = 11;
+    if (mins > 60) mins = 60;
+
+    if (input && String(input.value) !== String(mins)) {
+      input.value = String(mins);
+    }
+
+    return mins;
+  }
+
+  function formatTimerSeconds(rawSecs) {
+    const secsNumber = Number(rawSecs);
+    const safeSecs = Number.isFinite(secsNumber) ? secsNumber : 0;
+
+    const rounded = _timerRunning
+      ? Math.ceil(safeSecs)
+      : Math.round(safeSecs);
+
+    const clamped = Math.max(0, rounded);
+    const mins = Math.floor(clamped / 60);
+    const secs = clamped % 60;
+
+    return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+  }
+
+  window.getTimerMinutes = function() {
+    return safeTimerMinutes();
+  };
+
+  window.updateTimerDisplay = function() {
+    const secs = _timerGetRemaining();
+    const displayText = formatTimerSeconds(secs);
+    const totalSecs = safeTimerMinutes() * 60;
+
+    const isExpired = secs <= 0;
+    const isWarning = secs <= 60 && secs > 0;
+
+    const statusText = _timerRunning
+      ? (isExpired ? 'Done' : 'Running')
+      : (Math.round(secs) >= totalSecs ? 'Ready' : isExpired ? 'Done' : 'Paused');
+
+    const timerClass = 'timer-display' + (isExpired ? ' expired' : isWarning ? ' warning' : '');
+    const globalClass = 'grt-time' + (isExpired ? ' expired' : isWarning ? ' warning' : '');
+
+    const courtDisplay = document.getElementById('timer-display');
+    const courtStatus = document.getElementById('timer-status');
+    const globalDisplay = document.getElementById('global-timer-display');
+    const globalStatus = document.getElementById('global-timer-status');
+    const globalToggle = document.getElementById('global-timer-toggle');
+
+    if (courtDisplay) {
+      courtDisplay.textContent = displayText;
+      courtDisplay.className = timerClass;
+    }
+
+    if (courtStatus) {
+      courtStatus.textContent = statusText;
+    }
+
+    if (globalDisplay) {
+      globalDisplay.textContent = displayText;
+      globalDisplay.className = globalClass;
+    }
+
+    if (globalStatus) {
+      globalStatus.textContent = statusText;
+    }
+
+    if (globalToggle) {
+      globalToggle.textContent = _timerRunning ? 'Ⅱ' : '▶';
+      globalToggle.title = _timerRunning ? 'Pause timer' : 'Start timer';
+    }
+
+    const liveDisplay = document.getElementById('ld-timer-display');
+    const liveBtn = document.getElementById('ld-timer-btn');
+
+    if (liveDisplay) {
+      liveDisplay.textContent = displayText;
+    }
+
+    if (liveBtn) {
+      liveBtn.textContent = _timerRunning ? '⏸ PAUSE' : '▶ START';
+    }
+  };
+
+  window.resetTimer = function() {
+    try { pauseTimer(); } catch(e) {}
+
+    _timerSeconds = safeTimerMinutes() * 60;
+    _timerStartedAt = null;
+    _timerSecondsAtStart = _timerSeconds;
+    _timerRunning = false;
+    _timerAlerted2min = false;
+    _timerAlertedEnd = false;
+
+    try { cancelAnimationFrame(_timerRafId); } catch(e) {}
+
+    updateTimerDisplay();
+  };
+
+  window.toggleTimer = function() {
+    if (_timerRunning) {
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+
+    updateTimerDisplay();
+  };
+
+  setTimeout(updateTimerDisplay, 100);
+  setTimeout(updateTimerDisplay, 500);
+})();
+
 </script>
 
 </body>
