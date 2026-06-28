@@ -1155,6 +1155,12 @@ html body #global-round-timer.pb-global-timer-hidden {
   display: none !important;
 }
 
+
+/* PB_HIDE_DASHBOARD_INTEGRATION_TILES_V1 */
+.quick-action.pb-hide-dashboard-integration-tile {
+  display: none !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -20084,6 +20090,62 @@ function exportEndSessionSummary(){
       return result;
     };
     window.renderDashboard.__pbHideDuplicateScheduleWrapped = true;
+  }
+})();
+
+
+
+/* PB_HIDE_DASHBOARD_INTEGRATION_TILES_V1 */
+(function(){
+  if (window.__pbHideDashboardIntegrationTilesV1) return;
+  window.__pbHideDashboardIntegrationTilesV1 = true;
+
+  function hideDashboardIntegrationTiles() {
+    document.querySelectorAll(".quick-action").forEach(function(btn){
+      var titleEl = btn.querySelector(".quick-action-title");
+      var title = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+      var onclick = btn.getAttribute("onclick") || "";
+
+      var isIntegrationTile =
+        onclick.indexOf("showTab('mobilesync") >= 0 ||
+        onclick.indexOf('showTab("mobilesync') >= 0 ||
+        onclick.indexOf("showTab('sms") >= 0 ||
+        onclick.indexOf('showTab("sms') >= 0 ||
+        onclick.indexOf("showTab('email") >= 0 ||
+        onclick.indexOf('showTab("email') >= 0 ||
+        title === "mobile sync" ||
+        title === "sms" ||
+        title === "email";
+
+      if (isIntegrationTile) {
+        btn.classList.add("pb-hide-dashboard-integration-tile");
+        btn.setAttribute("data-pb-dashboard-integration-hidden", "1");
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", hideDashboardIntegrationTiles);
+  setTimeout(hideDashboardIntegrationTiles, 250);
+  setTimeout(hideDashboardIntegrationTiles, 1000);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbHideDashboardIntegrationTilesWrapped) {
+    window.showTab = function() {
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(hideDashboardIntegrationTiles, 50);
+      return result;
+    };
+    window.showTab.__pbHideDashboardIntegrationTilesWrapped = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbHideDashboardIntegrationTilesWrapped) {
+    window.renderDashboard = function() {
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(hideDashboardIntegrationTiles, 50);
+      return result;
+    };
+    window.renderDashboard.__pbHideDashboardIntegrationTilesWrapped = true;
   }
 })();
 
