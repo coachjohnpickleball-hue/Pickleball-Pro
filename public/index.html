@@ -20516,6 +20516,690 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_TEAM_NAME_DISPLAY_FIX_PERSISTENT_V2 */
+(function(){
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function usableName(p, idx){
+    if (!p) return "Player " + (idx + 1);
+
+    var names = [
+      p.name,
+      p.playerName,
+      p.fullName,
+      p.displayName,
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    ];
+
+    for (var i = 0; i < names.length; i++) {
+      var n = String(names[i] || "").trim();
+      if (!n) continue;
+
+      // Do not treat raw numeric labels as real names.
+      if (/^\d+\.?$/.test(n)) continue;
+
+      return n;
+    }
+
+    return "Player " + (idx + 1);
+  }
+
+  function pName(idx){
+    idx = Number(idx);
+    return usableName(window.state && state.players ? state.players[idx] : null, idx);
+  }
+
+  function matchesFlat(){
+    var out = [];
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(m){
+          if (m) out.push(m);
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
+  function teamText(team){
+    if (!Array.isArray(team)) return "";
+    return team.map(function(i){ return pName(i); }).join(" & ");
+  }
+
+  function duprText(cell){
+    var txt = String(cell && cell.textContent || "");
+    var m = txt.match(/\bDUPR\s+[0-9.]+/i);
+    return m ? " " + m[0] : "";
+  }
+
+  function applyTeamNames(){
+    if (!window.state || !Array.isArray(state.players) || !Array.isArray(state.schedule)) return;
+
+    var byId = {};
+    matchesFlat().forEach(function(m){
+      if (m && m.id != null) byId[String(m.id)] = m;
+    });
+
+    document.querySelectorAll("tr").forEach(function(row){
+      var cells = row.querySelectorAll("td");
+      if (!cells || cells.length < 4) return;
+
+      var first = String(cells[0].textContent || "").trim();
+      var mId = first.match(/^#?\s*(\d+)$/);
+      if (!mId) return;
+
+      var match = byId[mId[1]];
+      if (!match || !Array.isArray(match.teamA) || !Array.isArray(match.teamB)) return;
+
+      var a = teamText(match.teamA);
+      var b = teamText(match.teamB);
+
+      if (a) cells[2].innerHTML = esc(a) + esc(duprText(cells[2]));
+      if (b) cells[3].innerHTML = esc(b) + esc(duprText(cells[3]));
+    });
+  }
+
+  function applySoon(){
+    [0, 50, 150, 350, 800, 1500].forEach(function(ms){
+      setTimeout(applyTeamNames, ms);
+    });
+  }
+
+  function wrapFunction(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbTeamNamePersistentV2) return;
+
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      applySoon();
+      return result;
+    };
+
+    wrapped.__pbTeamNamePersistentV2 = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    [
+      "renderSchedule",
+      "generateSchedule",
+      "promptGenerateSchedule",
+      "regenerateRemaining",
+      "regenerateSchedulePreview",
+      "publishDraftRound",
+      "publishPreviewRound",
+      "showTab",
+      "renderCourtsGrid",
+      "renderDashboard"
+    ].forEach(wrapFunction);
+
+    applySoon();
+  }
+
+  // Re-apply after schedule-related clicks, including buttons that call inline handlers.
+  document.addEventListener("click", function(ev){
+    var t = ev.target;
+    if (!t) return;
+
+    var txt = String(t.textContent || "").toLowerCase();
+    var onclick = String(t.getAttribute && t.getAttribute("onclick") || "").toLowerCase();
+
+    if (
+      txt.includes("generate") ||
+      txt.includes("regenerate") ||
+      txt.includes("publish") ||
+      txt.includes("preview") ||
+      txt.includes("schedule") ||
+      onclick.includes("generate") ||
+      onclick.includes("regenerate") ||
+      onclick.includes("publish") ||
+      onclick.includes("renderschedule")
+    ) {
+      applySoon();
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var id = ev.target && ev.target.id;
+    if (
+      id === "team-mode" ||
+      id === "dupr-session-format" ||
+      id === "pb-dupr-overflow-toggle" ||
+      id === "courts-count" ||
+      id === "rounds-count" ||
+      id === "round-count"
+    ) {
+      applySoon();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    install();
+    setTimeout(install, 500);
+    setTimeout(install, 1500);
+  });
+
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  // Light heartbeat only while a schedule exists; avoids the heavy MutationObserver that caused trouble before.
+  if (!window.__pbTeamNameHeartbeatV2) {
+    window.__pbTeamNameHeartbeatV2 = setInterval(function(){
+      try {
+        if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+          applyTeamNames();
+        }
+      } catch(e) {}
+    }, 2000);
+  }
+
+  window.pbPatchScheduleTeamNamesNow = function(){
+    applyTeamNames();
+    return pbTeamNameDisplayPersistentStatusV2();
+  };
+
+  window.pbTeamNameDisplayPersistentStatusV2 = function(){
+    var first = matchesFlat()[0];
+    return {
+      installed: true,
+      matchCount: matchesFlat().length,
+      firstMatch: first ? {
+        id: first.id,
+        rawTeamA: first.teamA,
+        rawTeamB: first.teamB,
+        teamA_names: Array.isArray(first.teamA) ? first.teamA.map(pName) : null,
+        teamB_names: Array.isArray(first.teamB) ? first.teamB.map(pName) : null
+      } : null,
+      visibleTeams: Array.from(document.querySelectorAll("tr td:nth-child(3), tr td:nth-child(4)"))
+        .slice(0, 10)
+        .map(function(td){ return td.textContent.trim(); })
+    };
+  };
+})();
+
+
+
+/* PB_TEAM_NAME_ONLY_DISPLAY_FIX_V3 */
+(function(){
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function cleanName(p, idx){
+    if (!p) return "Player " + (idx + 1);
+
+    var names = [
+      p.name,
+      p.playerName,
+      p.fullName,
+      p.displayName,
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    ];
+
+    for (var i = 0; i < names.length; i++) {
+      var n = String(names[i] || "").trim();
+      if (!n) continue;
+
+      // Do not show numeric placeholder names like "9" or "9."
+      if (/^\d+\.?$/.test(n)) continue;
+
+      return n;
+    }
+
+    return "Player " + (idx + 1);
+  }
+
+  function playerName(idx){
+    idx = Number(idx);
+    var p = window.state && state.players ? state.players[idx] : null;
+    return cleanName(p, idx);
+  }
+
+  function flatMatches(){
+    var out = [];
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(m){
+          if (m) out.push(m);
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
+  function teamOnly(team){
+    if (!Array.isArray(team)) return "";
+    return team.map(function(i){ return playerName(i); }).join(" & ");
+  }
+
+  function applyNamesOnly(){
+    if (!window.state || !Array.isArray(state.players) || !Array.isArray(state.schedule)) return;
+
+    var byId = {};
+    flatMatches().forEach(function(m){
+      if (m && m.id != null) byId[String(m.id)] = m;
+    });
+
+    document.querySelectorAll("tr").forEach(function(row){
+      var cells = row.querySelectorAll("td");
+      if (!cells || cells.length < 4) return;
+
+      var first = String(cells[0].textContent || "").trim();
+      var idMatch = first.match(/^#?\s*(\d+)$/);
+      if (!idMatch) return;
+
+      var match = byId[idMatch[1]];
+      if (!match || !Array.isArray(match.teamA) || !Array.isArray(match.teamB)) return;
+
+      var a = teamOnly(match.teamA);
+      var b = teamOnly(match.teamB);
+
+      if (a) cells[2].innerHTML = esc(a);
+      if (b) cells[3].innerHTML = esc(b);
+    });
+  }
+
+  function applySoon(){
+    [0, 50, 150, 350, 800, 1500].forEach(function(ms){
+      setTimeout(applyNamesOnly, ms);
+    });
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbTeamNameOnlyV3) return;
+
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      applySoon();
+      return result;
+    };
+
+    wrapped.__pbTeamNameOnlyV3 = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    [
+      "renderSchedule",
+      "generateSchedule",
+      "promptGenerateSchedule",
+      "regenerateRemaining",
+      "regenerateSchedulePreview",
+      "publishDraftRound",
+      "publishPreviewRound",
+      "showTab",
+      "renderCourtsGrid",
+      "renderDashboard"
+    ].forEach(wrap);
+
+    applySoon();
+  }
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target;
+    if (!t) return;
+
+    var txt = String(t.textContent || "").toLowerCase();
+    var onclick = String(t.getAttribute && t.getAttribute("onclick") || "").toLowerCase();
+
+    if (
+      txt.includes("generate") ||
+      txt.includes("regenerate") ||
+      txt.includes("publish") ||
+      txt.includes("preview") ||
+      txt.includes("schedule") ||
+      onclick.includes("generate") ||
+      onclick.includes("regenerate") ||
+      onclick.includes("publish") ||
+      onclick.includes("renderschedule")
+    ) {
+      applySoon();
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var id = ev.target && ev.target.id;
+    if (
+      id === "team-mode" ||
+      id === "dupr-session-format" ||
+      id === "pb-dupr-overflow-toggle" ||
+      id === "courts-count" ||
+      id === "rounds-count" ||
+      id === "round-count"
+    ) {
+      applySoon();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    install();
+    setTimeout(install, 500);
+    setTimeout(install, 1500);
+  });
+
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  if (!window.__pbTeamNameOnlyHeartbeatV3) {
+    window.__pbTeamNameOnlyHeartbeatV3 = setInterval(function(){
+      try {
+        if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+          applyNamesOnly();
+        }
+      } catch(e) {}
+    }, 2000);
+  }
+
+  window.pbPatchScheduleTeamNamesNow = function(){
+    applyNamesOnly();
+    return window.pbTeamNameOnlyStatusV3();
+  };
+
+  window.pbTeamNameOnlyStatusV3 = function(){
+    return {
+      installed: true,
+      visibleTeams: Array.from(document.querySelectorAll("tr td:nth-child(3), tr td:nth-child(4)"))
+        .slice(0, 12)
+        .map(function(td){ return td.textContent.trim(); }),
+      firstMatch: flatMatches()[0] ? {
+        id: flatMatches()[0].id,
+        teamA: flatMatches()[0].teamA,
+        teamB: flatMatches()[0].teamB,
+        teamA_names: flatMatches()[0].teamA.map(playerName),
+        teamB_names: flatMatches()[0].teamB.map(playerName)
+      } : null
+    };
+  };
+})();
+
+
+
+/* PB_TEAM_DISPLAY_STRIP_SEED_DUPR_FINAL_V5 */
+(function(){
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function stripSeedPrefix(name){
+    name = String(name || "").trim();
+
+    // Removes:
+    // "4. Jeff Pimentel"
+    // "4 Jeff Pimentel"
+    // "#4 Jeff Pimentel"
+    // "#4. Jeff Pimentel"
+    name = name.replace(/^#?\s*\d+\s*\.?\s+/, "").trim();
+
+    return name;
+  }
+
+  function cleanName(p, idx){
+    if (!p) return "Player " + (idx + 1);
+
+    var candidates = [
+      p.name,
+      p.playerName,
+      p.fullName,
+      p.displayName,
+      p.label,
+      p.nickname,
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    ];
+
+    for (var i = 0; i < candidates.length; i++) {
+      var n = stripSeedPrefix(candidates[i]);
+      if (!n) continue;
+
+      // Avoid numeric-only fallback names.
+      if (/^#?\d+\.?$/.test(n)) continue;
+
+      return n;
+    }
+
+    return "Player " + (idx + 1);
+  }
+
+  function playerName(idx){
+    idx = Number(idx);
+    var p = window.state && state.players ? state.players[idx] : null;
+    return cleanName(p, idx);
+  }
+
+  function playerDupr(idx){
+    idx = Number(idx);
+    var p = window.state && state.players ? state.players[idx] : null;
+    if (!p) return 0;
+
+    try {
+      if (typeof pRating === "function") {
+        var r = Number(pRating(p));
+        if (!isNaN(r)) return r;
+      }
+    } catch(e) {}
+
+    var raw = p.dupr ?? p.clubRating ?? p.rating ?? p.skill ?? p.level ?? 0;
+    var v = Number(raw);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function teamDupr(team){
+    if (!Array.isArray(team) || !team.length) return "";
+
+    var ratings = team.map(playerDupr).filter(function(v){
+      return !isNaN(v) && v > 0;
+    });
+
+    if (!ratings.length) return "";
+
+    var avg = ratings.reduce(function(a,b){ return a + b; }, 0) / ratings.length;
+    return avg.toFixed(2);
+  }
+
+  function teamDisplay(team){
+    if (!Array.isArray(team)) return "";
+
+    var names = team.map(function(i){
+      return playerName(i);
+    }).join(" & ");
+
+    var d = teamDupr(team);
+
+    return d ? names + " · DUPR " + d : names;
+  }
+
+  function allMatches(){
+    var out = [];
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(m){
+          if (m) out.push(m);
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
+  function patchScheduleTeamCells(){
+    if (!window.state || !Array.isArray(state.players) || !Array.isArray(state.schedule)) return;
+
+    var byId = {};
+    allMatches().forEach(function(m){
+      if (m && m.id != null) byId[String(m.id)] = m;
+    });
+
+    document.querySelectorAll("tr").forEach(function(row){
+      var cells = row.querySelectorAll("td");
+      if (!cells || cells.length < 4) return;
+
+      var first = String(cells[0].textContent || "").trim();
+      var id = first.match(/^#?\s*(\d+)$/);
+      if (!id) return;
+
+      var match = byId[id[1]];
+      if (!match || !Array.isArray(match.teamA) || !Array.isArray(match.teamB)) return;
+
+      cells[2].innerHTML = esc(teamDisplay(match.teamA));
+      cells[3].innerHTML = esc(teamDisplay(match.teamB));
+    });
+  }
+
+  function patchSoon(){
+    [0, 50, 150, 300, 700, 1200, 2200].forEach(function(ms){
+      setTimeout(patchScheduleTeamCells, ms);
+    });
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbSeedStripDuprFinalV5) return;
+
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      patchSoon();
+      return result;
+    };
+
+    wrapped.__pbSeedStripDuprFinalV5 = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    [
+      "renderSchedule",
+      "generateSchedule",
+      "promptGenerateSchedule",
+      "regenerateRemaining",
+      "regenerateSchedulePreview",
+      "publishDraftRound",
+      "publishPreviewRound",
+      "showTab",
+      "renderCourtsGrid",
+      "renderDashboard"
+    ].forEach(wrap);
+
+    // Stop older display-fix heartbeats from fighting this formatter.
+    [
+      "__pbTeamNameHeartbeatV2",
+      "__pbTeamNameOnlyHeartbeatV3",
+      "__pbTeamNameDuprFinalHeartbeatV4"
+    ].forEach(function(k){
+      try {
+        if (window[k]) {
+          clearInterval(window[k]);
+          window[k] = null;
+        }
+      } catch(e) {}
+    });
+
+    patchSoon();
+  }
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target;
+    if (!t) return;
+
+    var txt = String(t.textContent || "").toLowerCase();
+    var onclick = String(t.getAttribute && t.getAttribute("onclick") || "").toLowerCase();
+
+    if (
+      txt.includes("generate") ||
+      txt.includes("regenerate") ||
+      txt.includes("publish") ||
+      txt.includes("preview") ||
+      txt.includes("schedule") ||
+      onclick.includes("generate") ||
+      onclick.includes("regenerate") ||
+      onclick.includes("publish") ||
+      onclick.includes("renderschedule")
+    ) {
+      patchSoon();
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var id = ev.target && ev.target.id;
+    if (
+      id === "team-mode" ||
+      id === "dupr-session-format" ||
+      id === "pb-dupr-overflow-toggle" ||
+      id === "courts-count" ||
+      id === "rounds-count" ||
+      id === "round-count"
+    ) {
+      patchSoon();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    install();
+    setTimeout(install, 500);
+    setTimeout(install, 1500);
+  });
+
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  if (!window.__pbSeedStripDuprFinalHeartbeatV5) {
+    window.__pbSeedStripDuprFinalHeartbeatV5 = setInterval(function(){
+      try {
+        if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+          patchScheduleTeamCells();
+        }
+      } catch(e) {}
+    }, 1000);
+  }
+
+  window.pbPatchScheduleTeamNamesNow = function(){
+    patchScheduleTeamCells();
+    return window.pbSeedStripDuprDisplayStatusV5();
+  };
+
+  window.pbSeedStripDuprDisplayStatusV5 = function(){
+    var first = allMatches()[0];
+
+    return {
+      installed: true,
+      firstMatch: first ? {
+        id: first.id,
+        rawTeamA: first.teamA,
+        rawTeamB: first.teamB,
+        teamA_display: teamDisplay(first.teamA),
+        teamB_display: teamDisplay(first.teamB),
+        rawPlayerNames: first.teamA.concat(first.teamB).map(function(i){
+          return state.players[i] && state.players[i].name;
+        }),
+        cleanedPlayerNames: first.teamA.concat(first.teamB).map(playerName)
+      } : null,
+      visibleTeams: Array.from(document.querySelectorAll("tr td:nth-child(3), tr td:nth-child(4)"))
+        .slice(0, 12)
+        .map(function(td){ return td.textContent.trim(); })
+    };
+  };
+})();
+
 </script>
 
 </body>
