@@ -21200,6 +21200,268 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_TEAM_DISPLAY_DUPR_BLUE_FINAL_V6 */
+(function(){
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function stripSeedPrefix(name){
+    name = String(name || "").trim();
+    return name.replace(/^#?\s*\d+\s*\.?\s+/, "").trim();
+  }
+
+  function cleanName(p, idx){
+    if (!p) return "Player " + (idx + 1);
+
+    var candidates = [
+      p.name,
+      p.playerName,
+      p.fullName,
+      p.displayName,
+      p.label,
+      p.nickname,
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    ];
+
+    for (var i = 0; i < candidates.length; i++) {
+      var n = stripSeedPrefix(candidates[i]);
+      if (!n) continue;
+      if (/^#?\d+\.?$/.test(n)) continue;
+      return n;
+    }
+
+    return "Player " + (idx + 1);
+  }
+
+  function playerName(idx){
+    idx = Number(idx);
+    var p = window.state && state.players ? state.players[idx] : null;
+    return cleanName(p, idx);
+  }
+
+  function playerDupr(idx){
+    idx = Number(idx);
+    var p = window.state && state.players ? state.players[idx] : null;
+    if (!p) return 0;
+
+    try {
+      if (typeof pRating === "function") {
+        var r = Number(pRating(p));
+        if (!isNaN(r)) return r;
+      }
+    } catch(e) {}
+
+    var raw = p.dupr ?? p.clubRating ?? p.rating ?? p.skill ?? p.level ?? 0;
+    var v = Number(raw);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function teamDupr(team){
+    if (!Array.isArray(team) || !team.length) return "";
+
+    var ratings = team.map(playerDupr).filter(function(v){
+      return !isNaN(v) && v > 0;
+    });
+
+    if (!ratings.length) return "";
+
+    var avg = ratings.reduce(function(a,b){ return a + b; }, 0) / ratings.length;
+    return avg.toFixed(2);
+  }
+
+  function teamHtml(team){
+    if (!Array.isArray(team)) return "";
+
+    var names = team.map(function(i){
+      return playerName(i);
+    }).join(" & ");
+
+    var d = teamDupr(team);
+
+    if (!d) return esc(names);
+
+    return esc(names) +
+      ' <span class="pb-team-dupr-blue" style="color:var(--blue,#2563eb);font-weight:800;white-space:nowrap;">· DUPR ' +
+      esc(d) +
+      '</span>';
+  }
+
+  function allMatches(){
+    var out = [];
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(m){
+          if (m) out.push(m);
+        });
+      });
+    } catch(e) {}
+    return out;
+  }
+
+  function patchScheduleTeamCells(){
+    if (!window.state || !Array.isArray(state.players) || !Array.isArray(state.schedule)) return;
+
+    var byId = {};
+    allMatches().forEach(function(m){
+      if (m && m.id != null) byId[String(m.id)] = m;
+    });
+
+    document.querySelectorAll("tr").forEach(function(row){
+      var cells = row.querySelectorAll("td");
+      if (!cells || cells.length < 4) return;
+
+      var first = String(cells[0].textContent || "").trim();
+      var id = first.match(/^#?\s*(\d+)$/);
+      if (!id) return;
+
+      var match = byId[id[1]];
+      if (!match || !Array.isArray(match.teamA) || !Array.isArray(match.teamB)) return;
+
+      cells[2].innerHTML = teamHtml(match.teamA);
+      cells[3].innerHTML = teamHtml(match.teamB);
+    });
+  }
+
+  function patchSoon(){
+    [0, 50, 150, 300, 700, 1200, 2200].forEach(function(ms){
+      setTimeout(patchScheduleTeamCells, ms);
+    });
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbDuprBlueFinalV6) return;
+
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      patchSoon();
+      return result;
+    };
+
+    wrapped.__pbDuprBlueFinalV6 = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    [
+      "renderSchedule",
+      "generateSchedule",
+      "promptGenerateSchedule",
+      "regenerateRemaining",
+      "regenerateSchedulePreview",
+      "publishDraftRound",
+      "publishPreviewRound",
+      "showTab",
+      "renderCourtsGrid",
+      "renderDashboard"
+    ].forEach(wrap);
+
+    // Stop older formatter heartbeats so this blue DUPR formatter wins.
+    [
+      "__pbTeamNameHeartbeatV2",
+      "__pbTeamNameOnlyHeartbeatV3",
+      "__pbTeamNameDuprFinalHeartbeatV4",
+      "__pbSeedStripDuprFinalHeartbeatV5"
+    ].forEach(function(k){
+      try {
+        if (window[k]) {
+          clearInterval(window[k]);
+          window[k] = null;
+        }
+      } catch(e) {}
+    });
+
+    patchSoon();
+  }
+
+  document.addEventListener("click", function(ev){
+    var t = ev.target;
+    if (!t) return;
+
+    var txt = String(t.textContent || "").toLowerCase();
+    var onclick = String(t.getAttribute && t.getAttribute("onclick") || "").toLowerCase();
+
+    if (
+      txt.includes("generate") ||
+      txt.includes("regenerate") ||
+      txt.includes("publish") ||
+      txt.includes("preview") ||
+      txt.includes("schedule") ||
+      onclick.includes("generate") ||
+      onclick.includes("regenerate") ||
+      onclick.includes("publish") ||
+      onclick.includes("renderschedule")
+    ) {
+      patchSoon();
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var id = ev.target && ev.target.id;
+    if (
+      id === "team-mode" ||
+      id === "dupr-session-format" ||
+      id === "pb-dupr-overflow-toggle" ||
+      id === "courts-count" ||
+      id === "rounds-count" ||
+      id === "round-count"
+    ) {
+      patchSoon();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    install();
+    setTimeout(install, 500);
+    setTimeout(install, 1500);
+  });
+
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  if (!window.__pbDuprBlueFinalHeartbeatV6) {
+    window.__pbDuprBlueFinalHeartbeatV6 = setInterval(function(){
+      try {
+        if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+          patchScheduleTeamCells();
+        }
+      } catch(e) {}
+    }, 1000);
+  }
+
+  window.pbPatchScheduleTeamNamesNow = function(){
+    patchScheduleTeamCells();
+    return window.pbDuprBlueDisplayStatusV6();
+  };
+
+  window.pbDuprBlueDisplayStatusV6 = function(){
+    var first = allMatches()[0];
+
+    return {
+      installed: true,
+      firstMatch: first ? {
+        id: first.id,
+        teamA_display_text: document.querySelector("tr td:nth-child(3)")?.textContent?.trim(),
+        teamB_display_text: document.querySelector("tr td:nth-child(4)")?.textContent?.trim(),
+        teamA_blueSpanExists: !!document.querySelector("tr td:nth-child(3) .pb-team-dupr-blue"),
+        teamB_blueSpanExists: !!document.querySelector("tr td:nth-child(4) .pb-team-dupr-blue")
+      } : null,
+      visibleTeams: Array.from(document.querySelectorAll("tr td:nth-child(3), tr td:nth-child(4)"))
+        .slice(0, 12)
+        .map(function(td){ return td.textContent.trim(); })
+    };
+  };
+})();
+
 </script>
 
 </body>
