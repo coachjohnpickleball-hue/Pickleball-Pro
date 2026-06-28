@@ -1161,6 +1161,21 @@ html body #global-round-timer.pb-global-timer-hidden {
   display: none !important;
 }
 
+
+
+/* PB_COMMS_EXACT_NAV_BUTTON_STYLE_V1 */
+.nav-group[data-tabs~="communications"] > .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  white-space: nowrap;
+}
+.nav-group[data-tabs~="communications"] .nav-caret {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -1294,7 +1309,7 @@ body.pb-non-admin a[href^="/admin/"]{
 
       <!-- PB_COMMS_BEFORE_MORE_DROPDOWN_V1 -->
   <div class="nav-group" data-tabs="communications mobilesync sms email">
-    <button class="nav-group-btn">📲 Comms ▾</button>
+    <button class="tab-btn" onclick="showTab('communications', event)">📲 Comms <span class="nav-caret">▾</span></button>
     <div class="nav-menu">
       <button class="tab-btn" onclick="showTab('communications', event)">Communications Hub</button>
       <button class="tab-btn" onclick="showTab('mobilesync', event)">Mobile Sync</button>
@@ -20336,6 +20351,8 @@ function exportEndSessionSummary(){
   console.info("PB_MOBILE_ROUND_START_AUTO_ANNOUNCE_V1 installed");
 })();
 
+
+/* PB_COMMS_BUTTON_STYLE_MATCH_V1 */
 </script>
 
 </body>
