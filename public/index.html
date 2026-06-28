@@ -1042,39 +1042,37 @@
 
 
 
-/* PB_GLOBAL_TIMER_MENU_CLOSE_V1 */
-#global-round-timer {
+
+
+
+
+
+
+
+
+
+/* PB_GLOBAL_TIMER_FORCE_FLOAT_V1 */
+html body #global-round-timer {
   position: fixed !important;
   right: 18px !important;
   bottom: 18px !important;
   left: auto !important;
-  z-index: 99990 !important;
-}
-
-#global-round-timer.grt-hidden {
-  display: none !important;
-}
-
-#global-round-timer .grt-hide-btn {
-  border-color: rgba(255,255,255,.18) !important;
-  background: rgba(255,255,255,.06) !important;
-  color: var(--txt2, #fff) !important;
-  min-width: 30px !important;
-  padding: .35rem .55rem !important;
-  font-size: 1rem !important;
-  line-height: 1 !important;
-}
-
-#global-round-timer .grt-hide-btn:hover {
-  background: rgba(255,255,255,.14) !important;
-  color: var(--txt, #fff) !important;
+  top: auto !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: translateZ(0) !important;
+  pointer-events: auto !important;
+  box-shadow: 0 16px 42px rgba(0,0,0,.32) !important;
 }
 
 @media (max-width: 700px) {
-  #global-round-timer {
+  html body #global-round-timer {
     right: 10px !important;
     left: 10px !important;
     bottom: 70px !important;
+    top: auto !important;
     justify-content: center !important;
   }
 }
@@ -1241,7 +1239,6 @@ body.pb-non-admin a[href^="/admin/"]{
       <button class="user-dropdown-item" onclick="saveTournament()">💾 Save tournament</button>
       <button class="user-dropdown-item" onclick="historyArchiveCurrent()">🏆 Archive tournament</button>
       <button class="user-dropdown-item" onclick="document.getElementById('load-file').click()">📂 Load tournament</button>
-      <button class="user-dropdown-item" id="global-timer-menu-btn" onclick="toggleGlobalRoundTimerFromMenu(event)">⏱ Hide Timer</button>
       <button class="user-dropdown-item" onclick="openBackupModal()">📦 Backup &amp; restore</button>
       <button class="user-dropdown-item" onclick="printSchedule()">🖨 Print schedule</button>
       <button class="user-dropdown-item" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Access log</button>
@@ -1262,7 +1259,6 @@ body.pb-non-admin a[href^="/admin/"]{
   <button type="button" onclick="toggleTimer()" id="global-timer-toggle">▶</button>
   <button type="button" onclick="resetTimer()">↺</button>
   <span id="global-timer-status" class="grt-status">Ready</span>
-  <button type="button" id="global-timer-hide-btn" class="grt-hide-btn" onclick="hideGlobalRoundTimer(event)" title="Hide timer">×</button>
 </div>
 
 
@@ -11557,10 +11553,11 @@ function printSchedule() {
 // ═══════════════════════════════════════════════
 
 
-// PB_GLOBAL_TIMER_MENU_CLOSE_V1
-function setGlobalRoundTimerVisible(visible) {
+
+// PB_GLOBAL_TIMER_FLOAT_MENU_SIMPLE_V1
+function setGlobalTimerFloatVisible(visible) {
   const timer = document.getElementById('global-round-timer');
-  const menuBtn = document.getElementById('global-timer-menu-btn');
+  const menuBtn = document.getElementById('global-timer-float-menu');
 
   if (timer) {
     timer.classList.toggle('grt-hidden', !visible);
@@ -11568,31 +11565,31 @@ function setGlobalRoundTimerVisible(visible) {
 
   if (menuBtn) {
     menuBtn.textContent = visible ? '⏱ Hide Timer' : '⏱ Show Timer';
-    menuBtn.title = visible ? 'Hide floating round timer' : 'Show floating round timer';
+    menuBtn.title = visible ? 'Hide floating timer' : 'Show floating timer';
   }
 
   try {
-    sessionStorage.setItem('pbGlobalRoundTimerVisible', visible ? '1' : '0');
+    sessionStorage.setItem('pbGlobalTimerFloatVisible', visible ? '1' : '0');
   } catch(e) {}
 }
 
-function hideGlobalRoundTimer(ev) {
+function hideGlobalTimerFloat(ev) {
   if (ev) {
     ev.preventDefault();
     ev.stopPropagation();
   }
-  setGlobalRoundTimerVisible(false);
+  setGlobalTimerFloatVisible(false);
 }
 
-function showGlobalRoundTimer(ev) {
+function showGlobalTimerFloat(ev) {
   if (ev) {
     ev.preventDefault();
     ev.stopPropagation();
   }
-  setGlobalRoundTimerVisible(true);
+  setGlobalTimerFloatVisible(true);
 }
 
-function toggleGlobalRoundTimerFromMenu(ev) {
+function toggleGlobalTimerFloat(ev) {
   if (ev) {
     ev.preventDefault();
     ev.stopPropagation();
@@ -11600,22 +11597,48 @@ function toggleGlobalRoundTimerFromMenu(ev) {
 
   const timer = document.getElementById('global-round-timer');
   const hidden = !!(timer && timer.classList.contains('grt-hidden'));
-  setGlobalRoundTimerVisible(hidden);
+  setGlobalTimerFloatVisible(hidden);
 }
 
-function initGlobalRoundTimerVisibility() {
+function initGlobalTimerFloat() {
   let visible = true;
 
   try {
-    visible = sessionStorage.getItem('pbGlobalRoundTimerVisible') !== '0';
+    visible = sessionStorage.getItem('pbGlobalTimerFloatVisible') !== '0';
   } catch(e) {}
 
-  setGlobalRoundTimerVisible(visible);
+  setGlobalTimerFloatVisible(visible);
 }
 
-document.addEventListener('DOMContentLoaded', initGlobalRoundTimerVisibility);
-setTimeout(initGlobalRoundTimerVisibility, 250);
-setTimeout(initGlobalRoundTimerVisibility, 1000);
+document.addEventListener('DOMContentLoaded', initGlobalTimerFloat);
+setTimeout(initGlobalTimerFloat, 250);
+setTimeout(initGlobalTimerFloat, 1000);
+
+
+// PB_GLOBAL_TIMER_FORCE_FLOAT_V1
+function forceGlobalTimerFloat() {
+  const t = document.getElementById('global-round-timer');
+  if (!t) return false;
+
+  t.style.setProperty('position', 'fixed', 'important');
+  t.style.setProperty('right', '18px', 'important');
+  t.style.setProperty('bottom', window.matchMedia('(max-width: 700px)').matches ? '70px' : '18px', 'important');
+  t.style.setProperty('left', window.matchMedia('(max-width: 700px)').matches ? '10px' : 'auto', 'important');
+  t.style.setProperty('top', 'auto', 'important');
+  t.style.setProperty('z-index', '2147483000', 'important');
+  t.style.setProperty('display', 'flex', 'important');
+  t.style.setProperty('visibility', 'visible', 'important');
+  t.style.setProperty('opacity', '1', 'important');
+  t.style.setProperty('transform', 'translateZ(0)', 'important');
+  t.setAttribute('data-pb-forced-floating-timer', 'true');
+
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', forceGlobalTimerFloat);
+setTimeout(forceGlobalTimerFloat, 250);
+setTimeout(forceGlobalTimerFloat, 1000);
+setInterval(forceGlobalTimerFloat, 2000);
 
 //  MATCH TIMER
 // ═══════════════════════════════════════════════
