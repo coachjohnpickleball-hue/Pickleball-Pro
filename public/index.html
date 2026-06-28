@@ -20188,6 +20188,154 @@ function exportEndSessionSummary(){
 /* PB_CRITICAL_COMMUNICATIONS_VISIBLE_V1_REMOVED */
 
 
+
+
+/* PB_MOBILE_ROUND_START_AUTO_ANNOUNCE_V1 */
+(function(){
+  function pbMsRoundStartKey(roundIdx){
+    try {
+      var code = (window.msState && window.msState.code) || "";
+      return "pbMobileRoundStartedAnnouncement:" + code + ":round:" + String(Number(roundIdx) + 1);
+    } catch(e) {
+      return "pbMobileRoundStartedAnnouncement:unknown:round:" + String(Number(roundIdx) + 1);
+    }
+  }
+
+  function pbGetCurrentRoundIdxForMobileAnnouncement(){
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var p = dashboardGetProgress();
+        if (p && typeof p.currentIdx === "number" && p.currentIdx >= 0) return p.currentIdx;
+      }
+    } catch(e) {}
+
+    try {
+      if (state && Array.isArray(state.schedule)) {
+        if (state.startedRounds && typeof state.startedRounds.forEach === "function") {
+          var lastStarted = -1;
+          state.startedRounds.forEach(function(idx){
+            if (typeof idx === "number" && idx > lastStarted) lastStarted = idx;
+          });
+          if (lastStarted >= 0) return lastStarted;
+        }
+
+        var openIdx = state.schedule.findIndex(function(round){
+          return (round || []).some(function(match){ return !match.complete; });
+        });
+        if (openIdx >= 0) return openIdx;
+      }
+    } catch(e) {}
+
+    return 0;
+  }
+
+  async function pbPostMobileRoundStartAnnouncement(roundIdx, reason){
+    try {
+      if (!window.msState || !msState.workerUrl || !msState.code) {
+        console.warn("Mobile round-start announcement skipped: Mobile Sync worker/code not configured yet.");
+        return false;
+      }
+
+      if (typeof msApi !== "function") {
+        console.warn("Mobile round-start announcement skipped: msApi unavailable.");
+        return false;
+      }
+
+      roundIdx = Number(roundIdx);
+      if (!Number.isFinite(roundIdx) || roundIdx < 0) roundIdx = pbGetCurrentRoundIdxForMobileAnnouncement();
+
+      var key = pbMsRoundStartKey(roundIdx);
+
+      try {
+        if (localStorage.getItem(key)) {
+          console.info("Mobile round-start announcement already sent for Round " + (roundIdx + 1));
+          return true;
+        }
+      } catch(e) {}
+
+      var text = "🏓 Round " + (roundIdx + 1) + " has started! Check your court below, or look for your name on the live board / ask the organizer.";
+
+      await msApi("/announce", {
+        method: "POST",
+        body: JSON.stringify({ text: text })
+      });
+
+      try { localStorage.setItem(key, String(Date.now())); } catch(e) {}
+
+      try {
+        if (typeof msFetchClaims === "function") await msFetchClaims();
+      } catch(e) {}
+
+      try {
+        if (typeof toast === "function") toast("📢 Mobile announcement posted: Round " + (roundIdx + 1) + " started");
+      } catch(e) {}
+
+      console.info("Mobile round-start announcement posted", { round: roundIdx + 1, reason: reason || "manual" });
+      return true;
+    } catch(err) {
+      console.warn("Mobile round-start announcement failed:", err);
+      try {
+        if (typeof toast === "function") toast("Mobile announcement failed: " + (err && err.message ? err.message : err), "err");
+      } catch(e) {}
+      return false;
+    }
+  }
+
+  window.pbPostMobileRoundStartAnnouncement = pbPostMobileRoundStartAnnouncement;
+
+  // Replace/restore the original auto-start function with a visible, reliable version.
+  window.msAnnounceRoundStarted = function(roundIdx){
+    return pbPostMobileRoundStartAnnouncement(roundIdx, "msAnnounceRoundStarted");
+  };
+
+  // Wrap Start Round. Even if the older function was removed or silently failed,
+  // this guarantees the mobile announcement fires after the round is locked.
+  if (typeof window.lockRound === "function" && !window.lockRound.__pbMobileAutoAnnounceWrapped) {
+    var oldLockRound = window.lockRound;
+    var wrappedLockRound = function(roundIdx){
+      var result = oldLockRound.apply(this, arguments);
+      setTimeout(function(){
+        pbPostMobileRoundStartAnnouncement(roundIdx, "lockRound");
+      }, 150);
+      return result;
+    };
+    wrappedLockRound.__pbMobileAutoAnnounceWrapped = true;
+    window.lockRound = wrappedLockRound;
+  }
+
+  // Also hook common Mobile Sync push functions. This covers the case where the
+  // organizer starts/pushes from Mobile Sync instead of the normal Schedule button.
+  [
+    "msPushNow",
+    "msPushRound",
+    "msPushCurrentRound",
+    "msPushCurrent",
+    "msPushState",
+    "msPushToMobile",
+    "msPushSchedule"
+  ].forEach(function(fnName){
+    try {
+      var fn = window[fnName];
+      if (typeof fn === "function" && !fn.__pbMobileAutoAnnounceWrapped) {
+        var wrapped = function(){
+          var result = fn.apply(this, arguments);
+          Promise.resolve(result).finally(function(){
+            var idx = pbGetCurrentRoundIdxForMobileAnnouncement();
+            if (state && state.startedRounds && state.startedRounds.has && state.startedRounds.has(idx)) {
+              pbPostMobileRoundStartAnnouncement(idx, fnName);
+            }
+          });
+          return result;
+        };
+        wrapped.__pbMobileAutoAnnounceWrapped = true;
+        window[fnName] = wrapped;
+      }
+    } catch(e) {}
+  });
+
+  console.info("PB_MOBILE_ROUND_START_AUTO_ANNOUNCE_V1 installed");
+})();
+
 </script>
 
 </body>
