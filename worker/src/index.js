@@ -604,6 +604,243 @@ export default {
     // Same admin-only restriction as above. Shows who logged in, and
     // when, going back up to 90 days (records auto-expire after that —
     // see the write site above for why).
+    
+    // PB_ACCESS_LOG_DELETE_MATCHING_POST_V1
+    if (request.method === 'POST' && path === '/admin/access-log/delete-matching') {
+      // PB_ACCESS_LOG_DELETE_AUTH_FIX_V2
+      const deleteAdminEmail = String(
+        userEmail ||
+        request.headers.get('cf-access-authenticated-user-email') ||
+        request.headers.get('cf-access-jwt-assertion-email') ||
+        ''
+      ).trim().toLowerCase();
+
+      const envAdminEmails = String(env.ADMIN_EMAILS || '')
+        .split(',')
+        .map(e => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      const adminOk =
+        (typeof isAdminUser === 'function' && isAdminUser(env, deleteAdminEmail)) ||
+        (typeof isAdminEmail === 'function' && isAdminEmail(deleteAdminEmail, env)) ||
+        envAdminEmails.includes(deleteAdminEmail);
+
+      if (!adminOk) {
+        return new Response(
+          'Forbidden: admin only. Detected email: ' + (deleteAdminEmail || 'none') + '. ADMIN_EMAILS: ' + envAdminEmails.join(', '),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          }
+        );
+      }
+
+      const form = await request.formData().catch(() => null);
+
+      if (!form) {
+        return new Response('Invalid form submission.', {
+          status: 400,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      }
+
+      const q = String(form.get('q') || '').trim().toLowerCase();
+      const daysRaw = parseInt(String(form.get('days') || '90'), 10);
+      const days = Number.isFinite(daysRaw) ? Math.max(1, Math.min(90, daysRaw)) : 90;
+      const country = String(form.get('country') || '').trim().toLowerCase();
+      const device = String(form.get('device') || '').trim().toLowerCase();
+      const confirmText = String(form.get('confirm') || '').trim();
+
+      const hasFilter = !!q || days < 90 || !!country || !!device;
+
+      const backParams = new URLSearchParams();
+      if (q) backParams.set('q', q);
+      if (days) backParams.set('days', String(days));
+      if (country) backParams.set('country', country.toUpperCase());
+      if (device) backParams.set('device', device);
+
+      const backHref = '/admin/access-log' + (backParams.toString() ? '?' + backParams.toString() : '');
+
+      function htmlPage(title, body, status) {
+        return new Response(
+          '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+          '<title>' + escapeHtml(title) + '</title>' +
+          '<style>body{font-family:system-ui;background:#0f172a;color:#fff;padding:24px}.card{max-width:860px;margin:auto;background:#111827;border:1px solid #334155;border-radius:18px;padding:22px}.ok{color:#C6FF00;font-weight:900}.warn{color:#FFD54F}.muted{color:#cbd5e1}.btn{display:inline-block;margin-top:14px;padding:10px 14px;border-radius:12px;background:#C6FF00;color:#111;text-decoration:none;font-weight:900}code{background:#020617;border:1px solid #334155;border-radius:8px;padding:2px 6px}</style>' +
+          '</head><body><main class="card">' + body +
+          '<a class="btn" href="' + escapeHtml(backHref) + '">Back to Access Log</a>' +
+          '</main></body></html>',
+          {
+            status: status || 200,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          }
+        );
+      }
+
+      if (confirmText !== 'DELETE') {
+        return htmlPage(
+          'Delete cancelled',
+          '<h1>Delete cancelled</h1><p>You must type <code>DELETE</code> exactly.</p>',
+          400
+        );
+      }
+
+      if (!hasFilter) {
+        return htmlPage(
+          'Delete cancelled',
+          '<h1>Delete cancelled</h1><p class="warn">Apply at least one filter before deleting logs.</p><p>Use Search, Days less than 90, Country, or Device contains.</p>',
+          400
+        );
+      }
+
+      const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+
+      function parseRecord(raw) {
+        try {
+          return raw ? JSON.parse(raw) : {};
+        } catch (err) {
+          return {};
+        }
+      }
+
+      function getRecordTimeMs(keyName, obj) {
+        const values = [
+          obj.at,
+          obj.createdAt,
+          obj.timestamp,
+          obj.time,
+          obj.date,
+          obj.day,
+          keyName
+        ];
+
+        for (const value of values) {
+          const text = String(value || '');
+          const match = text.match(/\d{4}-\d{2}-\d{2}(?:T[0-9:.+\-Z]*)?/);
+
+          if (match) {
+            const d = new Date(match[0]);
+            if (!Number.isNaN(d.getTime())) return d.getTime();
+          }
+
+          const d = new Date(text);
+          if (!Number.isNaN(d.getTime())) return d.getTime();
+        }
+
+        return 0;
+      }
+
+      function searchableText(keyName, raw, obj) {
+        return [
+          keyName,
+          raw,
+          obj.email,
+          obj.user,
+          obj.userEmail,
+          obj.ip,
+          obj.country,
+          obj.countryCode,
+          obj.userAgent,
+          obj.device,
+          obj.path,
+          obj.url,
+          obj.event,
+          obj.type,
+          obj.status
+        ].map(v => String(v || '')).join(' ').toLowerCase();
+      }
+
+      function matchesFilters(keyName, raw) {
+        const obj = parseRecord(raw);
+        const timeMs = getRecordTimeMs(keyName, obj);
+
+        if (!timeMs || timeMs < cutoffMs) return false;
+
+        const text = searchableText(keyName, raw, obj);
+
+        if (q && !text.includes(q)) return false;
+        if (country && !text.includes(country)) return false;
+        if (device && !text.includes(device)) return false;
+
+        return true;
+      }
+
+      const matches = [];
+      let cursor = undefined;
+
+      do {
+        const listed = await env.USAGE.list({ prefix: 'access-event:', cursor });
+        cursor = listed.cursor;
+
+        for (const key of listed.keys || []) {
+          const raw = await env.USAGE.get(key.name);
+
+          if (matchesFilters(key.name, raw || '')) {
+            matches.push({
+              key: key.name,
+              raw: raw || ''
+            });
+          }
+        }
+      } while (cursor);
+
+      if (!matches.length) {
+        return htmlPage(
+          'No matching logs',
+          '<h1>No matching logs found</h1><p>No access-event logs matched the current filters.</p>',
+          200
+        );
+      }
+
+      const now = new Date().toISOString();
+
+      try {
+        await env.USAGE.put('access-log-delete-backup:' + now, JSON.stringify({
+          createdAt: now,
+          deletedBy: userEmail,
+          filters: { q, days, country, device },
+          count: matches.length,
+          records: matches.slice(0, 5000)
+        }));
+      } catch (err) {}
+
+      const deleted = [];
+      const failed = [];
+
+      for (const item of matches) {
+        try {
+          await env.USAGE.delete(item.key);
+          deleted.push(item.key);
+        } catch (err) {
+          failed.push(item.key);
+        }
+      }
+
+      try {
+        await env.USAGE.put('access-log-delete-audit:' + now, JSON.stringify({
+          deletedAt: now,
+          deletedBy: userEmail,
+          filters: { q, days, country, device },
+          matchedCount: matches.length,
+          deletedCount: deleted.length,
+          failedCount: failed.length
+        }));
+      } catch (err) {}
+
+      return htmlPage(
+        'Matching logs deleted',
+        '<h1>Matching Access Log records deleted</h1>' +
+        '<p class="ok">Deleted ' + deleted.length + ' matching access-event log(s).</p>' +
+        (failed.length ? '<p class="warn">Failed to delete ' + failed.length + ' log(s).</p>' : '') +
+        '<p class="muted">Filters used:<br>' +
+        'Search: <code>' + escapeHtml(q || 'none') + '</code><br>' +
+        'Days: <code>' + escapeHtml(String(days)) + '</code><br>' +
+        'Country: <code>' + escapeHtml(country || 'all') + '</code><br>' +
+        'Device: <code>' + escapeHtml(device || 'any') + '</code></p>' +
+        '<p class="muted">A backup and audit record were saved in KV.</p>',
+        200
+      );
+    }
+
     if (request.method === 'GET' && (path === '/admin/login-log' || path === '/admin/access-log')) {
       return handleAdminLoginLog(env, userEmail, url);
     }
@@ -1085,6 +1322,16 @@ async function handleAdminLoginLog(env, userEmail, url) {
     '<h1>🔐 Access Log</h1><div class="sub">Admin-only view of who accessed Pickleball Pro. Detailed events are retained for up to 90 days.</div>',
     '<div class="cards"><div class="card"><div class="num">' + records.length + '</div><div class="label">access events shown</div></div><div class="card"><div class="num">' + uniquePeople + '</div><div class="label">unique people</div></div><div class="card"><div class="num">' + uniqueIps + '</div><div class="label">unique IPs</div></div><div class="card"><div class="num">' + todayCount + '</div><div class="label">events today</div></div></div>',
     '<form class="toolbar" method="GET" action="/admin/login-log"><div><label>Search email, IP, device, path</label><input name="q" value="' + escapeHtml(q) + '" placeholder="example: john, iPhone, CA"></div><div><label>Days</label><select name="days"><option' + (days===7?' selected':'') + '>7</option><option' + (days===30?' selected':'') + '>30</option><option' + (days===60?' selected':'') + '>60</option><option' + (days===90?' selected':'') + '>90</option></select></div><div><label>Country</label><select name="country"><option value="">All</option>' + countryOptions + '</select></div><div><label>Device contains</label><input name="device" value="' + escapeHtml(deviceFilter) + '" placeholder="iPhone"></div><button type="submit">Filter</button><a class="btn secondary" href="/admin/access-log">Refresh</a><a class="btn secondary" href="/admin/access-log?days=90">Clear Filters</a><a class="btn secondary" href="' + escapeHtml(csvHref) + '">Export CSV</a></form>',
+    // PB_ACCESS_LOG_DELETE_MATCHING_UI_V1
+    '<form class="toolbar" method="POST" action="/admin/access-log/delete-matching" style="border-color:#7f1d1d;background:#1f1111">' +
+      '<input type="hidden" name="q" value="' + escapeHtml(q) + '">' +
+      '<input type="hidden" name="days" value="' + escapeHtml(String(days)) + '">' +
+      '<input type="hidden" name="country" value="' + escapeHtml(countryFilter) + '">' +
+      '<input type="hidden" name="device" value="' + escapeHtml(deviceFilter) + '">' +
+      '<div><label>Delete matching logs</label><input name="confirm" placeholder="Type DELETE" autocomplete="off"></div>' +
+      '<button type="submit" style="background:#ff4d4d;color:#fff">Delete matching logs</button>' +
+      '<div class="muted" style="align-self:center">Deletes only logs matching the current Search / Days / Country / Device filters.</div>' +
+    '</form>',
     '<div class="warnings">' + warningHtml + '</div>',
     '<div class="sub"><strong>Showing ' + records.length + ' matching records</strong> from ' + totalBeforeFilter + ' saved log records. Today is shown separately; older history remains below.</div>',
     todaySectionHtml(todayRecords),
