@@ -1176,6 +1176,75 @@ html body #global-round-timer.pb-global-timer-hidden {
   line-height: 1;
 }
 
+
+
+/* PB_DASHBOARD_COMMAND_CENTER_CLEAN_V1_CSS */
+.pb-dashboard-command-center {
+  margin: 0.95rem 0 1.05rem;
+  display: grid;
+  grid-template-columns: minmax(220px,1fr) minmax(260px,1.35fr) minmax(220px,1fr);
+  gap: .75rem;
+}
+.pb-dashboard-command-card {
+  background: rgba(30,39,30,0.78);
+  border: 1px solid rgba(198,255,0,0.14);
+  border-radius: 16px;
+  padding: .9rem;
+  box-shadow: 0 12px 28px rgba(0,0,0,.16);
+}
+.pb-dashboard-command-label {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--txt3);
+  font-weight: 900;
+  margin-bottom: .35rem;
+}
+.pb-dashboard-command-title {
+  font-weight: 950;
+  color: var(--txt);
+  font-size: 1rem;
+  margin-bottom: .35rem;
+}
+.pb-dashboard-command-note {
+  color: var(--txt2);
+  font-size: .86rem;
+  line-height: 1.35;
+}
+.pb-dashboard-pill-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.4rem;
+  margin-top:.55rem;
+}
+.pb-dashboard-pill {
+  border: 1px solid rgba(198,255,0,.18);
+  background: rgba(198,255,0,.07);
+  color: var(--txt2);
+  border-radius: 999px;
+  padding: .28rem .55rem;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.pb-dashboard-action-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem;
+  margin-top:.7rem;
+}
+.pb-dashboard-action-row .btn {
+  padding: .45rem .65rem;
+  font-size: .82rem;
+}
+.pb-dashboard-muted-link {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.035);
+  color: var(--txt2);
+}
+@media(max-width: 980px) {
+  .pb-dashboard-command-center { grid-template-columns: 1fr; }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -22053,6 +22122,322 @@ function exportEndSessionSummary(){
       overflowAudit: typeof window.pbDuprAuditCurrentScheduleV19 === "function"
         ? window.pbDuprAuditCurrentScheduleV19()
         : "V19 audit helper missing"
+    };
+  };
+})();
+
+
+
+/* PB_DASHBOARD_COMMAND_CENTER_CLEAN_V1 */
+(function(){
+  if (window.__pbDashboardCommandCenterCleanV1) return;
+  window.__pbDashboardCommandCenterCleanV1 = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function safeText(el){
+    return el ? String(el.textContent || el.value || "").trim() : "";
+  }
+
+  function activePlayers(){
+    try {
+      return (state.players || []).filter(function(p){
+        return p && p.waitlist !== true && p.active !== false && p.checkedIn !== false;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function selectedCourts(){
+    try {
+      if (state.selectedCourts && state.selectedCourts.size) return state.selectedCourts.size;
+    } catch(e) {}
+    return 0;
+  }
+
+  function getScheduleModeLabel(){
+    var el = byId("team-mode");
+    if (!el) return "Mode not selected";
+
+    var label = "";
+    try {
+      label = el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].textContent : el.value;
+    } catch(e) {
+      label = el.value;
+    }
+
+    label = String(label || "").replace(/\s+/g, " ").trim();
+
+    var raw = String(el.value || "").toLowerCase();
+    if (raw === "dupr" || raw === "competitive-mixed" || raw.indexOf("dupr") >= 0 || raw.indexOf("competitive") >= 0) {
+      var fmt = byId("pb-dupr-format") || byId("pb-dupr-static-format") || byId("dupr-session-format");
+      if (fmt) {
+        var fmtLabel = "";
+        try {
+          fmtLabel = fmt.options && fmt.selectedIndex >= 0 ? fmt.options[fmt.selectedIndex].textContent : fmt.value;
+        } catch(e) {
+          fmtLabel = fmt.value;
+        }
+        fmtLabel = String(fmtLabel || "").replace(/\s+/g, " ").trim();
+        if (fmtLabel) label = "DUPR · " + fmtLabel;
+      }
+    }
+
+    return label || "Mode not selected";
+  }
+
+  function getOverflowLabel(){
+    var box = byId("pb-dupr-mode-overflow-v18") ||
+      byId("pb-dupr-single-overflow") ||
+      byId("pb-dupr-static-overflow");
+
+    if (!box || !box.offsetParent) return "";
+    return box.checked ? "Overflow ON" : "Overflow OFF";
+  }
+
+  function progressInfo(){
+    var rounds = [];
+    try { rounds = state.schedule || []; } catch(e) {}
+
+    var total = 0;
+    var complete = 0;
+    var current = -1;
+
+    rounds.forEach(function(round, idx){
+      var matches = round || [];
+      total += matches.length;
+      complete += matches.filter(function(m){ return m && m.complete; }).length;
+      if (current < 0 && matches.some(function(m){ return m && !m.complete; })) current = idx;
+    });
+
+    if (current < 0 && rounds.length) current = rounds.length - 1;
+
+    return {
+      rounds: rounds.length,
+      total: total,
+      complete: complete,
+      current: current
+    };
+  }
+
+  function nextMoveText(){
+    var p = progressInfo();
+    var ap = activePlayers();
+    var courts = selectedCourts();
+
+    if (ap < 4) return "Add at least 4 active players to start scheduling.";
+    if (!courts) return "Select courts before generating rounds.";
+    if (!p.rounds) return "Generate your first schedule when players and courts are ready.";
+    if (p.total && p.complete >= p.total) return "Rounds are complete. Review standings or export results.";
+
+    var roundNumber = p.current >= 0 ? p.current + 1 : 1;
+
+    try {
+      if (state.startedRounds && state.startedRounds.has(p.current)) {
+        return "Round " + roundNumber + " is live. Enter scores as games finish.";
+      }
+    } catch(e) {}
+
+    return "Round " + roundNumber + " is ready. Start the round when players are on court.";
+  }
+
+  function callPrimary(){
+    var btn = byId("dash-primary-action");
+    if (btn) btn.click();
+    else if (typeof dashboardPrimaryAction === "function") dashboardPrimaryAction();
+  }
+
+  function ensurePanel(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return null;
+
+    var existing = byId("pb-dashboard-command-center-v1");
+    if (existing) return existing;
+
+    var kpis = sec.querySelector(".dashboard-kpis");
+    if (!kpis) return null;
+
+    var panel = document.createElement("div");
+    panel.id = "pb-dashboard-command-center-v1";
+    panel.className = "pb-dashboard-command-center";
+
+    panel.innerHTML =
+      '<div class="pb-dashboard-command-card">' +
+        '<div class="pb-dashboard-command-label">Session setup</div>' +
+        '<div class="pb-dashboard-command-title" id="pb-dashboard-mode-title-v1">Mode</div>' +
+        '<div class="pb-dashboard-command-note" id="pb-dashboard-mode-note-v1">Players, courts and format.</div>' +
+        '<div class="pb-dashboard-pill-row" id="pb-dashboard-pill-row-v1"></div>' +
+      '</div>' +
+
+      '<div class="pb-dashboard-command-card">' +
+        '<div class="pb-dashboard-command-label">Next move</div>' +
+        '<div class="pb-dashboard-command-title" id="pb-dashboard-next-title-v1">Ready</div>' +
+        '<div class="pb-dashboard-command-note" id="pb-dashboard-next-note-v1">Use the next action below.</div>' +
+        '<div class="pb-dashboard-action-row">' +
+          '<button type="button" class="btn btn-primary" id="pb-dashboard-primary-proxy-v1">Do Next Action</button>' +
+          '<button type="button" class="btn btn-secondary pb-dashboard-muted-link" id="pb-dashboard-schedule-v1">Schedule</button>' +
+          '<button type="button" class="btn btn-secondary pb-dashboard-muted-link" id="pb-dashboard-standings-v1">Standings</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="pb-dashboard-command-card">' +
+        '<div class="pb-dashboard-command-label">Run session</div>' +
+        '<div class="pb-dashboard-command-title">Tools you actually use</div>' +
+        '<div class="pb-dashboard-command-note">Jump to player setup, communications, mobile scoring, or session health.</div>' +
+        '<div class="pb-dashboard-action-row">' +
+          '<button type="button" class="btn btn-secondary pb-dashboard-muted-link" id="pb-dashboard-players-v1">Players</button>' +
+          '<button type="button" class="btn btn-secondary pb-dashboard-muted-link" id="pb-dashboard-comms-v1">Comms</button>' +
+          '<button type="button" class="btn btn-secondary pb-dashboard-muted-link" id="pb-dashboard-nextstep-v1">Next Step</button>' +
+        '</div>' +
+      '</div>';
+
+    kpis.insertAdjacentElement("afterend", panel);
+
+    byId("pb-dashboard-primary-proxy-v1").addEventListener("click", callPrimary);
+    byId("pb-dashboard-schedule-v1").addEventListener("click", function(){ showTab("schedule"); });
+    byId("pb-dashboard-standings-v1").addEventListener("click", function(){ showTab("standings"); });
+    byId("pb-dashboard-players-v1").addEventListener("click", function(){ showTab("players"); });
+    byId("pb-dashboard-comms-v1").addEventListener("click", function(){ showTab("communications"); });
+    byId("pb-dashboard-nextstep-v1").addEventListener("click", function(){ showTab("sessionhealth"); });
+
+    return panel;
+  }
+
+  function syncPanel(){
+    var panel = ensurePanel();
+    if (!panel) return false;
+
+    var p = progressInfo();
+    var ap = activePlayers();
+    var courts = selectedCourts();
+    var mode = getScheduleModeLabel();
+    var overflow = getOverflowLabel();
+
+    var modeTitle = byId("pb-dashboard-mode-title-v1");
+    var modeNote = byId("pb-dashboard-mode-note-v1");
+    var nextTitle = byId("pb-dashboard-next-title-v1");
+    var nextNote = byId("pb-dashboard-next-note-v1");
+    var pills = byId("pb-dashboard-pill-row-v1");
+    var primaryProxy = byId("pb-dashboard-primary-proxy-v1");
+    var dashPrimary = byId("dash-primary-action");
+
+    if (modeTitle) modeTitle.textContent = mode;
+    if (modeNote) {
+      modeNote.textContent = ap + " active player" + (ap === 1 ? "" : "s") + " · " +
+        courts + " court" + (courts === 1 ? "" : "s") + " selected";
+    }
+
+    if (nextTitle) {
+      if (!p.rounds) nextTitle.textContent = "Build the schedule";
+      else if (p.total && p.complete >= p.total) nextTitle.textContent = "Review results";
+      else nextTitle.textContent = "Keep the round moving";
+    }
+
+    if (nextNote) nextNote.textContent = nextMoveText();
+
+    if (primaryProxy) {
+      primaryProxy.textContent = dashPrimary ? safeText(dashPrimary) || "Do Next Action" : "Do Next Action";
+    }
+
+    if (pills) {
+      var pillItems = [
+        ap + " players",
+        courts + " courts",
+        p.rounds ? ("Round " + Math.max(1, p.current + 1) + "/" + p.rounds) : "No rounds yet",
+        p.complete + "/" + p.total + " games"
+      ];
+
+      if (overflow) pillItems.push(overflow);
+
+      pills.innerHTML = pillItems.map(function(x){
+        return '<span class="pb-dashboard-pill">' + String(x).replace(/[<>&]/g, function(c){
+          return c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;";
+        }) + '</span>';
+      }).join("");
+    }
+
+    return true;
+  }
+
+  function polishDashboardTiles(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return;
+
+    var tiles = Array.from(sec.querySelectorAll(".quick-action"));
+    var seen = {};
+
+    tiles.forEach(function(tile){
+      var titleEl = tile.querySelector(".quick-action-title");
+      var title = safeText(titleEl).toLowerCase();
+
+      if (!title) return;
+
+      var duplicateKey = title.replace(/\s+/g, " ");
+
+      if (seen[duplicateKey]) {
+        tile.style.display = "none";
+        tile.setAttribute("data-pb-dashboard-clean-hidden", "duplicate");
+        return;
+      }
+
+      seen[duplicateKey] = true;
+
+      var adminish =
+        title.indexOf("json") >= 0 ||
+        title.indexOf("export") >= 0 ||
+        title.indexOf("admin") >= 0 ||
+        title.indexOf("backup") >= 0 ||
+        title.indexOf("restore") >= 0 ||
+        title.indexOf("integration") >= 0;
+
+      if (adminish) {
+        tile.style.display = "none";
+        tile.setAttribute("data-pb-dashboard-clean-hidden", "adminish");
+      }
+    });
+  }
+
+  function apply(){
+    syncPanel();
+    polishDashboardTiles();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbDashboardCommandCenterCleanV1) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbDashboardCommandCenterCleanV1 = true;
+  }
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbDashboardCommandCenterCleanV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbDashboardCommandCenterCleanV1 = true;
+  }
+
+  window.pbDashboardCommandCenterStatusV1 = function(){
+    apply();
+    return {
+      installed: true,
+      panelFound: !!byId("pb-dashboard-command-center-v1"),
+      activePlayers: activePlayers(),
+      courts: selectedCourts(),
+      mode: getScheduleModeLabel(),
+      overflow: getOverflowLabel(),
+      progress: progressInfo()
     };
   };
 })();
