@@ -29260,6 +29260,32 @@ function exportEndSessionSummary(){
   window.pbHomeDashboardTwitchFixStatusV1 = apply;
 })();
 
+
+
+/* PB_DISABLE_OLD_NAV_REBUILDERS_V1 */
+(function(){
+  if (window.__pbDisableOldNavRebuildersV1) return;
+  window.__pbDisableOldNavRebuildersV1 = true;
+
+  window.pbDisableOldNavRebuildersStatusV1 = function(){
+    return {
+      installed: true,
+      disabledFlags: [
+        "__pbCleanEfficientNavV1",
+        "__pbMinimalDashboardAndCommsRestoreV1",
+        "__pbDedupePlayersNavV1",
+        "__pbRestoreMoreAdvancedMenuV1",
+        "__pbForceMoreMenuVisibleV2",
+        "__pbSimplifyMoreAndReportingMenuV3",
+        "__pbReportingAfterCommsV1",
+        "__pbFixReportingMenuRealSectionsV1"
+      ],
+      finalNavFound: typeof window.pbFinalNavConsolidatedStatusV1 === "function",
+      homeFixFound: typeof window.pbHomeDashboardTwitchFixStatusV1 === "function"
+    };
+  };
+})();
+
 </script>
 
 </body>
