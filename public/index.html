@@ -22442,6 +22442,636 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_DUPR_OVERFLOW_AFTER_FORMAT_V22 */
+(function(){
+  if (window.__pbDuprOverflowAfterFormatV22) return;
+  window.__pbDuprOverflowAfterFormatV22 = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function normGender(g){
+    g = String(g || "").trim().toLowerCase();
+    if (g === "male" || g === "m" || g === "man" || g === "men" || g === "boy") return "male";
+    if (g === "female" || g === "f" || g === "woman" || g === "women" || g === "girl" || g === "lady") return "female";
+    return "";
+  }
+
+  function isDuprLikeMode(mode){
+    mode = String(mode || "").toLowerCase();
+    return mode === "dupr" ||
+      mode === "competitive-mixed" ||
+      mode.indexOf("dupr") >= 0 ||
+      mode.indexOf("competitive") >= 0;
+  }
+
+  function modeValue(){
+    var el = byId("team-mode");
+    return el ? el.value : "";
+  }
+
+  function formatSelect(){
+    var ids = [
+      "pb-dupr-format",
+      "pb-dupr-static-format",
+      "dupr-session-format",
+      "pb-dupr-visible-format",
+      "pb-dupr-format-master"
+    ];
+
+    var found = ids.map(function(id){ return byId(id); }).filter(Boolean);
+    var visible = found.find(function(el){ return !!el.offsetParent; });
+
+    return visible || found[0] || null;
+  }
+
+  function getFormat(){
+    var sel = formatSelect();
+    var raw = sel ? String(sel.value || "").toLowerCase() : "open";
+
+    if (raw === "male" || raw === "men" || raw === "men only") return "male";
+    if (raw === "female" || raw === "women" || raw === "women only") return "female";
+    if (raw === "separate" || raw === "separate men/women" || raw === "separate men women") return "separate";
+    if (raw === "mixed" || raw === "standard mixed") return "mixed";
+
+    return "open";
+  }
+
+  function overflowBox(){
+    return byId("pb-dupr-mode-overflow-v18") ||
+      byId("pb-dupr-single-overflow") ||
+      byId("pb-dupr-static-overflow") ||
+      byId("pb-dupr-overflow-toggle") ||
+      byId("pb-dupr-visible-overflow") ||
+      byId("pb-dupr-overflow-master");
+  }
+
+  function getOverflow(){
+    var box = overflowBox();
+    return box ? !!box.checked : true;
+  }
+
+  function activeItems(){
+    if (!window.state || !Array.isArray(state.players)) return [];
+
+    return state.players.map(function(p, idx){
+      return { p:p, idx:idx };
+    }).filter(function(x){
+      return x.p &&
+        x.p.active !== false &&
+        x.p.waitlist !== true &&
+        x.p.checkedIn !== false;
+    });
+  }
+
+  function activeIndexes(){
+    return activeItems().map(function(x){ return x.idx; });
+  }
+
+  function byGender(gender){
+    var want = normGender(gender);
+    return activeItems().filter(function(x){
+      return normGender(x.p.gender) === want;
+    }).map(function(x){ return x.idx; });
+  }
+
+  function notGender(gender){
+    var want = normGender(gender);
+    return activeItems().filter(function(x){
+      return normGender(x.p.gender) !== want;
+    }).map(function(x){ return x.idx; });
+  }
+
+  function playerObj(idx){
+    return window.state && state.players ? state.players[Number(idx)] : null;
+  }
+
+  function playerName(idx){
+    var p = playerObj(idx);
+    var n = p && (p.name || p.playerName || p.fullName || p.displayName || p.label);
+    n = String(n || ("Player " + (Number(idx) + 1))).trim();
+    return n.replace(/^#?\s*\d+\s*\.?\s+/, "").trim();
+  }
+
+  function playerGender(idx){
+    var p = playerObj(idx);
+    return p ? normGender(p.gender) : "";
+  }
+
+  function playerRating(idx){
+    var p = playerObj(idx);
+    if (!p) return 0;
+
+    try {
+      if (typeof pRating === "function") {
+        var r = Number(pRating(p));
+        if (!isNaN(r) && r > 0) return r;
+      }
+    } catch(e) {}
+
+    var raw = p.dupr || p.DUPR || p.clubRating || p.rating || p.skill || p.level || p.provisionalDupr || 0;
+    var v = Number(raw);
+
+    return isNaN(v) ? 0 : v;
+  }
+
+  function courtList(){
+    var out = [];
+
+    try {
+      out = Array.from(state.selectedCourts || []).sort(function(a,b){
+        return Number(a) - Number(b);
+      });
+    } catch(e) {}
+
+    if (!out.length) {
+      var el = byId("courts-count");
+      var n = parseInt((el && el.value) || "0", 10);
+      for (var i = 1; i <= n; i++) out.push(i);
+    }
+
+    return out;
+  }
+
+  function roundCount(){
+    var ids = ["rounds-count", "round-count", "num-rounds", "rounds"];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+      var n = parseInt((el && (el.value || el.textContent)) || "0", 10);
+      if (n > 0) return Math.max(1, Math.min(20, n));
+    }
+
+    return 4;
+  }
+
+  function rotate(arr, shift){
+    var a = arr.slice();
+    if (!a.length) return a;
+    shift = shift % a.length;
+    return a.slice(shift).concat(a.slice(0, shift));
+  }
+
+  function unique(arr){
+    var seen = {};
+    var out = [];
+
+    arr.forEach(function(x){
+      var k = String(x);
+      if (seen[k]) return;
+      seen[k] = true;
+      out.push(x);
+    });
+
+    return out;
+  }
+
+  function makePairs(indexes, roundNo){
+    var list = unique(indexes).slice().sort(function(a,b){
+      return playerRating(b) - playerRating(a) || playerName(a).localeCompare(playerName(b));
+    });
+
+    list = rotate(list, roundNo - 1);
+
+    var pairs = [];
+
+    while (list.length >= 2) {
+      pairs.push([list.shift(), list.pop()]);
+    }
+
+    return pairs;
+  }
+
+  function makeMatches(indexes, courts, label, roundNo, nextId){
+    indexes = unique(indexes);
+    var maxCourts = Math.min(courts.length, Math.floor(indexes.length / 4));
+    var playingCount = maxCourts * 4;
+    var rotated = rotate(indexes, (roundNo - 1) * 2);
+    var playing = rotated.slice(0, playingCount);
+    var leftover = rotated.slice(playingCount);
+    var pairs = makePairs(playing, roundNo);
+    var matches = [];
+
+    for (var c = 0; c < maxCourts; c++) {
+      if (pairs.length < 2) break;
+
+      matches.push({
+        id: nextId++,
+        round: roundNo,
+        court: courts[c],
+        teamA: pairs.shift(),
+        teamB: pairs.shift(),
+        scoreA: "",
+        scoreB: "",
+        complete: false,
+        scheduleMode: "dupr",
+        duprDivision: label,
+        podLabel: label
+      });
+    }
+
+    return {
+      matches: matches,
+      leftover: leftover,
+      nextId: nextId
+    };
+  }
+
+  function rebuildTeams(){
+    state.roundTeams = (state.schedule || []).map(function(round){
+      var teams = [];
+
+      (round || []).forEach(function(m){
+        if (!m || !Array.isArray(m.teamA) || !Array.isArray(m.teamB)) return;
+
+        teams.push([state.players[m.teamA[0]], state.players[m.teamA[1]]]);
+        teams.push([state.players[m.teamB[0]], state.players[m.teamB[1]]]);
+      });
+
+      return teams;
+    });
+
+    state.teams = [];
+
+    state.roundTeams.forEach(function(rt){
+      rt.forEach(function(t){
+        state.teams.push(t);
+      });
+    });
+  }
+
+  function renderAll(){
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof renderTeams === "function") renderTeams(); } catch(e) {}
+    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof smsPopRounds === "function") smsPopRounds(); } catch(e) {}
+    try { if (typeof autoSave === "function") autoSave(); } catch(e) {}
+    try { if (typeof pbPatchScheduleTeamNamesNow === "function") pbPatchScheduleTeamNamesNow(); } catch(e) {}
+  }
+
+  function applyBuilt(result){
+    if (!result || !result.ok) {
+      alert(result && result.error ? result.error : "Could not build DUPR schedule.");
+      return false;
+    }
+
+    state.schedule = result.schedule;
+    state.byeRounds = result.byeRounds;
+    state.startedRounds = new Set();
+    state.notifiedRounds = new Set();
+
+    rebuildTeams();
+    renderAll();
+
+    return true;
+  }
+
+  function buildSingleGender(gender, label, overflowOn){
+    var main = byGender(gender);
+    var others = notGender(gender);
+    var courts = courtList();
+
+    var mainCourtsCount = Math.min(courts.length, Math.floor(main.length / 4));
+
+    if (mainCourtsCount < 1) {
+      return {
+        ok: false,
+        error: label + " only needs at least 4 checked-in " + label.toLowerCase() + " players."
+      };
+    }
+
+    var extraCourtsCount = 0;
+
+    if (overflowOn) {
+      var leftoverMainCount = main.length - mainCourtsCount * 4;
+      var overflowPoolCount = leftoverMainCount + others.length;
+      extraCourtsCount = Math.min(courts.length - mainCourtsCount, Math.floor(overflowPoolCount / 4));
+    }
+
+    var rounds = roundCount();
+    var schedule = [];
+    var byeRounds = [];
+    var nextId = 1;
+
+    for (var r = 1; r <= rounds; r++) {
+      var mainCourts = courts.slice(0, mainCourtsCount);
+      var overflowCourts = courts.slice(mainCourtsCount, mainCourtsCount + extraCourtsCount);
+
+      var md = makeMatches(main, mainCourts, label, r, nextId);
+      nextId = md.nextId;
+
+      var matches = md.matches;
+      var byes = md.leftover.concat(others);
+
+      if (overflowOn && extraCourtsCount > 0) {
+        var pool = rotate(byes, r - 1);
+        var od = makeMatches(pool, overflowCourts, "Overflow", r, nextId);
+        nextId = od.nextId;
+        matches = matches.concat(od.matches);
+        byes = od.leftover;
+      }
+
+      schedule.push(matches);
+      byeRounds.push(byes);
+    }
+
+    return {
+      ok: true,
+      mode: gender,
+      overflow: overflowOn,
+      plan: {
+        primaryDivision: label,
+        primaryCourts: mainCourtsCount,
+        overflowCourts: extraCourtsCount,
+        mainPlayers: main.length,
+        otherPlayers: others.length
+      },
+      schedule: schedule,
+      byeRounds: byeRounds
+    };
+  }
+
+  function chooseSeparateDedicatedPlan(menCount, womenCount, courtsCount){
+    var menFull = Math.floor(menCount / 4);
+    var womenFull = Math.floor(womenCount / 4);
+
+    if (menFull < 1 || womenFull < 1 || courtsCount < 2) return null;
+
+    var best = null;
+
+    for (var m = 1; m <= Math.min(menFull, courtsCount - 1); m++) {
+      for (var w = 1; w <= Math.min(womenFull, courtsCount - m); w++) {
+        var dedicated = m + w;
+
+        /*
+          Priority:
+          1. maximize true Men/Women dedicated courts
+          2. use available gender capacity cleanly
+          3. keep the split reasonably balanced
+        */
+        var score = dedicated * 100000 -
+          Math.abs((menFull - m) - (womenFull - w)) * 100 -
+          Math.abs(m - w);
+
+        if (!best || score > best.score) {
+          best = {
+            menCourts: m,
+            womenCourts: w,
+            dedicatedCourts: dedicated,
+            score: score
+          };
+        }
+      }
+    }
+
+    return best;
+  }
+
+  function buildSeparate(overflowOn){
+    var men = byGender("male");
+    var women = byGender("female");
+    var courts = courtList();
+
+    var plan = chooseSeparateDedicatedPlan(men.length, women.length, courts.length);
+
+    if (!plan) {
+      return {
+        ok: false,
+        error: "Separate Men/Women needs at least 4 checked-in men, 4 checked-in women, and at least 2 courts."
+      };
+    }
+
+    var leftoverCount = men.length + women.length - plan.dedicatedCourts * 4;
+    var overflowCourtsCount = overflowOn
+      ? Math.min(courts.length - plan.dedicatedCourts, Math.floor(leftoverCount / 4))
+      : 0;
+
+    var rounds = roundCount();
+    var schedule = [];
+    var byeRounds = [];
+    var nextId = 1;
+
+    for (var r = 1; r <= rounds; r++) {
+      var cursor = 0;
+
+      var menCourts = courts.slice(cursor, cursor + plan.menCourts);
+      cursor += plan.menCourts;
+
+      var womenCourts = courts.slice(cursor, cursor + plan.womenCourts);
+      cursor += plan.womenCourts;
+
+      var overflowCourts = courts.slice(cursor, cursor + overflowCourtsCount);
+
+      var md = makeMatches(men, menCourts, "Men", r, nextId);
+      nextId = md.nextId;
+
+      var wd = makeMatches(women, womenCourts, "Women", r, nextId);
+      nextId = wd.nextId;
+
+      var matches = md.matches.concat(wd.matches);
+      var byes = md.leftover.concat(wd.leftover);
+
+      if (overflowOn && overflowCourtsCount > 0) {
+        var od = makeMatches(rotate(byes, r - 1), overflowCourts, "Overflow", r, nextId);
+        nextId = od.nextId;
+        matches = matches.concat(od.matches);
+        byes = od.leftover;
+      }
+
+      schedule.push(matches);
+      byeRounds.push(byes);
+    }
+
+    return {
+      ok: true,
+      mode: "separate",
+      overflow: overflowOn,
+      plan: {
+        menCourts: plan.menCourts,
+        womenCourts: plan.womenCourts,
+        dedicatedCourts: plan.dedicatedCourts,
+        overflowCourts: overflowCourtsCount,
+        menPlayers: men.length,
+        womenPlayers: women.length
+      },
+      schedule: schedule,
+      byeRounds: byeRounds
+    };
+  }
+
+  function generateSelected(){
+    var fmt = getFormat();
+    var overflowOn = getOverflow();
+    var mode = modeValue();
+
+    if (!isDuprLikeMode(mode)) return false;
+
+    if (fmt === "male") return applyBuilt(buildSingleGender("male", "Men", overflowOn));
+    if (fmt === "female") return applyBuilt(buildSingleGender("female", "Women", overflowOn));
+    if (fmt === "separate") return applyBuilt(buildSeparate(overflowOn));
+
+    return false;
+  }
+
+  function auditSchedule(){
+    var fmt = getFormat();
+    var overflowOn = getOverflow();
+    var divisions = {};
+    var violations = [];
+    var matchCount = 0;
+
+    (state.schedule || []).forEach(function(round, ri){
+      (round || []).forEach(function(m){
+        matchCount++;
+
+        var div = m.duprDivision || m.podLabel || "";
+        divisions[div] = (divisions[div] || 0) + 1;
+
+        var ids = [].concat(m.teamA || []).concat(m.teamB || []);
+        var genders = ids.map(playerGender);
+
+        if (fmt === "male" && div !== "Overflow" && genders.some(function(g){ return g !== "male"; })) {
+          violations.push("Round " + (ri + 1) + " match " + m.id + " has non-male player in Men court.");
+        }
+
+        if (fmt === "female" && div !== "Overflow" && genders.some(function(g){ return g !== "female"; })) {
+          violations.push("Round " + (ri + 1) + " match " + m.id + " has non-female player in Women court.");
+        }
+
+        if (fmt === "separate" && div === "Men" && genders.some(function(g){ return g !== "male"; })) {
+          violations.push("Round " + (ri + 1) + " match " + m.id + " has non-male player in Men division.");
+        }
+
+        if (fmt === "separate" && div === "Women" && genders.some(function(g){ return g !== "female"; })) {
+          violations.push("Round " + (ri + 1) + " match " + m.id + " has non-female player in Women division.");
+        }
+
+        if (!overflowOn && div === "Overflow") {
+          violations.push("Round " + (ri + 1) + " match " + m.id + " has Overflow while overflow is OFF.");
+        }
+      });
+    });
+
+    return {
+      pass: violations.length === 0,
+      format: fmt,
+      overflow: overflowOn,
+      matchCount: matchCount,
+      divisions: divisions,
+      violations: violations
+    };
+  }
+
+  function planPreview(){
+    var fmt = getFormat();
+    var overflowOn = getOverflow();
+
+    if (fmt === "male") return buildSingleGender("male", "Men", overflowOn).plan || null;
+    if (fmt === "female") return buildSingleGender("female", "Women", overflowOn).plan || null;
+    if (fmt === "separate") return buildSeparate(overflowOn).plan || null;
+
+    return null;
+  }
+
+  function shouldRoute(){
+    var fmt = getFormat();
+    return isDuprLikeMode(modeValue()) &&
+      (fmt === "male" || fmt === "female" || fmt === "separate");
+  }
+
+  function installClickRouter(){
+    if (document.__pbDuprOverflowAfterFormatV22Click) return;
+    document.__pbDuprOverflowAfterFormatV22Click = true;
+
+    document.addEventListener("click", function(ev){
+      var target = ev.target;
+      if (!target) return;
+
+      var btn = target.closest ? target.closest("button,input,a") : target;
+      if (!btn) return;
+
+      var text = String(btn.textContent || btn.value || "").toLowerCase();
+      var onclick = String(btn.getAttribute && btn.getAttribute("onclick") || "").toLowerCase();
+
+      var looksGenerate =
+        text.indexOf("generate") >= 0 ||
+        onclick.indexOf("generateschedule") >= 0 ||
+        onclick.indexOf("promptgenerateschedule") >= 0 ||
+        onclick.indexOf("regenerateschedulepreview") >= 0;
+
+      if (!looksGenerate) return;
+
+      if (shouldRoute()) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        generateSelected();
+        return false;
+      }
+    }, true);
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbDuprOverflowAfterFormatV22) return;
+
+    var wrapped = function(){
+      if (shouldRoute()) return generateSelected();
+      return fn.apply(this, arguments);
+    };
+
+    wrapped.__pbDuprOverflowAfterFormatV22 = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    installClickRouter();
+
+    wrap("generateSchedule");
+    wrap("promptGenerateSchedule");
+    wrap("regenerateSchedulePreview");
+
+    /*
+      V21 calls V19 internally. Repoint both helper names to V22 so the
+      existing routing stays working but uses the corrected overflow logic.
+    */
+    window.pbDuprGenerateSelectedModeV19 = generateSelected;
+    window.pbDuprGenerateSelectedModeV21 = generateSelected;
+    window.pbDuprAuditCurrentScheduleV19 = auditSchedule;
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  window.pbDuprGenerateSelectedModeV22 = generateSelected;
+  window.pbDuprAuditCurrentScheduleV22 = auditSchedule;
+  window.pbDuprOverflowPlanV22 = planPreview;
+
+  window.pbDuprOverflowStatusV22 = function(){
+    install();
+
+    return {
+      installed: true,
+      mode: modeValue(),
+      duprLikeMode: isDuprLikeMode(modeValue()),
+      format: getFormat(),
+      overflow: getOverflow(),
+      menCount: byGender("male").length,
+      womenCount: byGender("female").length,
+      otherCount: activeIndexes().length - byGender("male").length - byGender("female").length,
+      courts: courtList(),
+      rounds: roundCount(),
+      plan: planPreview(),
+      audit: auditSchedule()
+    };
+  };
+})();
+
 </script>
 
 </body>
