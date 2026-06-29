@@ -1968,6 +1968,23 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   }
 }
 
+
+
+/* PB_FINAL_NAV_CONSOLIDATED_V1 */
+.pb-nav-menu-note-final-v1 {
+  padding: 0.45rem 0.75rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: var(--txt3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.nav-menu .pb-final-fun-facts-v1 {
+  font-weight: 950 !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -19921,7 +19938,7 @@ function exportEndSessionSummary(){
       var lower = txt.toLowerCase();
 
       if (lower === "🏠 home" || lower === "home") {
-        setTextKeepingIcon(el, "🏠 Dashboard");
+        setTextKeepingIcon(el, "🏠 Home");
         return;
       }
 
@@ -28733,6 +28750,514 @@ function exportEndSessionSummary(){
 
   window.pbTournamentDetailsStatusV1 = apply;
   window.pbTournamentDetailsSaveV1 = writeDetails;
+})();
+
+
+
+/* PB_FINAL_NAV_CONSOLIDATED_V1 */
+(function(){
+  if (window.__pbFinalNavConsolidatedV1) return;
+  window.__pbFinalNavConsolidatedV1 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function tabFrom(el){
+    var onclick = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = onclick.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function navParent(){
+    var existing = document.querySelector(".nav-group");
+    return existing ? existing.parentNode : null;
+  }
+
+  function firstButton(group){
+    if (!group) return null;
+
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+
+    return null;
+  }
+
+  function groupByTab(tab){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "").split(/\s+/);
+      return tabs.indexOf(tab) >= 0;
+    }) || null;
+  }
+
+  function ensureGroup(primaryTab, tabs, label, order, afterGroup){
+    var group = groupByTab(primaryTab);
+
+    if (!group) {
+      group = document.createElement("div");
+      group.className = "nav-group";
+
+      var parent = navParent();
+
+      if (parent) {
+        if (afterGroup && afterGroup.parentNode === parent && afterGroup.nextSibling) {
+          parent.insertBefore(group, afterGroup.nextSibling);
+        } else {
+          parent.appendChild(group);
+        }
+      }
+    }
+
+    group.classList.add("nav-group");
+    group.setAttribute("data-tabs", tabs.join(" "));
+    group.style.display = "";
+    group.style.order = String(order || 70);
+    group.removeAttribute("data-pb-hidden-duplicate-players");
+    group.removeAttribute("data-pb-flow-nav-hidden");
+    group.removeAttribute("data-pb-more-restore-hidden");
+    group.removeAttribute("data-pb-simplify-more-hidden");
+    group.removeAttribute("data-pb-reporting-real-hidden");
+
+    var btn = firstButton(group);
+    if (!btn) {
+      btn = document.createElement("button");
+      group.insertBefore(btn, group.firstChild || null);
+    }
+
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = label;
+
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+    }
+
+    return group;
+  }
+
+  function makeMenuButton(tab, label, extraClass, customClick){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab-btn" + (extraClass ? " " + extraClass : "");
+    b.textContent = label;
+
+    if (customClick) {
+      b.addEventListener("click", function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        customClick(event);
+      });
+    } else {
+      b.setAttribute("onclick", "showTab('" + tab + "', event)");
+    }
+
+    return b;
+  }
+
+  function note(text){
+    var n = document.createElement("div");
+    n.className = "pb-nav-menu-note-final-v1";
+    n.textContent = text;
+    return n;
+  }
+
+  function fillMenu(group, sections){
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) return;
+
+    menu.innerHTML = "";
+
+    sections.forEach(function(section){
+      if (section.title) menu.appendChild(note(section.title));
+
+      section.items.forEach(function(item){
+        menu.appendChild(makeMenuButton(item.tab, item.label, item.className, item.click));
+      });
+    });
+  }
+
+  function openFunFacts(event){
+    try {
+      if (typeof pbOpenFunFactsMoreV8 === "function") {
+        pbOpenFunFactsMoreV8(event);
+        return;
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof showTab === "function") showTab("playerstats", event);
+    } catch(e) {}
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof populateH2HDropdowns === "function") populateH2HDropdowns(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+
+      var target =
+        document.getElementById("ps-h2h-card") ||
+        document.getElementById("h2h-body") ||
+        Array.from(document.querySelectorAll("#sec-playerstats th, #sec-playerstats table, #sec-playerstats .card, #sec-playerstats div")).find(function(el){
+          var txt = clean(el.textContent).toLowerCase();
+          return txt.indexOf("nemesis") >= 0 ||
+            txt.indexOf("head-to-head") >= 0 ||
+            txt.indexOf("head to head") >= 0 ||
+            txt.indexOf("favorite partner") >= 0 ||
+            txt.indexOf("streak") >= 0;
+        });
+
+      if (target) {
+        try { target.scrollIntoView({ behavior: "smooth", block: "start" }); }
+        catch(e) { target.scrollIntoView(); }
+      }
+    }, 250);
+  }
+
+  function hideDuplicateLinks(allowedByGroup){
+    document.querySelectorAll(".nav-group .nav-menu .tab-btn, .user-dropdown-item").forEach(function(btn){
+      var tab = tabFrom(btn);
+      if (!tab) return;
+
+      Object.keys(allowedByGroup).forEach(function(groupName){
+        if (allowedByGroup[groupName].tabs.indexOf(tab) < 0) return;
+
+        var owningGroup = allowedByGroup[groupName].group;
+        var currentGroup = btn.closest(".nav-group");
+
+        if (currentGroup !== owningGroup) {
+          btn.style.display = "none";
+          btn.setAttribute("data-pb-final-nav-hidden-v1", "duplicate-" + tab);
+        } else {
+          btn.style.display = "";
+          btn.removeAttribute("data-pb-final-nav-hidden-v1");
+        }
+      });
+    });
+  }
+
+  function normalizeTopNav(home, players, schedule, comms, reporting, more){
+    var groups = [home, players, schedule, comms, reporting, more].filter(Boolean);
+    var parent = navParent();
+
+    if (parent) {
+      groups.forEach(function(g){
+        if (g.parentNode === parent) parent.appendChild(g);
+      });
+    }
+
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+
+      if (g === home) g.style.order = "10";
+      else if (g === players) g.style.order = "20";
+      else if (g === schedule) g.style.order = "30";
+      else if (g === comms) g.style.order = "40";
+      else if (g === reporting) g.style.order = "50";
+      else if (g === more) g.style.order = "60";
+      else if (tabs === "mobilesync sms email") {
+        g.style.display = "none";
+        g.setAttribute("data-pb-final-nav-hidden-v1", "old-comms-group");
+      } else {
+        g.style.order = "70";
+      }
+    });
+
+    var userMenu = document.querySelector(".user-menu-wrap, .user-menu, .user-dropdown-wrap");
+    if (userMenu) userMenu.style.order = "80";
+  }
+
+  function apply(){
+    var home = groupByTab("dashboard");
+    if (home) {
+      home.style.display = "";
+      home.style.order = "10";
+      var hb = firstButton(home);
+      if (hb) hb.innerHTML = "🏠 Home";
+    }
+
+    var players = groupByTab("players");
+    if (players) {
+      players.style.display = "";
+      players.style.order = "20";
+      var pb = firstButton(players);
+      if (pb) {
+        if (players.querySelector(".nav-menu")) {
+          pb.removeAttribute("onclick");
+          pb.innerHTML = '👥 Players <span class="nav-caret">▾</span>';
+        } else {
+          pb.setAttribute("onclick", "showTab('players', event)");
+          pb.innerHTML = "👥 Players";
+        }
+      }
+    }
+
+    var schedule = groupByTab("schedule");
+    if (schedule) {
+      schedule.style.display = "";
+      schedule.style.order = "30";
+      var sb = firstButton(schedule);
+      if (sb) {
+        sb.setAttribute("onclick", "showTab('schedule', event)");
+        sb.innerHTML = "📅 Schedule";
+      }
+    }
+
+    var comms = ensureGroup(
+      "communications",
+      ["communications", "mobilesync", "sms", "email"],
+      '📲 Comms <span class="nav-caret">▾</span>',
+      40,
+      schedule
+    );
+
+    fillMenu(comms, [
+      {
+        title: "Messaging",
+        items: [
+          { tab: "communications", label: "Communications Hub" },
+          { tab: "mobilesync", label: "Mobile Sync" },
+          { tab: "sms", label: "SMS" },
+          { tab: "email", label: "Email" }
+        ]
+      }
+    ]);
+
+    var reporting = ensureGroup(
+      "standings",
+      ["standings", "report", "playerstats", "playoffs", "season", "endsession"],
+      '📊 Reporting <span class="nav-caret">▾</span>',
+      50,
+      comms
+    );
+
+    fillMenu(reporting, [
+      {
+        title: "Results",
+        items: [
+          { tab: "standings", label: "Standings" },
+          { tab: "report", label: "Tournament Report" },
+          { tab: "playerstats", label: "Player Stats" },
+          { tab: "endsession", label: "End Session Summary" }
+        ]
+      },
+      {
+        title: "Advanced reports",
+        items: [
+          { tab: "playoffs", label: "Playoffs" },
+          { tab: "season", label: "Season Board" }
+        ]
+      }
+    ]);
+
+    var more = ensureGroup(
+      "display",
+      ["display", "public", "checkin", "selfcheckin", "playerportal", "playerportaltools", "playerlookup", "fairness", "history", "admin"],
+      '⋯ More <span class="nav-caret">▾</span>',
+      60,
+      reporting
+    );
+
+    fillMenu(more, [
+      {
+        title: "Session tools",
+        items: [
+          { tab: "checkin", label: "Check-in" },
+          { tab: "selfcheckin", label: "Self Check-in QR" },
+          { tab: "display", label: "Public Display" }
+        ]
+      },
+      {
+        title: "Player tools",
+        items: [
+          { tab: "playerportal", label: "Player Portal" },
+          { tab: "playerportaltools", label: "Player Portal QR" },
+          { tab: "playerlookup", label: "Player Lookup" },
+          { tab: "playerstats", label: "🏆 Fun Facts", className: "pb-final-fun-facts-v1", click: openFunFacts }
+        ]
+      },
+      {
+        title: "Advanced",
+        items: [
+          { tab: "fairness", label: "Fairness" },
+          { tab: "history", label: "Tournament History" },
+          { tab: "admin", label: "Admin" }
+        ]
+      }
+    ]);
+
+    hideDuplicateLinks({
+      comms: {
+        group: comms,
+        tabs: ["communications", "mobilesync", "sms", "email"]
+      },
+      reporting: {
+        group: reporting,
+        tabs: ["standings", "report", "playerstats", "playoffs", "season", "endsession"]
+      },
+      more: {
+        group: more,
+        tabs: ["display", "public", "checkin", "selfcheckin", "playerportal", "playerportaltools", "playerlookup", "fairness", "history", "admin"]
+      }
+    });
+
+    normalizeTopNav(home, players, schedule, comms, reporting, more);
+
+    return status();
+  }
+
+  function status(){
+    var groups = Array.from(document.querySelectorAll(".nav-group"))
+      .filter(function(g){ return g.style.display !== "none"; })
+      .map(function(g){
+        var btn = firstButton(g);
+        return {
+          button: clean(btn ? btn.textContent : ""),
+          tabs: g.getAttribute("data-tabs") || "",
+          order: g.style.order || "",
+          items: Array.from(g.querySelectorAll(".nav-menu .tab-btn"))
+            .filter(function(b){ return b.style.display !== "none"; })
+            .map(function(b){ return clean(b.textContent); })
+        };
+      });
+
+    var more = groupByTab("display");
+
+    return {
+      installed: true,
+      consolidated: true,
+      topNav: groups,
+      moreHasFunFacts: !!(more && Array.from(more.querySelectorAll(".nav-menu .tab-btn")).some(function(b){
+        return clean(b.textContent).indexOf("Fun Facts") >= 0;
+      })),
+      hiddenDuplicates: document.querySelectorAll("[data-pb-final-nav-hidden-v1]").length
+    };
+  }
+
+  function scheduleApply(){
+    setTimeout(apply, 50);
+    setTimeout(apply, 250);
+    setTimeout(apply, 900);
+  }
+
+  var originalShowTab = window.showTab;
+  if (typeof originalShowTab === "function" && !originalShowTab.__pbFinalNavConsolidatedV1) {
+    window.showTab = function(){
+      var result = originalShowTab.apply(this, arguments);
+      scheduleApply();
+      return result;
+    };
+    window.showTab.__pbFinalNavConsolidatedV1 = true;
+  }
+
+  document.addEventListener("DOMContentLoaded", scheduleApply);
+  document.addEventListener("click", scheduleApply, true);
+
+  if (window.MutationObserver) {
+    try {
+      var obs = new MutationObserver(function(){
+        clearTimeout(window.__pbFinalNavConsolidatedV1Timer);
+        window.__pbFinalNavConsolidatedV1Timer = setTimeout(apply, 120);
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    } catch(e) {}
+  }
+
+  setTimeout(apply, 300);
+  setTimeout(apply, 1200);
+  setTimeout(apply, 2500);
+  setInterval(apply, 3000);
+
+  window.pbFinalNavConsolidatedStatusV1 = apply;
+})();
+
+
+
+/* PB_HOME_DASHBOARD_TWITCH_FIX_V1 */
+(function(){
+  if (window.__pbHomeDashboardTwitchFixV1) return;
+  window.__pbHomeDashboardTwitchFixV1 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function dashboardGroup(){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      return String(g.getAttribute("data-tabs") || "").split(/\s+/).indexOf("dashboard") >= 0;
+    }) || null;
+  }
+
+  function firstButton(group){
+    if (!group) return null;
+
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") {
+        return child;
+      }
+    }
+
+    return null;
+  }
+
+  function apply(){
+    var group = dashboardGroup();
+    var btn = firstButton(group);
+    var changed = false;
+
+    if (group) {
+      group.style.display = "";
+      group.style.order = "10";
+    }
+
+    if (btn && clean(btn.textContent) !== "🏠 Home") {
+      btn.innerHTML = "🏠 Home";
+      changed = true;
+    }
+
+    return {
+      installed: true,
+      dashboardGroupFound: !!group,
+      homeButtonFound: !!btn,
+      homeText: btn ? clean(btn.textContent) : "",
+      changed: changed
+    };
+  }
+
+  var originalShowTab = window.showTab;
+
+  if (typeof originalShowTab === "function" && !originalShowTab.__pbHomeDashboardTwitchFixV1) {
+    window.showTab = function(){
+      var result = originalShowTab.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 250);
+      return result;
+    };
+
+    window.showTab.__pbHomeDashboardTwitchFixV1 = true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 700);
+    setTimeout(apply, 1600);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 50);
+    setTimeout(apply, 250);
+  }, true);
+
+  setTimeout(apply, 300);
+  setTimeout(apply, 1200);
+  setTimeout(apply, 2500);
+
+  window.pbHomeDashboardTwitchFixStatusV1 = apply;
 })();
 
 </script>
