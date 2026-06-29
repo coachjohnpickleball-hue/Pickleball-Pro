@@ -1856,6 +1856,87 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   margin-bottom: 14px !important;
 }
 
+
+
+/* PB_FUN_STATS_HUB_V1 */
+.pb-fun-stats-hub-v1 {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(129,199,132,.08), rgba(255,255,255,.035));
+}
+
+.pb-fun-stats-title-v1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.pb-fun-stats-title-v1 strong {
+  font-size: .98rem;
+  color: var(--txt);
+}
+
+.pb-fun-stats-title-v1 span {
+  font-size: .76rem;
+  color: var(--txt3);
+}
+
+.pb-fun-stats-grid-v1 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pb-fun-stat-chip-v1 {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  background: rgba(0,0,0,.2);
+  color: var(--txt);
+  padding: 9px 8px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 58px;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.pb-fun-stat-chip-v1:hover {
+  transform: translateY(-1px);
+  border-color: rgba(129,199,132,.42);
+  background: rgba(129,199,132,.08);
+}
+
+.pb-fun-stat-chip-v1 b {
+  display: block;
+  font-size: .84rem;
+  line-height: 1.1;
+}
+
+.pb-fun-stat-chip-v1 small {
+  display: block;
+  margin-top: 4px;
+  font-size: .68rem;
+  color: var(--txt3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-fun-stats-note-v1 {
+  margin-top: 8px;
+  font-size: .72rem;
+  color: var(--txt3);
+}
+
+@media (max-width: 860px) {
+  .pb-fun-stats-grid-v1 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -27822,6 +27903,241 @@ function exportEndSessionSummary(){
   setTimeout(apply, 1500);
 
   window.pbDashboardExistingStepsTopStatusV2 = moveStepsToTop;
+})();
+
+
+
+/* PB_FUN_STATS_HUB_V1 */
+(function(){
+  if (window.__pbFunStatsHubV1) return;
+  window.__pbFunStatsHubV1 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function playerStatsSection(){
+    return document.getElementById("sec-playerstats") ||
+      document.getElementById("playerstats") ||
+      null;
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+    return cs.display !== "none" &&
+      cs.visibility !== "hidden" &&
+      el.offsetWidth > 0 &&
+      el.offsetHeight > 0;
+  }
+
+  function scrollToEl(el){
+    if (!el) return false;
+
+    try {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch(e) {
+      el.scrollIntoView();
+    }
+
+    el.style.outline = "2px solid rgba(129,199,132,.7)";
+    el.style.outlineOffset = "4px";
+
+    setTimeout(function(){
+      el.style.outline = "";
+      el.style.outlineOffset = "";
+    }, 1200);
+
+    return true;
+  }
+
+  function findByText(section, text){
+    if (!section) return null;
+
+    text = String(text || "").toLowerCase();
+
+    return Array.from(section.querySelectorAll("th, h2, h3, h4, .card, div, table")).find(function(el){
+      return clean(el.textContent).toLowerCase().indexOf(text) >= 0;
+    }) || null;
+  }
+
+  function goPlayerStats(){
+    try {
+      if (typeof showTab === "function") showTab("playerstats");
+    } catch(e) {}
+  }
+
+  function goReport(){
+    try {
+      if (typeof showTab === "function") showTab("report");
+    } catch(e) {}
+  }
+
+  function goLiveDisplay(){
+    try {
+      if (typeof showTab === "function") showTab("public");
+    } catch(e) {}
+  }
+
+  function targetNemesis(){
+    goPlayerStats();
+
+    setTimeout(function(){
+      var sec = playerStatsSection();
+      var th = findByText(sec, "nemesis");
+      var target = th ? (th.closest(".card") || th.closest("table") || th) : null;
+      scrollToEl(target);
+    }, 120);
+  }
+
+  function targetH2H(){
+    goPlayerStats();
+
+    setTimeout(function(){
+      var el = document.getElementById("ps-h2h-card") ||
+        document.getElementById("h2h-body") ||
+        findByText(playerStatsSection(), "head-to-head rivalry") ||
+        findByText(playerStatsSection(), "head to head");
+
+      scrollToEl(el);
+    }, 120);
+  }
+
+  function targetReportsH2H(){
+    goReport();
+
+    setTimeout(function(){
+      var el = document.getElementById("report-h2h") ||
+        findByText(document.getElementById("sec-report"), "head to head") ||
+        findByText(document.getElementById("sec-report"), "streak");
+
+      scrollToEl(el);
+    }, 160);
+  }
+
+  function targetMvp(){
+    goLiveDisplay();
+
+    setTimeout(function(){
+      var el = document.getElementById("ld-mvp") ||
+        findByText(document, "session mvp") ||
+        findByText(document, "mvp");
+
+      scrollToEl(el);
+    }, 160);
+  }
+
+  function targetClutch(){
+    goReport();
+
+    setTimeout(function(){
+      var sec = document.getElementById("sec-report") || document;
+      var el = findByText(sec, "clutch") ||
+        findByText(sec, "hot streak") ||
+        findByText(sec, "fun");
+
+      scrollToEl(el);
+    }, 160);
+  }
+
+  function chip(icon, title, hint, fn){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-fun-stat-chip-v1";
+    btn.innerHTML = "<b>" + icon + " " + title + "</b><small>" + hint + "</small>";
+    btn.addEventListener("click", fn);
+    return btn;
+  }
+
+  function buildHub(){
+    var hub = document.createElement("div");
+    hub.className = "pb-fun-stats-hub-v1";
+    hub.setAttribute("data-pb-fun-stats-hub-v1", "1");
+
+    var title = document.createElement("div");
+    title.className = "pb-fun-stats-title-v1";
+    title.innerHTML =
+      "<strong>🏆 Fun Stats</strong>" +
+      "<span>Quick links to the existing fun reports</span>";
+
+    var grid = document.createElement("div");
+    grid.className = "pb-fun-stats-grid-v1";
+
+    grid.appendChild(chip("😈", "Nemesis", "Who gives you trouble", targetNemesis));
+    grid.appendChild(chip("🤝", "Best Partner", "Partner chemistry", targetNemesis));
+    grid.appendChild(chip("⚔️", "Rivalry", "Player head-to-head", targetH2H));
+    grid.appendChild(chip("🔥", "Streaks", "Hot hands & trends", targetReportsH2H));
+    grid.appendChild(chip("🧊", "Clutch / MVP", "Close wins & session MVP", targetClutch));
+
+    var note = document.createElement("div");
+    note.className = "pb-fun-stats-note-v1";
+    note.textContent = "Uses the existing Player Stats and Reporting calculations — no scoring or schedule logic changed.";
+
+    hub.appendChild(title);
+    hub.appendChild(grid);
+    hub.appendChild(note);
+
+    return hub;
+  }
+
+  function insertHub(){
+    var sec = playerStatsSection();
+
+    if (!sec) {
+      return {
+        installed: true,
+        inserted: false,
+        reason: "playerstats-section-not-found"
+      };
+    }
+
+    sec.querySelectorAll(".pb-fun-stats-hub-v1").forEach(function(el){
+      el.remove();
+    });
+
+    var hub = buildHub();
+
+    /*
+      Put it near the top of Player Stats, but do not create/modify stat tables.
+    */
+    var anchor =
+      sec.querySelector("h1, h2, .page-header, .section-header") ||
+      sec.firstElementChild;
+
+    if (anchor && anchor.parentElement === sec && anchor.nextSibling) {
+      sec.insertBefore(hub, anchor.nextSibling);
+    } else if (anchor && anchor.parentElement === sec) {
+      sec.appendChild(hub);
+    } else {
+      sec.insertBefore(hub, sec.firstChild);
+    }
+
+    return {
+      installed: true,
+      inserted: true,
+      sectionId: sec.id || "",
+      visible: isVisible(hub),
+      createdNewCalculations: false
+    };
+  }
+
+  function apply(){
+    insertHub();
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 250);
+    setTimeout(apply, 1000);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 150);
+  }, true);
+
+  setTimeout(apply, 500);
+  setTimeout(apply, 1500);
+
+  window.pbFunStatsHubStatusV1 = insertHub;
 })();
 
 </script>
