@@ -1245,6 +1245,78 @@ html body #global-round-timer.pb-global-timer-hidden {
   .pb-dashboard-command-center { grid-template-columns: 1fr; }
 }
 
+
+
+/* PB_DASHBOARD_CLEAN_COMMAND_CENTER_V2_CSS */
+.pb-dash-v2 {
+  margin: 1rem 0 1.1rem;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: .8rem;
+}
+.pb-dash-v2-card {
+  background: rgba(30,39,30,.82);
+  border: 1px solid rgba(198,255,0,.14);
+  border-radius: 16px;
+  padding: .95rem;
+  box-shadow: 0 14px 30px rgba(0,0,0,.16);
+}
+.pb-dash-v2-eyebrow {
+  color: var(--txt3);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+  margin-bottom: .35rem;
+}
+.pb-dash-v2-title {
+  color: var(--txt);
+  font-size: 1.05rem;
+  font-weight: 950;
+  margin-bottom: .35rem;
+}
+.pb-dash-v2-note {
+  color: var(--txt2);
+  font-size: .86rem;
+  line-height: 1.35;
+}
+.pb-dash-v2-pills {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.38rem;
+  margin-top:.65rem;
+}
+.pb-dash-v2-pill {
+  border:1px solid rgba(198,255,0,.18);
+  background:rgba(198,255,0,.07);
+  border-radius:999px;
+  padding:.3rem .55rem;
+  font-size:.78rem;
+  color:var(--txt2);
+  font-weight:850;
+}
+.pb-dash-v2-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.45rem;
+  margin-top:.7rem;
+}
+.pb-dash-v2-actions .btn {
+  padding:.45rem .65rem;
+  font-size:.82rem;
+}
+.pb-dash-v2-secondary {
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.035);
+  color:var(--txt2);
+}
+[data-pb-dashboard-v2-hidden="1"] {
+  display:none !important;
+}
+@media(max-width: 980px) {
+  .pb-dash-v2 { grid-template-columns: 1fr; }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -23068,6 +23140,328 @@ function exportEndSessionSummary(){
       rounds: roundCount(),
       plan: planPreview(),
       audit: auditSchedule()
+    };
+  };
+})();
+
+
+
+/* PB_DASHBOARD_CLEAN_COMMAND_CENTER_V2 */
+(function(){
+  if (window.__pbDashboardCleanCommandCenterV2) return;
+  window.__pbDashboardCleanCommandCenterV2 = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return c === "&" ? "&amp;" :
+        c === "<" ? "&lt;" :
+        c === ">" ? "&gt;" :
+        c === '"' ? "&quot;" : "&#39;";
+    });
+  }
+
+  function txt(el){
+    return el ? String(el.textContent || el.value || "").trim() : "";
+  }
+
+  function activePlayers(){
+    try {
+      return (state.players || []).filter(function(p){
+        return p && p.waitlist !== true && p.active !== false && p.checkedIn !== false;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function selectedCourts(){
+    try {
+      if (state.selectedCourts && state.selectedCourts.size) return state.selectedCourts.size;
+    } catch(e) {}
+    return 0;
+  }
+
+  function progress(){
+    var rounds = [];
+    try { rounds = state.schedule || []; } catch(e) {}
+
+    var total = 0;
+    var complete = 0;
+    var current = -1;
+
+    rounds.forEach(function(round, idx){
+      var matches = round || [];
+      total += matches.length;
+      complete += matches.filter(function(m){ return m && m.complete; }).length;
+      if (current < 0 && matches.some(function(m){ return m && !m.complete; })) current = idx;
+    });
+
+    if (current < 0 && rounds.length) current = rounds.length - 1;
+
+    return {
+      rounds: rounds.length,
+      total: total,
+      complete: complete,
+      current: current
+    };
+  }
+
+  function modeLabel(){
+    var mode = byId("team-mode");
+    if (!mode) return "Mode not selected";
+
+    var label = "";
+    try {
+      label = mode.options && mode.selectedIndex >= 0 ? mode.options[mode.selectedIndex].textContent : mode.value;
+    } catch(e) {
+      label = mode.value;
+    }
+
+    label = String(label || "").replace(/\s+/g, " ").trim();
+
+    var raw = String(mode.value || "").toLowerCase();
+
+    if (raw === "dupr" || raw === "competitive-mixed" || raw.indexOf("dupr") >= 0 || raw.indexOf("competitive") >= 0) {
+      var fmt = byId("pb-dupr-format") || byId("pb-dupr-static-format") || byId("dupr-session-format");
+      if (fmt) {
+        var f = "";
+        try {
+          f = fmt.options && fmt.selectedIndex >= 0 ? fmt.options[fmt.selectedIndex].textContent : fmt.value;
+        } catch(e) {
+          f = fmt.value;
+        }
+        f = String(f || "").replace(/\s+/g, " ").trim();
+        if (f) label = "DUPR · " + f;
+      }
+    }
+
+    return label || "Mode not selected";
+  }
+
+  function overflowLabel(){
+    var box = byId("pb-dupr-mode-overflow-v18") ||
+      byId("pb-dupr-single-overflow") ||
+      byId("pb-dupr-static-overflow");
+
+    if (!box || !box.offsetParent) return "";
+    return box.checked ? "Overflow ON" : "Overflow OFF";
+  }
+
+  function nextActionNote(){
+    var ap = activePlayers();
+    var courts = selectedCourts();
+    var p = progress();
+
+    if (ap < 4) return "Add players first. You need at least 4 active players.";
+    if (!courts) return "Select courts before generating rounds.";
+    if (!p.rounds) return "Ready to generate the first schedule.";
+
+    if (p.total && p.complete >= p.total) {
+      return "Session is complete. Review standings or export the final report.";
+    }
+
+    var roundNumber = p.current >= 0 ? p.current + 1 : 1;
+
+    try {
+      if (state.startedRounds && state.startedRounds.has(p.current)) {
+        return "Round " + roundNumber + " is live. Enter scores as matches finish.";
+      }
+    } catch(e) {}
+
+    return "Round " + roundNumber + " is ready. Start when players are on court.";
+  }
+
+  function go(tab){
+    try {
+      if (typeof showTab === "function") showTab(tab);
+    } catch(e) {}
+  }
+
+  function doPrimary(){
+    var b = byId("dash-primary-action");
+    if (b) b.click();
+    else if (typeof dashboardPrimaryAction === "function") dashboardPrimaryAction();
+  }
+
+  function ensurePanel(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return null;
+
+    var panel = byId("pb-dashboard-clean-command-center-v2");
+    if (panel) return panel;
+
+    var kpis = sec.querySelector(".dashboard-kpis");
+    if (!kpis) return null;
+
+    panel = document.createElement("div");
+    panel.id = "pb-dashboard-clean-command-center-v2";
+    panel.className = "pb-dash-v2";
+
+    panel.innerHTML =
+      '<div class="pb-dash-v2-card">' +
+        '<div class="pb-dash-v2-eyebrow">Next action</div>' +
+        '<div class="pb-dash-v2-title" id="pb-dash-v2-next-title">Keep the session moving</div>' +
+        '<div class="pb-dash-v2-note" id="pb-dash-v2-next-note"></div>' +
+        '<div class="pb-dash-v2-actions">' +
+          '<button type="button" class="btn btn-primary" id="pb-dash-v2-primary">Do Next Action</button>' +
+          '<button type="button" class="btn btn-secondary pb-dash-v2-secondary" id="pb-dash-v2-schedule">Schedule</button>' +
+          '<button type="button" class="btn btn-secondary pb-dash-v2-secondary" id="pb-dash-v2-standings">Standings</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="pb-dash-v2-card">' +
+        '<div class="pb-dash-v2-eyebrow">Session setup</div>' +
+        '<div class="pb-dash-v2-title" id="pb-dash-v2-mode">Mode</div>' +
+        '<div class="pb-dash-v2-note" id="pb-dash-v2-setup-note"></div>' +
+        '<div class="pb-dash-v2-pills" id="pb-dash-v2-pills"></div>' +
+      '</div>' +
+
+      '<div class="pb-dash-v2-card">' +
+        '<div class="pb-dash-v2-eyebrow">Quick jumps</div>' +
+        '<div class="pb-dash-v2-title">Run tools</div>' +
+        '<div class="pb-dash-v2-note">Fast access to the screens used during a live session.</div>' +
+        '<div class="pb-dash-v2-actions">' +
+          '<button type="button" class="btn btn-secondary pb-dash-v2-secondary" id="pb-dash-v2-players">Players</button>' +
+          '<button type="button" class="btn btn-secondary pb-dash-v2-secondary" id="pb-dash-v2-comms">Comms</button>' +
+          '<button type="button" class="btn btn-secondary pb-dash-v2-secondary" id="pb-dash-v2-mobile">Mobile</button>' +
+        '</div>' +
+      '</div>';
+
+    kpis.insertAdjacentElement("afterend", panel);
+
+    byId("pb-dash-v2-primary").addEventListener("click", doPrimary);
+    byId("pb-dash-v2-schedule").addEventListener("click", function(){ go("schedule"); });
+    byId("pb-dash-v2-standings").addEventListener("click", function(){ go("standings"); });
+    byId("pb-dash-v2-players").addEventListener("click", function(){ go("players"); });
+    byId("pb-dash-v2-comms").addEventListener("click", function(){ go("communications"); });
+    byId("pb-dash-v2-mobile").addEventListener("click", function(){ go("mobilesync"); });
+
+    return panel;
+  }
+
+  function hideDashboardClutter(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return;
+
+    var words = [
+      "json",
+      "export json",
+      "reset",
+      "admin",
+      "backup",
+      "restore",
+      "integration",
+      "test",
+      "debug",
+      "developer",
+      "season board"
+    ];
+
+    Array.from(sec.querySelectorAll(".quick-action, .dashboard-card, button")).forEach(function(el){
+      var t = txt(el).toLowerCase();
+      if (!t) return;
+
+      var shouldHide = words.some(function(w){ return t.indexOf(w) >= 0; });
+
+      if (shouldHide && !el.closest("#pb-dashboard-clean-command-center-v2")) {
+        el.setAttribute("data-pb-dashboard-v2-hidden", "1");
+      }
+    });
+  }
+
+  function sync(){
+    var panel = ensurePanel();
+    if (!panel) return false;
+
+    var p = progress();
+    var ap = activePlayers();
+    var courts = selectedCourts();
+    var overflow = overflowLabel();
+
+    var primary = byId("dash-primary-action");
+
+    var nextTitle = byId("pb-dash-v2-next-title");
+    var nextNote = byId("pb-dash-v2-next-note");
+    var primaryProxy = byId("pb-dash-v2-primary");
+    var mode = byId("pb-dash-v2-mode");
+    var setupNote = byId("pb-dash-v2-setup-note");
+    var pills = byId("pb-dash-v2-pills");
+
+    if (nextTitle) {
+      if (!p.rounds) nextTitle.textContent = "Build the schedule";
+      else if (p.total && p.complete >= p.total) nextTitle.textContent = "Review results";
+      else nextTitle.textContent = "Keep the round moving";
+    }
+
+    if (nextNote) nextNote.textContent = nextActionNote();
+    if (primaryProxy) primaryProxy.textContent = primary ? txt(primary) || "Do Next Action" : "Do Next Action";
+    if (mode) mode.textContent = modeLabel();
+
+    if (setupNote) {
+      setupNote.textContent = ap + " active players · " + courts + " courts selected";
+    }
+
+    if (pills) {
+      var items = [
+        ap + " players",
+        courts + " courts",
+        p.rounds ? ("Round " + Math.max(1, p.current + 1) + "/" + p.rounds) : "No rounds",
+        p.complete + "/" + p.total + " games"
+      ];
+
+      if (overflow) items.push(overflow);
+
+      pills.innerHTML = items.map(function(x){
+        return '<span class="pb-dash-v2-pill">' + esc(x) + '</span>';
+      }).join("");
+    }
+
+    hideDashboardClutter();
+    return true;
+  }
+
+  function apply(){
+    sync();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbDashboardCleanCommandCenterV2) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbDashboardCleanCommandCenterV2 = true;
+  }
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbDashboardCleanCommandCenterV2) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbDashboardCleanCommandCenterV2 = true;
+  }
+
+  window.pbDashboardCleanStatusV2 = function(){
+    apply();
+
+    return {
+      installed: true,
+      panelFound: !!byId("pb-dashboard-clean-command-center-v2"),
+      activePlayers: activePlayers(),
+      courts: selectedCourts(),
+      mode: modeLabel(),
+      overflow: overflowLabel(),
+      progress: progress()
     };
   };
 })();
