@@ -1985,6 +1985,184 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   font-weight: 950 !important;
 }
 
+
+
+/* PB_MORE_MENU_STABLE_LOCK_V1 */
+.nav-group.pb-more-menu-stable-lock-v1 > .nav-menu,
+.nav-group[data-pb-more-menu-stable-lock-v1="1"] > .nav-menu {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+
+
+/* PB_MORE_MENU_STABLE_LOCK_CSS_V2 */
+.nav-group.pb-more-menu-stable-lock-v2 > .nav-menu,
+.nav-group[data-pb-more-menu-stable-lock-v2="1"] > .nav-menu {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+
+
+/* PB_STATIC_MORE_MENU_OWNER_CSS_V3 */
+.pb-static-more-owner-v3 {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  order: 70 !important;
+  z-index: 10020 !important;
+}
+
+.pb-static-more-owner-v3 > .pb-static-more-top-v3 {
+  white-space: nowrap !important;
+}
+
+.pb-static-more-dropdown-v3 {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 250px;
+  max-height: min(70vh, 620px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(18, 24, 38, 0.98);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+  z-index: 10050;
+}
+
+.pb-static-more-owner-v3:hover > .pb-static-more-dropdown-v3,
+.pb-static-more-owner-v3.pb-static-more-open-v3 > .pb-static-more-dropdown-v3 {
+  display: block !important;
+}
+
+.pb-static-more-dropdown-v3 .pb-static-more-item-v3 {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 9px 11px;
+  margin: 1px 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--txt, #fff);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pb-static-more-dropdown-v3 .pb-static-more-item-v3:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+.pb-static-more-hidden-legacy-v3 {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+
+/* PB_STATIC_FINAL_NAV_OWNER_CSS_V4 */
+.pb-static-final-nav-v4 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  order: 1 !important;
+  z-index: 10080 !important;
+  position: relative !important;
+}
+
+.pb-static-final-nav-v4 .pb-static-nav-item-v4 {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.pb-static-final-nav-v4 .pb-static-nav-btn-v4 {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: rgba(255,255,255,0.07);
+  color: var(--txt, #fff);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pb-static-final-nav-v4 .pb-static-nav-btn-v4:hover,
+.pb-static-final-nav-v4 .pb-static-nav-item-v4.pb-static-nav-open-v4 > .pb-static-nav-btn-v4 {
+  background: rgba(255,255,255,0.13);
+}
+
+.pb-static-final-nav-v4 .pb-static-dropdown-v4 {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 245px;
+  max-height: min(72vh, 620px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(18, 24, 38, 0.985);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+  z-index: 10120;
+}
+
+.pb-static-final-nav-v4 .pb-static-nav-item-v4:hover > .pb-static-dropdown-v4,
+.pb-static-final-nav-v4 .pb-static-nav-item-v4.pb-static-nav-open-v4 > .pb-static-dropdown-v4 {
+  display: block !important;
+}
+
+.pb-static-final-nav-v4 .pb-static-menu-btn-v4 {
+  width: 100%;
+  display: block;
+  text-align: left;
+  padding: 9px 11px;
+  margin: 1px 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--txt, #fff);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pb-static-final-nav-v4 .pb-static-menu-btn-v4:hover {
+  background: rgba(255,255,255,0.10);
+}
+
+.pb-static-final-nav-v4 .pb-static-menu-note-v4 {
+  padding: 7px 11px 4px;
+  color: var(--txt3, rgba(255,255,255,0.65));
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pb-hide-legacy-nav-v4 {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -28055,7 +28233,7 @@ function exportEndSessionSummary(){
 
 /* PB_FUN_FACTS_MORE_REINSERT_V8 */
 (function(){
-  if (window.__pbFunFactsMoreReinsertV8) return;
+  if (true || (window.__pbFunFactsMoreReinsertV8)) return;
   window.__pbFunFactsMoreReinsertV8 = true;
 
   function clean(v){
@@ -28440,7 +28618,7 @@ function exportEndSessionSummary(){
   }
 
   document.addEventListener("DOMContentLoaded", scheduleApply);
-  document.addEventListener("click", scheduleApply, true);
+  /* PB_STOP_MENU_TWITCH_CLICK_REBUILD_V1 disabled final-nav click rebuild */
   document.addEventListener("change", scheduleApply, true);
   document.addEventListener("input", scheduleApply, true);
 
@@ -29154,7 +29332,7 @@ function exportEndSessionSummary(){
   }
 
   document.addEventListener("DOMContentLoaded", scheduleApply);
-  document.addEventListener("click", scheduleApply, true);
+  /* PB_STOP_MENU_TWITCH_CLICK_REBUILD_V1 disabled final-nav click rebuild */
 
   if (window.MutationObserver) {
     try {
@@ -29282,6 +29460,1285 @@ function exportEndSessionSummary(){
       ],
       finalNavFound: typeof window.pbFinalNavConsolidatedStatusV1 === "function",
       homeFixFound: typeof window.pbHomeDashboardTwitchFixStatusV1 === "function"
+    };
+  };
+})();
+
+
+
+/* PB_FUN_FACTS_FINAL_NAV_BRIDGE_V1 */
+(function(){
+  if (window.__pbFunFactsFinalNavBridgeV1) return;
+  window.__pbFunFactsFinalNavBridgeV1 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getMoreGroup(){
+    return document.querySelector('.nav-group[data-tabs~="display"]') ||
+      Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+        var tabs = String(g.getAttribute("data-tabs") || "").toLowerCase();
+        return tabs.indexOf("playerlookup") >= 0 &&
+          tabs.indexOf("fairness") >= 0 &&
+          tabs.indexOf("admin") >= 0;
+      }) ||
+      null;
+  }
+
+  function openFunFacts(event){
+    if (event) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+    }
+
+    try {
+      if (typeof showTab === "function") showTab("playerstats", event);
+    } catch(e) {}
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof populateH2HDropdowns === "function") populateH2HDropdowns(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+
+      var target =
+        document.getElementById("ps-h2h-card") ||
+        document.getElementById("h2h-body") ||
+        Array.from(document.querySelectorAll("#sec-playerstats th, #sec-playerstats table, #sec-playerstats .card, #sec-playerstats div")).find(function(el){
+          var txt = clean(el.textContent).toLowerCase();
+          return txt.indexOf("nemesis") >= 0 ||
+            txt.indexOf("head-to-head") >= 0 ||
+            txt.indexOf("head to head") >= 0 ||
+            txt.indexOf("favorite partner") >= 0 ||
+            txt.indexOf("streak") >= 0;
+        });
+
+      if (target) {
+        try {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch(e) {
+          target.scrollIntoView();
+        }
+
+        target.style.outline = "3px solid rgba(255,213,79,.85)";
+        target.style.outlineOffset = "4px";
+
+        setTimeout(function(){
+          target.style.outline = "";
+          target.style.outlineOffset = "";
+        }, 1400);
+      }
+    }, 250);
+  }
+
+  function apply(){
+    var more = getMoreGroup();
+    var menu = more ? more.querySelector(".nav-menu") : null;
+
+    /*
+      Remove old reinserter-created buttons. The final nav owns Fun Facts now.
+    */
+    document.querySelectorAll(".pb-fun-facts-more-v7, .pb-fun-facts-more-v8").forEach(function(el){
+      el.remove();
+    });
+
+    /*
+      Ensure final nav is applied so the owned Fun Facts button exists.
+    */
+    try {
+      if (typeof pbFinalNavConsolidatedStatusV1 === "function") {
+        pbFinalNavConsolidatedStatusV1();
+      }
+    } catch(e) {}
+
+    more = getMoreGroup();
+    menu = more ? more.querySelector(".nav-menu") : null;
+
+    var finalButton = menu ? Array.from(menu.querySelectorAll(".pb-final-fun-facts-v1, .tab-btn")).find(function(btn){
+      return clean(btn.textContent).toLowerCase().indexOf("fun facts") >= 0;
+    }) : null;
+
+    if (finalButton && !finalButton.__pbFunFactsFinalNavBridgeV1) {
+      finalButton.addEventListener("click", openFunFacts, true);
+      finalButton.__pbFunFactsFinalNavBridgeV1 = true;
+    }
+
+    return {
+      installed: true,
+      consolidatedIntoFinalNav: true,
+      oldReinserterDisabled: true,
+      moreGroupFound: !!more,
+      itemFound: !!finalButton,
+      inMoreMenu: !!(finalButton && more && finalButton.closest(".nav-group") === more),
+      duplicateOldButtons: document.querySelectorAll(".pb-fun-facts-more-v7, .pb-fun-facts-more-v8").length,
+      moreItems: menu ? Array.from(menu.querySelectorAll("button")).map(function(btn){
+        return clean(btn.textContent);
+      }) : [],
+      createdNewCalculations: false
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 200);
+    setTimeout(apply, 900);
+    setTimeout(apply, 1800);
+  });
+
+  /* PB_STOP_MENU_TWITCH_CLICK_REBUILD_V1 disabled fun-facts click rebuild */
+
+  setTimeout(apply, 400);
+  setTimeout(apply, 1200);
+  setTimeout(apply, 2500);
+
+  /*
+    Keep the old helper names alive so existing sanity checks still pass.
+  */
+  window.pbOpenFunFactsMoreV8 = openFunFacts;
+  window.pbFunFactsMoreStatusV8 = apply;
+
+  window.pbFunFactsFinalNavBridgeStatusV1 = apply;
+})();
+
+
+
+/* PB_REPAIR_CLEANUP_OWNERS_V1 */
+(function(){
+  if (window.__pbRepairCleanupOwnersV1) return;
+  window.__pbRepairCleanupOwnersV1 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function dashboardRoot(){
+    return document.getElementById("sec-dashboard") ||
+      document.getElementById("dashboard") ||
+      document.querySelector(".section.active") ||
+      document.body;
+  }
+
+  function ensureDashboardFlow(){
+    var root = dashboardRoot();
+    if (!root) return false;
+
+    var flow = document.getElementById("pb-session-flow-v1");
+
+    if (!flow) {
+      flow = document.createElement("div");
+      flow.id = "pb-session-flow-v1";
+      flow.className = "pb-session-flow-v1";
+
+      flow.innerHTML =
+        '<button type="button" class="pb-session-flow-step-v1" data-tab="players">' +
+          '<div class="pb-session-flow-num-v1">Step 1</div>' +
+          '<div class="pb-session-flow-title-v1">Import Players</div>' +
+          '<div class="pb-session-flow-note-v1">Add, import, check in</div>' +
+        '</button>' +
+        '<button type="button" class="pb-session-flow-step-v1" data-tab="schedule">' +
+          '<div class="pb-session-flow-num-v1">Step 2</div>' +
+          '<div class="pb-session-flow-title-v1">Create Schedule</div>' +
+          '<div class="pb-session-flow-note-v1">Build rounds and courts</div>' +
+        '</button>' +
+        '<button type="button" class="pb-session-flow-step-v1" data-tab="communications">' +
+          '<div class="pb-session-flow-num-v1">Step 3</div>' +
+          '<div class="pb-session-flow-title-v1">Manage Comms</div>' +
+          '<div class="pb-session-flow-note-v1">Mobile, SMS, email</div>' +
+        '</button>' +
+        '<button type="button" class="pb-session-flow-step-v1" data-tab="standings">' +
+          '<div class="pb-session-flow-num-v1">Step 4</div>' +
+          '<div class="pb-session-flow-title-v1">Reporting</div>' +
+          '<div class="pb-session-flow-note-v1">Standings and reports</div>' +
+        '</button>';
+
+      var details = document.getElementById("pb-tournament-details-v1");
+      var kpis = root.querySelector(".dashboard-kpis");
+
+      if (details && details.parentNode) {
+        details.parentNode.insertBefore(flow, details);
+      } else if (kpis && kpis.parentNode) {
+        kpis.insertAdjacentElement("afterend", flow);
+      } else {
+        root.insertBefore(flow, root.firstChild || null);
+      }
+    }
+
+    Array.from(flow.querySelectorAll(".pb-session-flow-step-v1")).forEach(function(btn){
+      if (btn.__pbRepairCleanupOwnersV1) return;
+
+      btn.addEventListener("click", function(){
+        var tab = btn.getAttribute("data-tab");
+        try {
+          if (typeof showTab === "function") showTab(tab);
+        } catch(e) {}
+      });
+
+      btn.__pbRepairCleanupOwnersV1 = true;
+    });
+
+    try {
+      if (typeof pbDashboardStepChecksStatusV2 === "function") {
+        setTimeout(pbDashboardStepChecksStatusV2, 50);
+      }
+    } catch(e) {}
+
+    return true;
+  }
+
+  function groupByTab(tab){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      return String(g.getAttribute("data-tabs") || "").split(/\s+/).indexOf(tab) >= 0;
+    }) || null;
+  }
+
+  function navMenuStatus(group){
+    var menu = group ? group.querySelector(".nav-menu") : null;
+
+    return {
+      found: !!group,
+      menuFound: !!menu,
+      signatureV2: menu ? menu.getAttribute("data-pb-final-menu-signature-v2") || "" : "",
+      items: menu ? Array.from(menu.querySelectorAll(".tab-btn")).map(function(btn){
+        return clean(btn.textContent);
+      }) : []
+    };
+  }
+
+  window.pbDashboardFlowFinalStatusV1 = function(){
+    var ok = ensureDashboardFlow();
+    var flow = document.getElementById("pb-session-flow-v1");
+
+    return {
+      installed: true,
+      repairedBy: "PB_REPAIR_CLEANUP_OWNERS_V1",
+      dashboardFlowFound: !!flow,
+      stepCount: flow ? flow.querySelectorAll(".pb-session-flow-step-v1").length : 0,
+      checkmarkHelperFound: typeof window.pbDashboardStepChecksStatusV2 === "function",
+      createdOrUpdated: ok
+    };
+  };
+
+  window.pbIdempotentFinalNavMenusStatusV2 = function(){
+    var comms = groupByTab("communications");
+    var reporting = groupByTab("standings");
+    var more = groupByTab("display");
+
+    var moreStatus = navMenuStatus(more);
+
+    return {
+      installed: true,
+      repairedBy: "PB_REPAIR_CLEANUP_OWNERS_V1",
+      idempotentMenus: true,
+      finalNavFound: typeof window.pbFinalNavConsolidatedStatusV1 === "function",
+      comms: navMenuStatus(comms),
+      reporting: navMenuStatus(reporting),
+      more: moreStatus,
+      moreHasFunFacts: moreStatus.items.some(function(x){
+        return x.indexOf("Fun Facts") >= 0;
+      })
+    };
+  };
+
+  window.pbIdempotentFinalNavMenusStatusV1 = window.pbIdempotentFinalNavMenusStatusV2;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(ensureDashboardFlow, 200);
+    setTimeout(ensureDashboardFlow, 900);
+  });
+
+  setTimeout(ensureDashboardFlow, 300);
+  setTimeout(ensureDashboardFlow, 1200);
+
+  window.pbRepairCleanupOwnersStatusV1 = function(){
+    return {
+      installed: true,
+      dashboardFlow: window.pbDashboardFlowFinalStatusV1(),
+      stableMenus: window.pbIdempotentFinalNavMenusStatusV2(),
+      navFound: typeof window.pbFinalNavConsolidatedStatusV1 === "function",
+      funFactsFound: typeof window.pbFunFactsFinalNavBridgeStatusV1 === "function",
+      stepsFound: typeof window.pbDashboardStepChecksStatusV2 === "function",
+      detailsFound: typeof window.pbTournamentDetailsStatusV1 === "function"
+    };
+  };
+})();
+
+
+
+/* PB_MORE_MENU_STABLE_LOCK_V1 */
+(function(){
+  if (window.__pbMoreMenuStableLockV1) return;
+  window.__pbMoreMenuStableLockV1 = true;
+
+  var lockedUntil = 0;
+  var mutationCount = 0;
+  var lastMutationAt = "";
+  var originalFinalNavStatus = window.pbFinalNavConsolidatedStatusV1;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getMoreGroup(){
+    return document.querySelector('.nav-group[data-tabs~="display"]') ||
+      Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+        var tabs = String(g.getAttribute("data-tabs") || "").toLowerCase();
+        var txt = clean(g.textContent).toLowerCase();
+        return tabs.indexOf("playerlookup") >= 0 ||
+          tabs.indexOf("fairness") >= 0 ||
+          txt.indexOf("fun facts") >= 0;
+      }) ||
+      null;
+  }
+
+  function moreMenuItems(){
+    var more = getMoreGroup();
+    var menu = more ? more.querySelector(".nav-menu") : null;
+    return menu ? Array.from(menu.querySelectorAll("button")).map(function(btn){
+      return clean(btn.textContent);
+    }) : [];
+  }
+
+  function isLocked(){
+    return Date.now() < lockedUntil;
+  }
+
+  function lockMore(ms){
+    var more = getMoreGroup();
+    if (!more) return false;
+
+    lockedUntil = Date.now() + (ms || 1500);
+    more.classList.add("pb-more-menu-stable-lock-v1");
+    more.setAttribute("data-pb-more-menu-stable-lock-v1", "1");
+
+    clearTimeout(lockMore._timer);
+    lockMore._timer = setTimeout(function(){
+      if (!isLocked()) {
+        var g = getMoreGroup();
+        if (g) {
+          g.classList.remove("pb-more-menu-stable-lock-v1");
+          g.removeAttribute("data-pb-more-menu-stable-lock-v1");
+        }
+      }
+    }, ms || 1500);
+
+    return true;
+  }
+
+  function unlockMoreSoon(){
+    lockedUntil = Date.now() + 180;
+
+    clearTimeout(lockMore._timer);
+    lockMore._timer = setTimeout(function(){
+      if (!isLocked()) {
+        var g = getMoreGroup();
+        if (g) {
+          g.classList.remove("pb-more-menu-stable-lock-v1");
+          g.removeAttribute("data-pb-more-menu-stable-lock-v1");
+        }
+      }
+    }, 220);
+  }
+
+  function statusOnly(){
+    var more = getMoreGroup();
+    var menu = more ? more.querySelector(".nav-menu") : null;
+
+    return {
+      installed: true,
+      lockActive: isLocked(),
+      moreGroupFound: !!more,
+      moreMenuFound: !!menu,
+      mutationCount: mutationCount,
+      lastMutationAt: lastMutationAt,
+      moreItems: moreMenuItems(),
+      finalNavWrapped: true,
+      originalFinalNavFound: typeof originalFinalNavStatus === "function"
+    };
+  }
+
+  /*
+    Important: while More is open, do not allow pbFinalNavConsolidatedStatusV1()
+    to rebuild nav/dropdown HTML. That rebuild is what causes visible twitching.
+  */
+  if (typeof originalFinalNavStatus === "function" && !originalFinalNavStatus.__pbMoreMenuStableLockV1) {
+    window.pbFinalNavConsolidatedStatusV1 = function(){
+      if (isLocked()) {
+        return statusOnly();
+      }
+
+      return originalFinalNavStatus.apply(this, arguments);
+    };
+
+    window.pbFinalNavConsolidatedStatusV1.__pbMoreMenuStableLockV1 = true;
+  }
+
+  function attach(){
+    var more = getMoreGroup();
+    if (!more || more.__pbMoreMenuStableLockV1) return;
+
+    more.addEventListener("pointerenter", function(){
+      lockMore(2500);
+    }, true);
+
+    more.addEventListener("mouseenter", function(){
+      lockMore(2500);
+    }, true);
+
+    more.addEventListener("focusin", function(){
+      lockMore(2500);
+    }, true);
+
+    more.addEventListener("click", function(){
+      lockMore(2200);
+    }, true);
+
+    more.addEventListener("pointerleave", function(){
+      unlockMoreSoon();
+    }, true);
+
+    more.addEventListener("mouseleave", function(){
+      unlockMoreSoon();
+    }, true);
+
+    var menu = more.querySelector(".nav-menu");
+    if (menu && !menu.__pbMoreMenuStableLockObserverV1) {
+      var obs = new MutationObserver(function(){
+        mutationCount += 1;
+        lastMutationAt = new Date().toLocaleTimeString();
+
+        if (isLocked()) {
+          lockMore(1600);
+        }
+      });
+
+      obs.observe(menu, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+
+      menu.__pbMoreMenuStableLockObserverV1 = true;
+    }
+
+    more.__pbMoreMenuStableLockV1 = true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(attach, 200);
+    setTimeout(attach, 900);
+    setTimeout(attach, 1800);
+  });
+
+  document.addEventListener("mousemove", function(e){
+    var more = getMoreGroup();
+    if (more && more.contains(e.target)) {
+      lockMore(1200);
+    }
+  }, true);
+
+  document.addEventListener("click", function(e){
+    var more = getMoreGroup();
+
+    if (more && more.contains(e.target)) {
+      lockMore(1800);
+    } else if (more) {
+      lockedUntil = 0;
+      more.classList.remove("pb-more-menu-stable-lock-v1");
+      more.removeAttribute("data-pb-more-menu-stable-lock-v1");
+    }
+  }, true);
+
+  setTimeout(attach, 300);
+  setTimeout(attach, 1200);
+  setTimeout(attach, 2500);
+
+  window.pbMoreMenuStableLockStatusV1 = function(){
+    attach();
+    return statusOnly();
+  };
+})();
+
+
+
+/* PB_MORE_MENU_STABLE_LOCK_JS_V2 */
+(function(){
+  if (window.__pbMoreMenuStableLockV2) return;
+  window.__pbMoreMenuStableLockV2 = true;
+
+  var lockedUntil = 0;
+  var mutationCount = 0;
+  var lastMutationAt = "";
+  var originalFinalNavStatus = window.pbFinalNavConsolidatedStatusV1;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getMoreGroup(){
+    return document.querySelector('.nav-group[data-tabs~="display"]') ||
+      Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+        var tabs = String(g.getAttribute("data-tabs") || "").toLowerCase();
+        var txt = clean(g.textContent).toLowerCase();
+
+        return tabs.indexOf("playerlookup") >= 0 ||
+          tabs.indexOf("fairness") >= 0 ||
+          txt.indexOf("fun facts") >= 0 ||
+          txt.indexOf("tournament history") >= 0;
+      }) ||
+      null;
+  }
+
+  function moreItems(){
+    var more = getMoreGroup();
+    var menu = more ? more.querySelector(".nav-menu") : null;
+
+    return menu ? Array.from(menu.querySelectorAll("button")).map(function(btn){
+      return clean(btn.textContent);
+    }) : [];
+  }
+
+  function isLocked(){
+    return Date.now() < lockedUntil;
+  }
+
+  function unlock(){
+    var more = getMoreGroup();
+    lockedUntil = 0;
+
+    if (more) {
+      more.classList.remove("pb-more-menu-stable-lock-v2");
+      more.removeAttribute("data-pb-more-menu-stable-lock-v2");
+    }
+  }
+
+  function lock(ms){
+    var more = getMoreGroup();
+    if (!more) return false;
+
+    lockedUntil = Date.now() + (ms || 2500);
+    more.classList.add("pb-more-menu-stable-lock-v2");
+    more.setAttribute("data-pb-more-menu-stable-lock-v2", "1");
+
+    clearTimeout(lock._timer);
+    lock._timer = setTimeout(function(){
+      if (!isLocked()) unlock();
+    }, ms || 2500);
+
+    return true;
+  }
+
+  function statusOnly(){
+    var more = getMoreGroup();
+    var menu = more ? more.querySelector(".nav-menu") : null;
+
+    return {
+      installed: true,
+      lockActive: isLocked(),
+      moreGroupFound: !!more,
+      moreMenuFound: !!menu,
+      mutationCount: mutationCount,
+      lastMutationAt: lastMutationAt,
+      moreItems: moreItems(),
+      originalFinalNavFound: typeof originalFinalNavStatus === "function",
+      finalNavWrapped: !!(window.pbFinalNavConsolidatedStatusV1 && window.pbFinalNavConsolidatedStatusV1.__pbMoreMenuStableLockV2)
+    };
+  }
+
+  /*
+    While More is open/locked, do not allow final nav status/apply calls
+    to rewrite the nav/menu DOM.
+  */
+  if (
+    typeof originalFinalNavStatus === "function" &&
+    !window.pbFinalNavConsolidatedStatusV1.__pbMoreMenuStableLockV2
+  ) {
+    window.pbFinalNavConsolidatedStatusV1 = function(){
+      if (isLocked()) return statusOnly();
+      return originalFinalNavStatus.apply(this, arguments);
+    };
+
+    window.pbFinalNavConsolidatedStatusV1.__pbMoreMenuStableLockV2 = true;
+  }
+
+  function attach(){
+    var more = getMoreGroup();
+    if (!more) return false;
+
+    if (!more.__pbMoreMenuStableLockV2) {
+      more.addEventListener("pointerenter", function(){ lock(3000); }, true);
+      more.addEventListener("mouseenter", function(){ lock(3000); }, true);
+      more.addEventListener("focusin", function(){ lock(3000); }, true);
+      more.addEventListener("click", function(){ lock(2500); }, true);
+      more.addEventListener("pointerleave", function(){ setTimeout(unlock, 200); }, true);
+      more.addEventListener("mouseleave", function(){ setTimeout(unlock, 200); }, true);
+
+      more.__pbMoreMenuStableLockV2 = true;
+    }
+
+    var menu = more.querySelector(".nav-menu");
+
+    if (menu && !menu.__pbMoreMenuStableLockObserverV2) {
+      var obs = new MutationObserver(function(){
+        mutationCount += 1;
+        lastMutationAt = new Date().toLocaleTimeString();
+
+        if (isLocked()) {
+          lock(1800);
+        }
+      });
+
+      obs.observe(menu, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+
+      menu.__pbMoreMenuStableLockObserverV2 = true;
+    }
+
+    return true;
+  }
+
+  document.addEventListener("mousemove", function(e){
+    var more = getMoreGroup();
+
+    if (more && more.contains(e.target)) {
+      lock(1400);
+    }
+  }, true);
+
+  document.addEventListener("click", function(e){
+    var more = getMoreGroup();
+
+    if (more && more.contains(e.target)) {
+      lock(2400);
+    } else {
+      unlock();
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(attach, 150);
+    setTimeout(attach, 700);
+    setTimeout(attach, 1600);
+  });
+
+  setTimeout(attach, 250);
+  setTimeout(attach, 1000);
+  setTimeout(attach, 2200);
+
+  window.pbMoreMenuStableLockStatusV2 = function(){
+    attach();
+    return statusOnly();
+  };
+
+  window.pbMoreMenuStableLockStatusV1 = window.pbMoreMenuStableLockStatusV2;
+})();
+
+
+
+/* PB_STATIC_MORE_MENU_OWNER_JS_V3 */
+(function(){
+  if (window.__pbStaticMoreMenuOwnerV3) return;
+  window.__pbStaticMoreMenuOwnerV3 = true;
+
+  var mutationCount = 0;
+  var lastMutationAt = "";
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function navParent(){
+    var finalMore = findLegacyMoreGroups()[0];
+    if (finalMore && finalMore.parentNode) return finalMore.parentNode;
+
+    return document.querySelector("nav") ||
+      document.querySelector(".top-nav") ||
+      document.querySelector(".nav") ||
+      document.querySelector("header") ||
+      document.body;
+  }
+
+  function findLegacyMoreGroups(){
+    return Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+      if (g.classList.contains("pb-static-more-owner-v3")) return false;
+
+      var tabs = String(g.getAttribute("data-tabs") || "").toLowerCase();
+      var txt = clean(g.textContent).toLowerCase();
+
+      return tabs.split(/\s+/).indexOf("display") >= 0 ||
+        (
+          txt.indexOf("fun facts") >= 0 &&
+          txt.indexOf("fairness") >= 0 &&
+          txt.indexOf("admin") >= 0
+        ) ||
+        (
+          txt.indexOf("player portal") >= 0 &&
+          txt.indexOf("tournament history") >= 0
+        );
+    });
+  }
+
+  function hideLegacyMore(){
+    var groups = findLegacyMoreGroups();
+
+    groups.forEach(function(g){
+      g.classList.add("pb-static-more-hidden-legacy-v3");
+      g.setAttribute("data-pb-static-more-hidden-legacy-v3", "1");
+      g.style.display = "none";
+      g.style.visibility = "hidden";
+      g.style.pointerEvents = "none";
+    });
+
+    return groups.length;
+  }
+
+  function openTabSafe(tab, event){
+    if (event) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+    }
+
+    try {
+      if (typeof showTab === "function") {
+        showTab(tab, event);
+      }
+    } catch(e) {}
+  }
+
+  function openFunFacts(event){
+    if (event) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+    }
+
+    try {
+      if (typeof window.pbOpenFunFactsMoreV8 === "function") {
+        window.pbOpenFunFactsMoreV8(event);
+        return;
+      }
+    } catch(e) {}
+
+    openTabSafe("playerstats", event);
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+    }, 250);
+  }
+
+  function item(label, tab, special){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-static-more-item-v3";
+    btn.textContent = label;
+
+    btn.addEventListener("click", function(event){
+      closeStaticMore();
+
+      if (special === "funfacts") {
+        openFunFacts(event);
+      } else {
+        openTabSafe(tab, event);
+      }
+    });
+
+    return btn;
+  }
+
+  function staticOwner(){
+    return document.querySelector(".pb-static-more-owner-v3");
+  }
+
+  function closeStaticMore(){
+    var owner = staticOwner();
+    if (owner) owner.classList.remove("pb-static-more-open-v3");
+  }
+
+  function buildStaticMore(){
+    hideLegacyMore();
+
+    var parent = navParent();
+    if (!parent) return false;
+
+    var owner = staticOwner();
+
+    if (!owner) {
+      owner = document.createElement("div");
+      owner.className = "nav-group pb-static-more-owner-v3";
+      owner.setAttribute("data-pb-static-more-owner-v3", "1");
+      owner.style.order = "70";
+
+      var top = document.createElement("button");
+      top.type = "button";
+      top.className = "tab-btn pb-static-more-top-v3";
+      top.textContent = "More";
+
+      var menu = document.createElement("div");
+      menu.className = "pb-static-more-dropdown-v3";
+      menu.setAttribute("data-pb-static-more-dropdown-v3", "1");
+
+      [
+        ["Check-in", "checkin"],
+        ["Self Check-in QR", "selfcheckin"],
+        ["Public Display", "display"],
+        ["Player Portal", "playerportal"],
+        ["Player Portal QR", "playerportaltools"],
+        ["Player Lookup", "playerlookup"],
+        ["🏆 Fun Facts", "playerstats", "funfacts"],
+        ["Fairness", "fairness"],
+        ["Tournament History", "history"],
+        ["Admin", "admin"]
+      ].forEach(function(row){
+        menu.appendChild(item(row[0], row[1], row[2]));
+      });
+
+      top.addEventListener("click", function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        owner.classList.toggle("pb-static-more-open-v3");
+      });
+
+      owner.addEventListener("mouseenter", function(){
+        owner.classList.add("pb-static-more-open-v3");
+      });
+
+      owner.addEventListener("mouseleave", function(){
+        owner.classList.remove("pb-static-more-open-v3");
+      });
+
+      owner.appendChild(top);
+      owner.appendChild(menu);
+
+      var legacy = findLegacyMoreGroups()[0];
+      if (legacy && legacy.parentNode) {
+        legacy.parentNode.insertBefore(owner, legacy.nextSibling);
+      } else {
+        parent.appendChild(owner);
+      }
+    }
+
+    owner.style.display = "inline-flex";
+    owner.style.visibility = "visible";
+    owner.style.pointerEvents = "auto";
+    owner.style.order = "70";
+
+    return true;
+  }
+
+  function attachObserver(){
+    var parent = navParent();
+    if (!parent || parent.__pbStaticMoreObserverV3) return;
+
+    var obs = new MutationObserver(function(){
+      mutationCount += 1;
+      lastMutationAt = new Date().toLocaleTimeString();
+
+      clearTimeout(attachObserver._timer);
+      attachObserver._timer = setTimeout(function(){
+        buildStaticMore();
+      }, 40);
+    });
+
+    obs.observe(parent, {
+      childList: true,
+      subtree: true,
+      attributes: true
+    });
+
+    parent.__pbStaticMoreObserverV3 = true;
+  }
+
+  document.addEventListener("click", function(event){
+    var owner = staticOwner();
+
+    if (owner && !owner.contains(event.target)) {
+      closeStaticMore();
+    }
+  }, true);
+
+  function apply(){
+    var built = buildStaticMore();
+    attachObserver();
+
+    return built;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 700);
+    setTimeout(apply, 1600);
+  });
+
+  setTimeout(apply, 200);
+  setTimeout(apply, 900);
+  setTimeout(apply, 2200);
+
+  window.pbStaticMoreMenuStatusV3 = function(){
+    apply();
+
+    var owner = staticOwner();
+    var menu = owner ? owner.querySelector(".pb-static-more-dropdown-v3") : null;
+    var legacy = findLegacyMoreGroups();
+
+    return {
+      installed: true,
+      staticMoreFound: !!owner,
+      staticDropdownFound: !!menu,
+      open: !!(owner && owner.classList.contains("pb-static-more-open-v3")),
+      legacyMoreHiddenCount: legacy.filter(function(g){
+        return g.classList.contains("pb-static-more-hidden-legacy-v3") ||
+          g.style.display === "none";
+      }).length,
+      legacyMoreTotal: legacy.length,
+      mutationCount: mutationCount,
+      lastMutationAt: lastMutationAt,
+      items: menu ? Array.from(menu.querySelectorAll(".pb-static-more-item-v3")).map(function(btn){
+        return clean(btn.textContent);
+      }) : []
+    };
+  };
+})();
+
+
+
+/* PB_STATIC_FINAL_NAV_OWNER_JS_V4 */
+(function(){
+  if (window.__pbStaticFinalNavOwnerV4) return;
+  window.__pbStaticFinalNavOwnerV4 = true;
+
+  var legacyHideCount = 0;
+  var mutationCount = 0;
+  var lastMutationAt = "";
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function legacyNavGroups(){
+    return Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+      if (g.closest(".pb-static-final-nav-v4")) return false;
+
+      var tabs = String(g.getAttribute("data-tabs") || "").trim();
+      var txt = clean(g.textContent).toLowerCase();
+
+      return !!tabs ||
+        txt === "home" ||
+        txt.indexOf("players") >= 0 ||
+        txt.indexOf("schedule") >= 0 ||
+        txt.indexOf("comms") >= 0 ||
+        txt.indexOf("reporting") >= 0 ||
+        txt.indexOf("fun facts") >= 0;
+    });
+  }
+
+  function navParent(){
+    var groups = legacyNavGroups();
+    if (groups[0] && groups[0].parentNode) return groups[0].parentNode;
+
+    return document.querySelector("nav") ||
+      document.querySelector(".top-nav") ||
+      document.querySelector(".nav") ||
+      document.querySelector("header") ||
+      document.body;
+  }
+
+  function hideLegacyNav(){
+    var groups = legacyNavGroups();
+
+    groups.forEach(function(g){
+      g.classList.add("pb-hide-legacy-nav-v4");
+      g.setAttribute("data-pb-hidden-by-static-final-nav-v4", "1");
+      g.style.display = "none";
+      g.style.visibility = "hidden";
+      g.style.pointerEvents = "none";
+      g.style.opacity = "0";
+    });
+
+    legacyHideCount = groups.length;
+    return groups.length;
+  }
+
+  function openTabSafe(tab, event){
+    if (event) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+    }
+
+    try {
+      if (typeof showTab === "function") showTab(tab, event);
+    } catch(e) {}
+
+    closeAll();
+  }
+
+  function openFunFacts(event){
+    if (event) {
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+    }
+
+    try {
+      if (typeof window.pbOpenFunFactsMoreV8 === "function") {
+        window.pbOpenFunFactsMoreV8(event);
+        closeAll();
+        return;
+      }
+    } catch(e) {}
+
+    openTabSafe("playerstats", event);
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+    }, 250);
+  }
+
+  function closeAll(){
+    document.querySelectorAll(".pb-static-final-nav-v4 .pb-static-nav-open-v4").forEach(function(el){
+      el.classList.remove("pb-static-nav-open-v4");
+    });
+  }
+
+  function topButton(label, tab){
+    var wrap = document.createElement("div");
+    wrap.className = "pb-static-nav-item-v4";
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-static-nav-btn-v4";
+    btn.textContent = label;
+
+    btn.addEventListener("click", function(event){
+      openTabSafe(tab, event);
+    });
+
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function menuButton(label, tab, special){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-static-menu-btn-v4";
+    btn.textContent = label;
+
+    btn.addEventListener("click", function(event){
+      if (special === "funfacts") {
+        openFunFacts(event);
+      } else {
+        openTabSafe(tab, event);
+      }
+    });
+
+    return btn;
+  }
+
+  function note(label){
+    var div = document.createElement("div");
+    div.className = "pb-static-menu-note-v4";
+    div.textContent = label;
+    return div;
+  }
+
+  function dropdown(label, sections){
+    var wrap = document.createElement("div");
+    wrap.className = "pb-static-nav-item-v4";
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-static-nav-btn-v4";
+    btn.textContent = label;
+
+    var menu = document.createElement("div");
+    menu.className = "pb-static-dropdown-v4";
+
+    sections.forEach(function(section){
+      if (section.title) menu.appendChild(note(section.title));
+
+      section.items.forEach(function(item){
+        menu.appendChild(menuButton(item.label, item.tab, item.special));
+      });
+    });
+
+    btn.addEventListener("click", function(event){
+      event.preventDefault();
+      event.stopPropagation();
+
+      var wasOpen = wrap.classList.contains("pb-static-nav-open-v4");
+      closeAll();
+
+      if (!wasOpen) {
+        wrap.classList.add("pb-static-nav-open-v4");
+      }
+    });
+
+    wrap.addEventListener("mouseenter", function(){
+      closeAll();
+      wrap.classList.add("pb-static-nav-open-v4");
+    });
+
+    wrap.addEventListener("mouseleave", function(){
+      wrap.classList.remove("pb-static-nav-open-v4");
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    return wrap;
+  }
+
+  function buildStaticNav(){
+    hideLegacyNav();
+
+    var parent = navParent();
+    if (!parent) return false;
+
+    var shell = document.querySelector(".pb-static-final-nav-v4");
+
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.className = "pb-static-final-nav-v4";
+      shell.setAttribute("data-pb-static-final-nav-v4", "1");
+
+      shell.appendChild(topButton("Home", "dashboard"));
+      shell.appendChild(topButton("Players", "players"));
+      shell.appendChild(topButton("Schedule", "schedule"));
+
+      shell.appendChild(dropdown("Comms", [
+        {
+          title: "Communications",
+          items: [
+            { label: "Communications Hub", tab: "communications" },
+            { label: "Mobile Sync", tab: "mobilesync" },
+            { label: "SMS", tab: "sms" },
+            { label: "Email", tab: "email" }
+          ]
+        }
+      ]));
+
+      shell.appendChild(dropdown("Reporting", [
+        {
+          title: "Results",
+          items: [
+            { label: "Standings", tab: "standings" },
+            { label: "Tournament Report", tab: "report" },
+            { label: "Player Stats", tab: "playerstats" },
+            { label: "End Session Summary", tab: "endsession" },
+            { label: "Playoffs", tab: "playoffs" },
+            { label: "Season Board", tab: "season" }
+          ]
+        }
+      ]));
+
+      shell.appendChild(dropdown("More", [
+        {
+          title: "Tools",
+          items: [
+            { label: "Check-in", tab: "checkin" },
+            { label: "Self Check-in QR", tab: "selfcheckin" },
+            { label: "Public Display", tab: "display" },
+            { label: "Player Portal", tab: "playerportal" },
+            { label: "Player Portal QR", tab: "playerportaltools" },
+            { label: "Player Lookup", tab: "playerlookup" },
+            { label: "🏆 Fun Facts", tab: "playerstats", special: "funfacts" },
+            { label: "Fairness", tab: "fairness" },
+            { label: "Tournament History", tab: "history" },
+            { label: "Admin", tab: "admin" }
+          ]
+        }
+      ]));
+
+      var firstLegacy = legacyNavGroups()[0];
+
+      if (firstLegacy && firstLegacy.parentNode) {
+        firstLegacy.parentNode.insertBefore(shell, firstLegacy);
+      } else {
+        parent.insertBefore(shell, parent.firstChild || null);
+      }
+    }
+
+    shell.style.display = "flex";
+    shell.style.visibility = "visible";
+    shell.style.pointerEvents = "auto";
+    shell.style.opacity = "1";
+
+    return true;
+  }
+
+  function attachObserver(){
+    var parent = navParent();
+    if (!parent || parent.__pbStaticFinalNavObserverV4) return;
+
+    var obs = new MutationObserver(function(){
+      mutationCount += 1;
+      lastMutationAt = new Date().toLocaleTimeString();
+
+      clearTimeout(attachObserver._timer);
+      attachObserver._timer = setTimeout(function(){
+        hideLegacyNav();
+      }, 30);
+    });
+
+    obs.observe(parent, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "class", "data-tabs"]
+    });
+
+    parent.__pbStaticFinalNavObserverV4 = true;
+  }
+
+  document.addEventListener("click", function(event){
+    var shell = document.querySelector(".pb-static-final-nav-v4");
+    if (shell && !shell.contains(event.target)) closeAll();
+  }, true);
+
+  function apply(){
+    var ok = buildStaticNav();
+    attachObserver();
+    hideLegacyNav();
+    return ok;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 700);
+    setTimeout(apply, 1600);
+  });
+
+  setTimeout(apply, 200);
+  setTimeout(apply, 900);
+  setTimeout(apply, 2200);
+
+  window.pbStaticFinalNavStatusV4 = function(){
+    apply();
+
+    var shell = document.querySelector(".pb-static-final-nav-v4");
+    var legacy = legacyNavGroups();
+
+    return {
+      installed: true,
+      staticNavFound: !!shell,
+      staticTopItems: shell ? Array.from(shell.querySelectorAll(":scope > .pb-static-nav-item-v4 > .pb-static-nav-btn-v4")).map(function(btn){
+        return clean(btn.textContent);
+      }) : [],
+      legacyHiddenCount: legacy.filter(function(g){
+        return g.classList.contains("pb-hide-legacy-nav-v4") || g.style.display === "none";
+      }).length,
+      legacyTotal: legacy.length,
+      mutationCount: mutationCount,
+      lastMutationAt: lastMutationAt
     };
   };
 })();
