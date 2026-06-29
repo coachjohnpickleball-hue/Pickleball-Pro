@@ -1844,6 +1844,18 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   pointer-events: auto !important;
 }
 
+
+
+
+
+
+/* PB_DASHBOARD_EXISTING_STEPS_TOP_V2 */
+/* Move the existing dashboard steps block only. Do not create new UI. */
+.pb-existing-steps-moved-top-v2 {
+  margin-top: 0 !important;
+  margin-bottom: 14px !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -27641,6 +27653,175 @@ function exportEndSessionSummary(){
   });
 
   setTimeout(rerenderSchedule, 500);
+})();
+
+
+
+
+
+
+
+
+/* PB_DASHBOARD_EXISTING_STEPS_TOP_V2 */
+(function(){
+  if (window.__pbDashboardExistingStepsTopV2) return;
+  window.__pbDashboardExistingStepsTopV2 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function findDashboardSection(){
+    return document.getElementById("sec-home") ||
+      document.getElementById("sec-dashboard") ||
+      document.getElementById("home") ||
+      document.getElementById("dashboard") ||
+      document.querySelector(".section.active") ||
+      null;
+  }
+
+  function commonAncestor(a, b){
+    if (!a || !b) return null;
+
+    var parents = [];
+    var x = a;
+
+    while (x) {
+      parents.push(x);
+      x = x.parentElement;
+    }
+
+    x = b;
+
+    while (x) {
+      if (parents.indexOf(x) >= 0) return x;
+      x = x.parentElement;
+    }
+
+    return null;
+  }
+
+  function looksLikeExistingStepsBlock(el){
+    if (!el) return false;
+
+    var txt = clean(el.textContent).toLowerCase();
+
+    if (!txt) return false;
+
+    var hasStep1 = txt.indexOf("step 1") >= 0;
+    var hasStep2 = txt.indexOf("step 2") >= 0;
+    var hasStep3 = txt.indexOf("step 3") >= 0;
+
+    if (!(hasStep1 && hasStep2)) return false;
+
+    /*
+      Avoid picking the full dashboard page.
+    */
+    if (txt.length > 2500) return false;
+
+    /*
+      Avoid my previous created workflow bar.
+    */
+    if (el.classList && el.classList.contains("pb-dashboard-workflow-top-v1")) return false;
+
+    return hasStep3 || txt.indexOf("players") >= 0 || txt.indexOf("schedule") >= 0;
+  }
+
+  function findExistingStepsBlock(section){
+    if (!section) return null;
+
+    /*
+      Remove the overbuilt V1 bar if it exists in the loaded DOM.
+    */
+    section.querySelectorAll(".pb-dashboard-workflow-top-v1").forEach(function(el){
+      el.remove();
+    });
+
+    var candidates = Array.from(section.querySelectorAll("div, section, article, aside"))
+      .filter(looksLikeExistingStepsBlock)
+      .sort(function(a, b){
+        return clean(a.textContent).length - clean(b.textContent).length;
+      });
+
+    if (candidates[0]) return candidates[0];
+
+    /*
+      Fallback: find separate Step 1 and Step 2 elements, then move their shared container.
+    */
+    var all = Array.from(section.querySelectorAll("*"));
+
+    var step1 = all.find(function(el){
+      return clean(el.textContent).toLowerCase().indexOf("step 1") >= 0;
+    });
+
+    var step2 = all.find(function(el){
+      return clean(el.textContent).toLowerCase().indexOf("step 2") >= 0;
+    });
+
+    var shared = commonAncestor(step1, step2);
+
+    while (shared && shared !== section) {
+      if (looksLikeExistingStepsBlock(shared)) return shared;
+      shared = shared.parentElement;
+    }
+
+    return null;
+  }
+
+  function moveStepsToTop(){
+    var section = findDashboardSection();
+
+    if (!section) {
+      return {
+        installed: true,
+        moved: false,
+        reason: "dashboard-section-not-found"
+      };
+    }
+
+    var block = findExistingStepsBlock(section);
+
+    if (!block) {
+      return {
+        installed: true,
+        moved: false,
+        dashboardSectionId: section.id || "",
+        reason: "existing-steps-block-not-found"
+      };
+    }
+
+    block.classList.add("pb-existing-steps-moved-top-v2");
+
+    /*
+      Move existing steps to the top of dashboard content.
+      This does not create any new buttons or change their click logic.
+    */
+    if (section.firstElementChild !== block) {
+      section.insertBefore(block, section.firstElementChild);
+    }
+
+    return {
+      installed: true,
+      moved: true,
+      dashboardSectionId: section.id || "",
+      stepsText: clean(block.textContent).slice(0, 220),
+      createdNewUI: false
+    };
+  }
+
+  function apply(){
+    moveStepsToTop();
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 250);
+    setTimeout(apply, 1000);
+  });
+
+  setTimeout(apply, 500);
+  setTimeout(apply, 1500);
+
+  window.pbDashboardExistingStepsTopStatusV2 = moveStepsToTop;
 })();
 
 </script>
