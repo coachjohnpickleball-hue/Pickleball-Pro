@@ -1605,6 +1605,245 @@ html body #global-round-timer.pb-global-timer-hidden {
   gap: .35rem;
 }
 
+
+
+/* PB_TIMER_IN_MENU_NO_FLOAT_V1 */
+/* Hide the floating Show Time / Hide Time controls. The Menu copy stays visible. */
+button[onclick*="pbToggleGlobalTimer"]:not(.pb-menu-timer-toggle-v1),
+button[onclick*="pbHideGlobalTimer"]:not(.pb-menu-timer-hide-v1),
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle {
+  display: none !important;
+}
+
+/* Keep the actual timer panel visible only when the app opens it. */
+.pb-menu-timer-toggle-v1 {
+  width: 100%;
+  text-align: left;
+}
+
+
+
+/* PB_TIMER_MENU_WITH_CLOSE_V2 */
+button.pb-menu-timer-toggle-v2,
+button.pb-timer-close-v2 {
+  display: inline-flex !important;
+}
+
+.pb-menu-timer-toggle-v2 {
+  width: 100%;
+  text-align: left;
+}
+
+/* Hide only the floating Show Time buttons, not the close button inside timer. */
+button[onclick*="pbToggleGlobalTimer"]:not(.pb-menu-timer-toggle-v1):not(.pb-menu-timer-toggle-v2),
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle {
+  display: none !important;
+}
+
+.pb-timer-close-v2 {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 99999;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(0,0,0,.38);
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pb-timer-close-v2:hover {
+  background: rgba(239,83,80,.85);
+}
+
+/* Make sure the timer container can position the close button. */
+[data-pb-timer-panel-v2="1"] {
+  position: relative !important;
+}
+
+
+
+/* PB_TIMER_MENU_CLOSE_PRECISE_V3 */
+.pb-menu-timer-toggle-v3 {
+  width: 100%;
+  text-align: left;
+  display: block !important;
+}
+
+/* Hide floating Show Time controls only. */
+button[data-pb-hidden-floating-timer-v3="1"],
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle {
+  display: none !important;
+}
+
+/* Do not let older patches hide the new timer close button. */
+.pb-timer-close-v3 {
+  display: inline-flex !important;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 99999;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(0,0,0,.42);
+  color: #fff;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pb-timer-close-v3:hover {
+  background: rgba(239,83,80,.9);
+}
+
+[data-pb-timer-panel-v3="1"] {
+  position: relative !important;
+}
+
+
+
+/* PB_TIMER_EXISTING_CLOSE_MENU_V4 */
+
+/* Menu item is the only Show Time control. */
+.pb-menu-timer-toggle-v4 {
+  width: 100%;
+  text-align: left;
+  display: block !important;
+}
+
+/* Hide only floating Show Time buttons. */
+button[data-pb-hidden-floating-showtime-v4="1"],
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle {
+  display: none !important;
+}
+
+/*
+  Keep the app's existing timer close button visible when the timer is open.
+  This overrides older patches that hid pbHideGlobalTimer buttons.
+*/
+#global-timer-close-btn,
+.pb-global-timer-close {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* But if the timer is closed, do not leave the close button floating alone. */
+#global-timer-close-btn[data-pb-force-hidden-v4="1"],
+.pb-global-timer-close[data-pb-force-hidden-v4="1"] {
+  display: none !important;
+}
+
+
+
+/* PB_TIMER_MENU_NO_X_V5 */
+
+/* The menu item is text only — no close/X inside the menu. */
+.pb-menu-timer-toggle-v5 {
+  width: 100%;
+  text-align: left;
+  display: block !important;
+}
+
+/* Hide/remove any accidental X close buttons inside menus. */
+.user-dropdown .pb-timer-close-v2,
+.user-dropdown .pb-timer-close-v3,
+.user-dropdown .pb-timer-close-v4,
+.user-menu .pb-timer-close-v2,
+.user-menu .pb-timer-close-v3,
+.user-menu .pb-timer-close-v4,
+.nav-menu .pb-timer-close-v2,
+.nav-menu .pb-timer-close-v3,
+.nav-menu .pb-timer-close-v4,
+.pb-menu-timer-toggle-v1 .pb-timer-close-v2,
+.pb-menu-timer-toggle-v1 .pb-timer-close-v3,
+.pb-menu-timer-toggle-v2 .pb-timer-close-v2,
+.pb-menu-timer-toggle-v2 .pb-timer-close-v3,
+.pb-menu-timer-toggle-v3 .pb-timer-close-v2,
+.pb-menu-timer-toggle-v3 .pb-timer-close-v3,
+.pb-menu-timer-toggle-v4 .pb-timer-close-v2,
+.pb-menu-timer-toggle-v4 .pb-timer-close-v3,
+.pb-menu-timer-toggle-v5 .pb-timer-close-v2,
+.pb-menu-timer-toggle-v5 .pb-timer-close-v3 {
+  display: none !important;
+}
+
+/* Floating Show Time button stays hidden. */
+button[data-pb-hidden-floating-showtime-v5="1"],
+button[data-pb-hidden-floating-showtime-v4="1"],
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle {
+  display: none !important;
+}
+
+
+
+/* PB_REMOVE_FLOATING_SHOWTIME_V6 */
+
+/* Hide any floating Show Time control we explicitly mark. */
+[data-pb-remove-floating-showtime-v6="1"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* Known floating timer ids/classes. */
+#pb-global-timer-float-toggle,
+#global-timer-float-toggle,
+#floating-show-time,
+#show-time-floating,
+.pb-global-timer-float-toggle,
+.floating-timer-toggle,
+.timer-floating-toggle,
+.floating-show-time,
+.show-time-floating {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* Keep Menu timer item and real timer close button visible. */
+.pb-menu-timer-toggle-v4,
+.pb-menu-timer-toggle-v5,
+#global-timer-close-btn,
+.pb-global-timer-close {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -25857,6 +26096,1542 @@ function exportEndSessionSummary(){
       detectedBase: detectBase(),
       playerCount: players().length,
       numericTokenSample: scheduleNumericTokens().slice(0, 20),
+      sample: sample
+    };
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(rerenderSchedule, 250);
+  });
+
+  setTimeout(rerenderSchedule, 500);
+})();
+
+
+
+/* PB_TIMER_IN_MENU_NO_FLOAT_V1 */
+(function(){
+  if (window.__pbTimerInMenuNoFloatV1) return;
+  window.__pbTimerInMenuNoFloatV1 = true;
+
+  function findMenuDropdown(){
+    return document.querySelector(".user-dropdown") ||
+      document.querySelector(".user-menu .dropdown-menu") ||
+      document.querySelector(".user-menu-wrap .user-dropdown") ||
+      document.querySelector(".user-dropdown-wrap .user-dropdown") ||
+      document.querySelector("[data-user-menu]") ||
+      null;
+  }
+
+  function makeTimerButton(){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "user-dropdown-item pb-menu-timer-toggle-v1";
+    btn.textContent = "⏱ Show Time";
+
+    btn.addEventListener("click", function(event){
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (typeof pbToggleGlobalTimer === "function") {
+        pbToggleGlobalTimer(event);
+      }
+    });
+
+    return btn;
+  }
+
+  function hideFloatingTimerButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if (btn.classList.contains("pb-menu-timer-toggle-v1")) return;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var text = String(btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+      var isTimerFloat =
+        onclick.indexOf("pbToggleGlobalTimer") >= 0 ||
+        onclick.indexOf("pbHideGlobalTimer") >= 0 ||
+        text === "show time" ||
+        text === "hide time" ||
+        text.indexOf("show time") >= 0 ||
+        text.indexOf("hide time") >= 0;
+
+      var inMenu = !!btn.closest(".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu");
+
+      if (isTimerFloat && !inMenu) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-floating-timer-v1", "1");
+      }
+    });
+  }
+
+  function ensureTimerMenuItem(){
+    var menu = findMenuDropdown();
+    if (!menu) return false;
+
+    var existing = menu.querySelector(".pb-menu-timer-toggle-v1");
+    if (existing) return true;
+
+    var btn = makeTimerButton();
+
+    /*
+      Put it near the top of the Menu, after Save if there is a Save item.
+    */
+    var items = Array.from(menu.children);
+    var saveItem = items.find(function(el){
+      return /save/i.test(String(el.textContent || ""));
+    });
+
+    if (saveItem && saveItem.nextSibling) {
+      menu.insertBefore(btn, saveItem.nextSibling);
+    } else if (saveItem) {
+      menu.appendChild(btn);
+    } else {
+      menu.insertBefore(btn, menu.firstChild);
+    }
+
+    return true;
+  }
+
+  function apply(){
+    ensureTimerMenuItem();
+    hideFloatingTimerButtons();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbTimerInMenuNoFloatV1) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return out;
+    };
+    window.showTab.__pbTimerInMenuNoFloatV1 = true;
+  }
+
+  window.pbTimerMenuStatusV1 = function(){
+    apply();
+
+    return {
+      installed: true,
+      menuItemFound: !!document.querySelector(".pb-menu-timer-toggle-v1"),
+      hiddenFloatingButtons: document.querySelectorAll("[data-pb-hidden-floating-timer-v1]").length,
+      toggleFunctionFound: typeof pbToggleGlobalTimer === "function",
+      hideFunctionFound: typeof pbHideGlobalTimer === "function"
+    };
+  };
+})();
+
+
+
+/* PB_TIMER_MENU_WITH_CLOSE_V2 */
+(function(){
+  if (window.__pbTimerMenuWithCloseV2) return;
+  window.__pbTimerMenuWithCloseV2 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function findMenuDropdown(){
+    return document.querySelector(".user-dropdown") ||
+      document.querySelector(".user-menu .dropdown-menu") ||
+      document.querySelector(".user-menu-wrap .user-dropdown") ||
+      document.querySelector(".user-dropdown-wrap .user-dropdown") ||
+      document.querySelector("[data-user-menu]") ||
+      null;
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+    return cs.display !== "none" &&
+      cs.visibility !== "hidden" &&
+      cs.opacity !== "0" &&
+      el.offsetParent !== null;
+  }
+
+  function candidateTimerPanels(){
+    var selectors = [
+      "#pb-global-timer",
+      "#global-timer",
+      "#pb-global-timer-panel",
+      "#global-timer-panel",
+      "#pb-timer",
+      "#timer-panel",
+      ".pb-global-timer",
+      ".global-timer",
+      ".pb-timer-panel",
+      ".timer-panel"
+    ];
+
+    var found = [];
+
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        if (found.indexOf(el) < 0) found.push(el);
+      });
+    });
+
+    /*
+      Fallback: find visible non-button elements with timer-ish id/class/text.
+    */
+    document.querySelectorAll("div, section, aside").forEach(function(el){
+      if (found.indexOf(el) >= 0) return;
+      if (el.closest(".user-dropdown, .nav-menu")) return;
+
+      var idc = clean((el.id || "") + " " + (el.className || "")).toLowerCase();
+      var txt = clean(el.textContent).toLowerCase();
+
+      if (
+        idc.indexOf("timer") >= 0 ||
+        idc.indexOf("global-time") >= 0 ||
+        txt.indexOf("show time") >= 0 ||
+        txt.indexOf("hide time") >= 0
+      ) {
+        found.push(el);
+      }
+    });
+
+    return found.filter(function(el){
+      if (!el) return false;
+      if (el.tagName && el.tagName.toLowerCase() === "button") return false;
+      if (el.closest(".user-dropdown, .nav-menu")) return false;
+      return true;
+    });
+  }
+
+  function findTimerPanel(){
+    var panels = candidateTimerPanels();
+
+    /*
+      Prefer visible timer panels.
+    */
+    var visible = panels.find(isVisible);
+    if (visible) return visible;
+
+    return panels[0] || null;
+  }
+
+  function timerIsOpen(){
+    return candidateTimerPanels().some(function(el){
+      return isVisible(el);
+    });
+  }
+
+  function hideFloatingTimerButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if (btn.classList.contains("pb-menu-timer-toggle-v1")) return;
+      if (btn.classList.contains("pb-menu-timer-toggle-v2")) return;
+      if (btn.classList.contains("pb-timer-close-v2")) return;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var text = clean(btn.textContent).toLowerCase();
+
+      var isTimerFloat =
+        onclick.indexOf("pbToggleGlobalTimer") >= 0 ||
+        text === "show time" ||
+        text === "hide time";
+
+      var inMenu = !!btn.closest(".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu");
+
+      if (isTimerFloat && !inMenu) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-floating-timer-v2", "1");
+      }
+    });
+  }
+
+  function closeTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (typeof pbHideGlobalTimer === "function") {
+      try {
+        pbHideGlobalTimer(event || new Event("click"));
+      } catch(e) {}
+    }
+
+    candidateTimerPanels().forEach(function(panel){
+      panel.style.display = "none";
+      panel.setAttribute("data-pb-timer-closed-v2", "1");
+    });
+
+    updateMenuLabel();
+  }
+
+  function ensureCloseButton(){
+    var panel = findTimerPanel();
+
+    if (!panel) return false;
+
+    panel.setAttribute("data-pb-timer-panel-v2", "1");
+
+    var existing = panel.querySelector(".pb-timer-close-v2");
+    if (existing) return true;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-timer-close-v2";
+    btn.setAttribute("aria-label", "Close timer");
+    btn.title = "Close timer";
+    btn.textContent = "✕";
+
+    btn.addEventListener("click", closeTimer);
+
+    panel.appendChild(btn);
+
+    return true;
+  }
+
+  function showTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    /*
+      Menu is for turning it ON. Closing happens from the timer's ✕ button.
+    */
+    if (!timerIsOpen() && typeof pbToggleGlobalTimer === "function") {
+      try {
+        pbToggleGlobalTimer(event || new Event("click"));
+      } catch(e) {}
+    }
+
+    setTimeout(function(){
+      ensureCloseButton();
+      updateMenuLabel();
+    }, 80);
+
+    setTimeout(function(){
+      ensureCloseButton();
+      updateMenuLabel();
+    }, 300);
+  }
+
+  function makeMenuButton(){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "user-dropdown-item pb-menu-timer-toggle-v2";
+    btn.textContent = "⏱ Show Time";
+    btn.addEventListener("click", showTimer);
+    return btn;
+  }
+
+  function ensureTimerMenuItem(){
+    var menu = findMenuDropdown();
+    if (!menu) return false;
+
+    /*
+      Upgrade old V1 button if it exists.
+    */
+    var existing =
+      menu.querySelector(".pb-menu-timer-toggle-v2") ||
+      menu.querySelector(".pb-menu-timer-toggle-v1");
+
+    if (existing) {
+      existing.classList.add("pb-menu-timer-toggle-v2");
+      existing.textContent = "⏱ Show Time";
+      existing.removeAttribute("onclick");
+
+      if (!existing.__pbTimerMenuWithCloseV2) {
+        existing.addEventListener("click", showTimer);
+        existing.__pbTimerMenuWithCloseV2 = true;
+      }
+
+      return true;
+    }
+
+    var btn = makeMenuButton();
+
+    var saveItem = Array.from(menu.children).find(function(el){
+      return /save/i.test(clean(el.textContent));
+    });
+
+    if (saveItem && saveItem.nextSibling) {
+      menu.insertBefore(btn, saveItem.nextSibling);
+    } else if (saveItem) {
+      menu.appendChild(btn);
+    } else {
+      menu.insertBefore(btn, menu.firstChild);
+    }
+
+    btn.__pbTimerMenuWithCloseV2 = true;
+
+    return true;
+  }
+
+  function updateMenuLabel(){
+    document.querySelectorAll(".pb-menu-timer-toggle-v1, .pb-menu-timer-toggle-v2").forEach(function(btn){
+      btn.textContent = timerIsOpen() ? "⏱ Time is On" : "⏱ Show Time";
+    });
+  }
+
+  function apply(){
+    ensureTimerMenuItem();
+    hideFloatingTimerButtons();
+    ensureCloseButton();
+    updateMenuLabel();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbTimerMenuWithCloseV2) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return out;
+    };
+    window.showTab.__pbTimerMenuWithCloseV2 = true;
+  }
+
+  window.pbTimerMenuCloseStatusV2 = function(){
+    apply();
+
+    return {
+      installed: true,
+      menuItemFound: !!document.querySelector(".pb-menu-timer-toggle-v2"),
+      timerOpen: timerIsOpen(),
+      timerPanelFound: !!findTimerPanel(),
+      closeButtonFound: !!document.querySelector(".pb-timer-close-v2"),
+      hiddenFloatingButtons: document.querySelectorAll("[data-pb-hidden-floating-timer-v2], [data-pb-hidden-floating-timer-v1]").length,
+      toggleFunctionFound: typeof pbToggleGlobalTimer === "function",
+      hideFunctionFound: typeof pbHideGlobalTimer === "function"
+    };
+  };
+})();
+
+
+
+/* PB_TIMER_MENU_CLOSE_PRECISE_V3 */
+(function(){
+  if (window.__pbTimerMenuClosePreciseV3) return;
+  window.__pbTimerMenuClosePreciseV3 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+    return cs.display !== "none" &&
+      cs.visibility !== "hidden" &&
+      cs.opacity !== "0" &&
+      el.offsetWidth > 0 &&
+      el.offsetHeight > 0;
+  }
+
+  function findMenuDropdown(){
+    return document.querySelector(".user-dropdown") ||
+      document.querySelector(".user-menu .dropdown-menu") ||
+      document.querySelector(".user-menu-wrap .user-dropdown") ||
+      document.querySelector(".user-dropdown-wrap .user-dropdown") ||
+      document.querySelector("[data-user-menu]") ||
+      null;
+  }
+
+  function panelBySelector(){
+    var selectors = [
+      "#pb-global-timer",
+      "#global-timer",
+      "#pb-global-timer-panel",
+      "#global-timer-panel",
+      "#pb-timer",
+      "#timer-panel",
+      ".pb-global-timer",
+      ".global-timer",
+      ".pb-timer-panel",
+      ".timer-panel"
+    ];
+
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el && !el.closest(".user-dropdown, .nav-menu")) return el;
+    }
+
+    return null;
+  }
+
+  function panelByHideButton(){
+    var btns = Array.from(document.querySelectorAll("button")).filter(function(btn){
+      if (btn.closest(".user-dropdown, .nav-menu")) return false;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var txt = clean(btn.textContent).toLowerCase();
+
+      return onclick.indexOf("pbHideGlobalTimer") >= 0 ||
+        txt === "hide time" ||
+        txt === "close timer";
+    });
+
+    for (var i = 0; i < btns.length; i++) {
+      var btn = btns[i];
+      var panel =
+        btn.closest("[id*='timer' i]") ||
+        btn.closest("[class*='timer' i]") ||
+        btn.parentElement;
+
+      if (panel && !panel.closest(".user-dropdown, .nav-menu")) return panel;
+    }
+
+    return null;
+  }
+
+  function findTimerPanel(){
+    return panelBySelector() || panelByHideButton();
+  }
+
+  function timerIsOpen(){
+    var panel = findTimerPanel();
+    return !!(panel && isVisible(panel));
+  }
+
+  function hideFloatingTimerButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if (btn.classList.contains("pb-menu-timer-toggle-v3")) return;
+      if (btn.classList.contains("pb-timer-close-v3")) return;
+      if (btn.closest(".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu")) return;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var txt = clean(btn.textContent).toLowerCase();
+
+      var isFloatingShow =
+        onclick.indexOf("pbToggleGlobalTimer") >= 0 ||
+        txt === "show time";
+
+      if (isFloatingShow) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-floating-timer-v3", "1");
+      }
+    });
+  }
+
+  function closeTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (typeof pbHideGlobalTimer === "function") {
+      try {
+        pbHideGlobalTimer(event || new Event("click"));
+      } catch(e) {}
+    }
+
+    var panel = findTimerPanel();
+    if (panel) {
+      panel.style.display = "none";
+      panel.setAttribute("data-pb-timer-closed-v3", "1");
+    }
+
+    updateMenuLabel();
+  }
+
+  function ensureCloseButton(){
+    var panel = findTimerPanel();
+
+    if (!panel) return false;
+
+    panel.setAttribute("data-pb-timer-panel-v3", "1");
+
+    var old = panel.querySelector(".pb-timer-close-v3");
+    if (old) return true;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-timer-close-v3";
+    btn.textContent = "✕";
+    btn.title = "Close timer";
+    btn.setAttribute("aria-label", "Close timer");
+    btn.addEventListener("click", closeTimer);
+
+    panel.appendChild(btn);
+    return true;
+  }
+
+  function openTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    /*
+      Menu only turns timer ON.
+      Closing is done from the timer's X button.
+    */
+    if (!timerIsOpen()) {
+      if (typeof pbToggleGlobalTimer === "function") {
+        try {
+          pbToggleGlobalTimer(event || new Event("click"));
+        } catch(e) {}
+      } else {
+        var panel = findTimerPanel();
+        if (panel) panel.style.display = "";
+      }
+    }
+
+    setTimeout(function(){
+      ensureCloseButton();
+      updateMenuLabel();
+      hideFloatingTimerButtons();
+    }, 80);
+
+    setTimeout(function(){
+      ensureCloseButton();
+      updateMenuLabel();
+      hideFloatingTimerButtons();
+    }, 300);
+  }
+
+  function createMenuButton(){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "user-dropdown-item pb-menu-timer-toggle-v3";
+    btn.textContent = "⏱ Show Time";
+    btn.addEventListener("click", openTimer);
+    return btn;
+  }
+
+  function ensureTimerMenuItem(){
+    var menu = findMenuDropdown();
+    if (!menu) return false;
+
+    /*
+      Remove previous timer menu buttons/listeners and replace with one clean button.
+    */
+    Array.from(menu.querySelectorAll(".pb-menu-timer-toggle-v1, .pb-menu-timer-toggle-v2, .pb-menu-timer-toggle-v3")).forEach(function(btn){
+      btn.remove();
+    });
+
+    var btn = createMenuButton();
+
+    var saveItem = Array.from(menu.children).find(function(el){
+      return /save/i.test(clean(el.textContent));
+    });
+
+    if (saveItem && saveItem.nextSibling) {
+      menu.insertBefore(btn, saveItem.nextSibling);
+    } else if (saveItem) {
+      menu.appendChild(btn);
+    } else {
+      menu.insertBefore(btn, menu.firstChild);
+    }
+
+    return true;
+  }
+
+  function updateMenuLabel(){
+    document.querySelectorAll(".pb-menu-timer-toggle-v3").forEach(function(btn){
+      btn.textContent = timerIsOpen() ? "⏱ Time is On" : "⏱ Show Time";
+    });
+  }
+
+  function apply(){
+    ensureTimerMenuItem();
+    hideFloatingTimerButtons();
+
+    if (timerIsOpen()) {
+      ensureCloseButton();
+    }
+
+    updateMenuLabel();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbTimerMenuClosePreciseV3) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return out;
+    };
+    window.showTab.__pbTimerMenuClosePreciseV3 = true;
+  }
+
+  window.pbTimerMenuCloseStatusV3 = function(){
+    apply();
+
+    var panel = findTimerPanel();
+
+    return {
+      installed: true,
+      menuItemFound: !!document.querySelector(".pb-menu-timer-toggle-v3"),
+      timerOpen: timerIsOpen(),
+      timerPanelFound: !!panel,
+      timerPanelId: panel ? panel.id || "" : "",
+      timerPanelClass: panel ? clean(panel.className || "") : "",
+      closeButtonFound: !!document.querySelector(".pb-timer-close-v3"),
+      hiddenFloatingButtons: document.querySelectorAll("[data-pb-hidden-floating-timer-v3]").length,
+      toggleFunctionFound: typeof pbToggleGlobalTimer === "function",
+      hideFunctionFound: typeof pbHideGlobalTimer === "function"
+    };
+  };
+})();
+
+
+
+/* PB_TIMER_EXISTING_CLOSE_MENU_V4 */
+(function(){
+  if (window.__pbTimerExistingCloseMenuV4) return;
+  window.__pbTimerExistingCloseMenuV4 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+
+    return cs.display !== "none" &&
+      cs.visibility !== "hidden" &&
+      cs.opacity !== "0" &&
+      el.offsetWidth > 0 &&
+      el.offsetHeight > 0;
+  }
+
+  function findMenuDropdown(){
+    return document.querySelector(".user-dropdown") ||
+      document.querySelector(".user-menu .dropdown-menu") ||
+      document.querySelector(".user-menu-wrap .user-dropdown") ||
+      document.querySelector(".user-dropdown-wrap .user-dropdown") ||
+      document.querySelector("[data-user-menu]") ||
+      null;
+  }
+
+  function existingCloseButton(){
+    return document.getElementById("global-timer-close-btn") ||
+      document.querySelector(".pb-global-timer-close") ||
+      null;
+  }
+
+  function timerPanelFromCloseButton(){
+    var close = existingCloseButton();
+
+    if (!close) return null;
+
+    /*
+      The close button itself is not the panel.
+      Walk up until we find a real container.
+    */
+    var el = close.parentElement;
+
+    while (el && el !== document.body) {
+      if (el.closest(".user-dropdown, .nav-menu")) return null;
+
+      var idc = clean((el.id || "") + " " + (el.className || "")).toLowerCase();
+
+      if (
+        idc.indexOf("timer") >= 0 ||
+        idc.indexOf("global-time") >= 0 ||
+        el.querySelector("#global-timer-close-btn, .pb-global-timer-close")
+      ) {
+        return el;
+      }
+
+      el = el.parentElement;
+    }
+
+    return close.parentElement || null;
+  }
+
+  function timerPanelBySelector(){
+    var selectors = [
+      "#global-timer-panel",
+      "#pb-global-timer-panel",
+      "#global-timer",
+      "#pb-global-timer",
+      "#pb-timer",
+      "#timer-panel",
+      ".global-timer-panel",
+      ".pb-global-timer-panel",
+      ".global-timer",
+      ".pb-global-timer",
+      ".timer-panel",
+      ".pb-timer-panel"
+    ];
+
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+
+      if (!el) continue;
+      if (el.tagName && el.tagName.toLowerCase() === "button") continue;
+      if (el.id === "global-timer-close-btn") continue;
+      if (el.classList && el.classList.contains("pb-global-timer-close")) continue;
+      if (el.closest(".user-dropdown, .nav-menu")) continue;
+
+      return el;
+    }
+
+    return null;
+  }
+
+  function findTimerPanel(){
+    return timerPanelBySelector() || timerPanelFromCloseButton();
+  }
+
+  function timerIsOpen(){
+    var panel = findTimerPanel();
+
+    if (!panel) return false;
+
+    return isVisible(panel);
+  }
+
+  function setCloseVisibility(){
+    var close = existingCloseButton();
+
+    if (!close) return false;
+
+    if (timerIsOpen()) {
+      close.removeAttribute("data-pb-force-hidden-v4");
+    } else {
+      close.setAttribute("data-pb-force-hidden-v4", "1");
+    }
+
+    return true;
+  }
+
+  function hideFloatingShowTimeButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if (btn.classList.contains("pb-menu-timer-toggle-v1")) return;
+      if (btn.classList.contains("pb-menu-timer-toggle-v2")) return;
+      if (btn.classList.contains("pb-menu-timer-toggle-v3")) return;
+      if (btn.classList.contains("pb-menu-timer-toggle-v4")) return;
+      if (btn.id === "global-timer-close-btn") return;
+      if (btn.classList.contains("pb-global-timer-close")) return;
+      if (btn.closest(".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu")) return;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var txt = clean(btn.textContent).toLowerCase();
+
+      var isFloatingShow =
+        onclick.indexOf("pbToggleGlobalTimer") >= 0 ||
+        txt === "show time" ||
+        txt.indexOf("show time") >= 0;
+
+      if (isFloatingShow) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-floating-showtime-v4", "1");
+      }
+    });
+  }
+
+  function openTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    /*
+      Menu turns timer ON only.
+      Close button closes it.
+    */
+    if (!timerIsOpen()) {
+      if (typeof pbToggleGlobalTimer === "function") {
+        try {
+          pbToggleGlobalTimer(event || new Event("click"));
+        } catch(e) {}
+      } else {
+        var panel = findTimerPanel();
+        if (panel) panel.style.display = "";
+      }
+    }
+
+    setTimeout(apply, 80);
+    setTimeout(apply, 300);
+  }
+
+  function wireExistingCloseButton(){
+    var close = existingCloseButton();
+
+    if (!close) return false;
+
+    if (!close.__pbTimerExistingCloseMenuV4) {
+      close.addEventListener("click", function(event){
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (typeof pbHideGlobalTimer === "function") {
+          try {
+            pbHideGlobalTimer(event);
+          } catch(e) {}
+        } else {
+          var panel = findTimerPanel();
+          if (panel) panel.style.display = "none";
+        }
+
+        setTimeout(apply, 80);
+      });
+
+      close.__pbTimerExistingCloseMenuV4 = true;
+    }
+
+    return true;
+  }
+
+  function createMenuButton(){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "user-dropdown-item pb-menu-timer-toggle-v4";
+    btn.textContent = "⏱ Show Time";
+    btn.addEventListener("click", openTimer);
+    return btn;
+  }
+
+  function ensureTimerMenuItem(){
+    var menu = findMenuDropdown();
+    if (!menu) return false;
+
+    /*
+      Remove older timer menu buttons and replace with one clean ON button.
+    */
+    Array.from(menu.querySelectorAll(".pb-menu-timer-toggle-v1, .pb-menu-timer-toggle-v2, .pb-menu-timer-toggle-v3, .pb-menu-timer-toggle-v4")).forEach(function(btn){
+      btn.remove();
+    });
+
+    var btn = createMenuButton();
+
+    var saveItem = Array.from(menu.children).find(function(el){
+      return /save/i.test(clean(el.textContent));
+    });
+
+    if (saveItem && saveItem.nextSibling) {
+      menu.insertBefore(btn, saveItem.nextSibling);
+    } else if (saveItem) {
+      menu.appendChild(btn);
+    } else {
+      menu.insertBefore(btn, menu.firstChild);
+    }
+
+    return true;
+  }
+
+  function updateMenuLabel(){
+    document.querySelectorAll(".pb-menu-timer-toggle-v4").forEach(function(btn){
+      btn.textContent = timerIsOpen() ? "⏱ Time is On" : "⏱ Show Time";
+    });
+  }
+
+  function apply(){
+    ensureTimerMenuItem();
+    hideFloatingShowTimeButtons();
+    wireExistingCloseButton();
+    setCloseVisibility();
+    updateMenuLabel();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbTimerExistingCloseMenuV4) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return out;
+    };
+
+    window.showTab.__pbTimerExistingCloseMenuV4 = true;
+  }
+
+  window.pbTimerMenuStatusV4 = function(){
+    apply();
+
+    var panel = findTimerPanel();
+    var close = existingCloseButton();
+
+    return {
+      installed: true,
+      menuItemFound: !!document.querySelector(".pb-menu-timer-toggle-v4"),
+      timerOpen: timerIsOpen(),
+      timerPanelFound: !!panel,
+      timerPanelId: panel ? panel.id || "" : "",
+      timerPanelClass: panel ? clean(panel.className || "") : "",
+      existingCloseButtonFound: !!close,
+      existingCloseButtonId: close ? close.id || "" : "",
+      existingCloseButtonClass: close ? clean(close.className || "") : "",
+      closeButtonVisible: close ? isVisible(close) : false,
+      hiddenFloatingShowTimeButtons: document.querySelectorAll("[data-pb-hidden-floating-showtime-v4]").length,
+      toggleFunctionFound: typeof pbToggleGlobalTimer === "function",
+      hideFunctionFound: typeof pbHideGlobalTimer === "function"
+    };
+  };
+})();
+
+
+
+/* PB_TIMER_MENU_NO_X_V5 */
+(function(){
+  if (window.__pbTimerMenuNoXV5) return;
+  window.__pbTimerMenuNoXV5 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function findMenuDropdown(){
+    return document.querySelector(".user-dropdown") ||
+      document.querySelector(".user-menu .dropdown-menu") ||
+      document.querySelector(".user-menu-wrap .user-dropdown") ||
+      document.querySelector(".user-dropdown-wrap .user-dropdown") ||
+      document.querySelector("[data-user-menu]") ||
+      null;
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    var cs = getComputedStyle(el);
+
+    return cs.display !== "none" &&
+      cs.visibility !== "hidden" &&
+      cs.opacity !== "0" &&
+      el.offsetWidth > 0 &&
+      el.offsetHeight > 0;
+  }
+
+  function timerPanel(){
+    var selectors = [
+      "#global-timer-panel",
+      "#pb-global-timer-panel",
+      "#global-timer",
+      "#pb-global-timer",
+      "#pb-timer",
+      "#timer-panel",
+      ".global-timer-panel",
+      ".pb-global-timer-panel",
+      ".global-timer",
+      ".pb-global-timer",
+      ".timer-panel",
+      ".pb-timer-panel"
+    ];
+
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+
+      if (!el) continue;
+      if (el.tagName && el.tagName.toLowerCase() === "button") continue;
+      if (el.id === "global-timer-close-btn") continue;
+      if (el.closest(".user-dropdown, .nav-menu")) continue;
+
+      return el;
+    }
+
+    var close = document.getElementById("global-timer-close-btn") ||
+      document.querySelector(".pb-global-timer-close");
+
+    if (close && close.parentElement && !close.parentElement.closest(".user-dropdown, .nav-menu")) {
+      return close.parentElement;
+    }
+
+    return null;
+  }
+
+  function timerIsOpen(){
+    var panel = timerPanel();
+    return !!(panel && isVisible(panel));
+  }
+
+  function removeAccidentalMenuX(){
+    /*
+      Remove fake close buttons created by the earlier V2/V3 attempts.
+      The app's real close button is #global-timer-close-btn / .pb-global-timer-close.
+    */
+    document.querySelectorAll(".pb-timer-close-v2, .pb-timer-close-v3").forEach(function(btn){
+      btn.remove();
+    });
+
+    var menu = findMenuDropdown();
+
+    if (!menu) return;
+
+    menu.querySelectorAll("button").forEach(function(btn){
+      var txt = clean(btn.textContent);
+
+      if (
+        btn.className.indexOf("pb-menu-timer-toggle") >= 0 ||
+        txt.indexOf("Show Time") >= 0 ||
+        txt.indexOf("Time is On") >= 0
+      ) {
+        btn.textContent = timerIsOpen() ? "⏱ Time is On" : "⏱ Show Time";
+      }
+    });
+  }
+
+  function hideFloatingShowTimeButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if (btn.className.indexOf("pb-menu-timer-toggle") >= 0) return;
+      if (btn.id === "global-timer-close-btn") return;
+      if (btn.classList.contains("pb-global-timer-close")) return;
+      if (btn.closest(".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu")) return;
+
+      var onclick = String(btn.getAttribute("onclick") || "");
+      var txt = clean(btn.textContent).toLowerCase();
+
+      var isFloatingShow =
+        onclick.indexOf("pbToggleGlobalTimer") >= 0 ||
+        txt === "show time" ||
+        txt.indexOf("show time") >= 0;
+
+      if (isFloatingShow) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-floating-showtime-v5", "1");
+      }
+    });
+  }
+
+  function openTimer(event){
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (!timerIsOpen() && typeof pbToggleGlobalTimer === "function") {
+      try {
+        pbToggleGlobalTimer(event || new Event("click"));
+      } catch(e) {}
+    }
+
+    setTimeout(apply, 80);
+    setTimeout(apply, 300);
+  }
+
+  function ensureCleanMenuButton(){
+    var menu = findMenuDropdown();
+
+    if (!menu) return false;
+
+    /*
+      Remove every previous timer menu button and rebuild one clean text-only button.
+    */
+    Array.from(menu.querySelectorAll(
+      ".pb-menu-timer-toggle-v1, .pb-menu-timer-toggle-v2, .pb-menu-timer-toggle-v3, .pb-menu-timer-toggle-v4, .pb-menu-timer-toggle-v5"
+    )).forEach(function(btn){
+      btn.remove();
+    });
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "user-dropdown-item pb-menu-timer-toggle-v5";
+    btn.textContent = timerIsOpen() ? "⏱ Time is On" : "⏱ Show Time";
+    btn.addEventListener("click", openTimer);
+
+    var saveItem = Array.from(menu.children).find(function(el){
+      return /save/i.test(clean(el.textContent));
+    });
+
+    if (saveItem && saveItem.nextSibling) {
+      menu.insertBefore(btn, saveItem.nextSibling);
+    } else if (saveItem) {
+      menu.appendChild(btn);
+    } else {
+      menu.insertBefore(btn, menu.firstChild);
+    }
+
+    return true;
+  }
+
+  function apply(){
+    removeAccidentalMenuX();
+    ensureCleanMenuButton();
+    hideFloatingShowTimeButtons();
+    removeAccidentalMenuX();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbTimerMenuNoXV5) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return out;
+    };
+
+    window.showTab.__pbTimerMenuNoXV5 = true;
+  }
+
+  window.pbTimerMenuNoXStatusV5 = function(){
+    apply();
+
+    var menuBtn = document.querySelector(".pb-menu-timer-toggle-v5");
+    var menuText = menuBtn ? clean(menuBtn.textContent) : "";
+
+    return {
+      installed: true,
+      menuItemFound: !!menuBtn,
+      menuText: menuText,
+      menuHasX: menuText.indexOf("✕") >= 0 || menuText.indexOf("×") >= 0 || menuText.toLowerCase().indexOf("close") >= 0,
+      timerOpen: timerIsOpen(),
+      floatingShowTimeHidden: document.querySelectorAll("[data-pb-hidden-floating-showtime-v5], [data-pb-hidden-floating-showtime-v4]").length,
+      realCloseButtonFound: !!(document.getElementById("global-timer-close-btn") || document.querySelector(".pb-global-timer-close"))
+    };
+  };
+})();
+
+
+
+/* PB_REMOVE_FLOATING_SHOWTIME_V6 */
+(function(){
+  if (window.__pbRemoveFloatingShowtimeV6) return;
+  window.__pbRemoveFloatingShowtimeV6 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function isInsideMenu(el){
+    return !!(el && el.closest(
+      ".user-dropdown, .user-menu, .user-menu-wrap, .user-dropdown-wrap, .nav-menu, [data-user-menu]"
+    ));
+  }
+
+  function isRealTimerClose(el){
+    if (!el) return false;
+
+    return el.id === "global-timer-close-btn" ||
+      el.classList.contains("pb-global-timer-close") ||
+      el.classList.contains("pb-timer-close-v2") ||
+      el.classList.contains("pb-timer-close-v3");
+  }
+
+  function isMenuTimerButton(el){
+    if (!el) return false;
+
+    return el.classList.contains("pb-menu-timer-toggle-v1") ||
+      el.classList.contains("pb-menu-timer-toggle-v2") ||
+      el.classList.contains("pb-menu-timer-toggle-v3") ||
+      el.classList.contains("pb-menu-timer-toggle-v4") ||
+      el.classList.contains("pb-menu-timer-toggle-v5");
+  }
+
+  function isFloatingShowTimeControl(el){
+    if (!el) return false;
+    if (isInsideMenu(el)) return false;
+    if (isRealTimerClose(el)) return false;
+    if (isMenuTimerButton(el)) return false;
+
+    var tag = (el.tagName || "").toLowerCase();
+
+    if (!["button", "a", "div", "span"].includes(tag)) return false;
+
+    var onclick = String(el.getAttribute("onclick") || "");
+    var role = String(el.getAttribute("role") || "").toLowerCase();
+    var txt = clean(el.textContent).toLowerCase();
+
+    var looksClickable =
+      tag === "button" ||
+      tag === "a" ||
+      role === "button" ||
+      onclick.indexOf("pbToggleGlobalTimer") >= 0;
+
+    var saysShowTime =
+      txt === "show time" ||
+      txt === "⏱ show time" ||
+      txt.indexOf("show time") >= 0;
+
+    var callsShowTimer =
+      onclick.indexOf("pbToggleGlobalTimer") >= 0;
+
+    return looksClickable && (saysShowTime || callsShowTimer);
+  }
+
+  function removeFloatingShowTime(){
+    var removed = [];
+
+    document.querySelectorAll("button, a, div[role='button'], span[role='button'], div, span").forEach(function(el){
+      if (!isFloatingShowTimeControl(el)) return;
+
+      el.style.display = "none";
+      el.style.visibility = "hidden";
+      el.style.pointerEvents = "none";
+      el.style.opacity = "0";
+      el.setAttribute("data-pb-remove-floating-showtime-v6", "1");
+
+      removed.push({
+        tag: el.tagName,
+        id: el.id || "",
+        className: clean(el.className || ""),
+        text: clean(el.textContent)
+      });
+    });
+
+    window.__pbRemoveFloatingShowtimeV6Last = removed;
+
+    return removed;
+  }
+
+  function apply(){
+    removeFloatingShowTime();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 100);
+  setTimeout(apply, 500);
+  setTimeout(apply, 1200);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbRemoveFloatingShowtimeV6) {
+    window.showTab = function(){
+      var out = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 300);
+      return out;
+    };
+
+    window.showTab.__pbRemoveFloatingShowtimeV6 = true;
+  }
+
+  window.pbRemoveFloatingShowtimeNowV6 = removeFloatingShowTime;
+
+  window.pbRemoveFloatingShowtimeStatusV6 = function(){
+    var removed = removeFloatingShowTime();
+
+    return {
+      installed: true,
+      hiddenFloatingShowTimeCount: document.querySelectorAll("[data-pb-remove-floating-showtime-v6='1']").length,
+      lastHidden: removed,
+      menuTimerButtonFound: !!document.querySelector(".pb-menu-timer-toggle-v5, .pb-menu-timer-toggle-v4"),
+      realCloseButtonFound: !!(document.getElementById("global-timer-close-btn") || document.querySelector(".pb-global-timer-close"))
+    };
+  };
+})();
+
+
+
+/* PB_SCHEDULE_NAMES_NO_NUMBERS_V10 */
+(function(){
+  if (window.__pbScheduleNamesNoNumbersV10) return;
+  window.__pbScheduleNamesNoNumbersV10 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function esc(v){
+    return clean(v).replace(/[&<>"']/g, function(c){
+      return c === "&" ? "&amp;" :
+        c === "<" ? "&lt;" :
+        c === ">" ? "&gt;" :
+        c === '"' ? "&quot;" : "&#39;";
+    });
+  }
+
+  function stripLeadingPlayerNumber(name){
+    var n = clean(name);
+
+    /*
+      Remove common display prefixes:
+      "1 John"
+      "1. John"
+      "1) John"
+      "#1 John"
+      "Player 1 - John"
+    */
+    n = n.replace(/^player\s+\d+\s*[-:.)]?\s*/i, "");
+    n = n.replace(/^#?\d+\s*[-:.)]\s*/i, "");
+    n = n.replace(/^#?\d+\s+(?=[A-Za-zÀ-ž])/i, "");
+
+    return clean(n);
+  }
+
+  function players(){
+    try { return Array.isArray(state.players) ? state.players : []; }
+    catch(e) { return []; }
+  }
+
+  function rawPlayerName(p){
+    if (!p) return "";
+
+    return clean(
+      p.name ||
+      p.playerName ||
+      p.fullName ||
+      p.displayName ||
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    );
+  }
+
+  function playerName(p){
+    return stripLeadingPlayerNumber(rawPlayerName(p));
+  }
+
+  function scheduleNumericTokens(){
+    var out = [];
+
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(match){
+          ["teamA", "teamB"].forEach(function(k){
+            var team = match && match[k];
+            if (!Array.isArray(team)) return;
+
+            team.forEach(function(x){
+              if (typeof x === "number" && Number.isInteger(x)) out.push(x);
+              else if (typeof x === "string" && /^\d+$/.test(x.trim())) out.push(Number(x.trim()));
+            });
+          });
+        });
+      });
+    } catch(e) {}
+
+    return out;
+  }
+
+  function detectBase(){
+    var list = players();
+    var nums = scheduleNumericTokens();
+
+    if (!nums.length || !list.length) return "index";
+
+    var min = Math.min.apply(null, nums);
+    var max = Math.max.apply(null, nums);
+
+    if (min === 0) return "index";
+    if (min >= 1 && max === list.length) return "oneBased";
+
+    var allId = nums.every(function(n){
+      return list.some(function(p){ return p && String(p.id) === String(n); });
+    });
+
+    return allId ? "id" : "index";
+  }
+
+  function resolvePlayer(token){
+    var list = players();
+
+    if (!list.length || token == null) return null;
+
+    if (typeof token === "object") {
+      if (rawPlayerName(token)) return token;
+
+      if (token.id != null) {
+        var byObjId = list.find(function(p){ return p && String(p.id) === String(token.id); });
+        if (byObjId) return byObjId;
+      }
+
+      if (token.playerIdx != null) return resolvePlayer(token.playerIdx);
+      if (token.idx != null) return resolvePlayer(token.idx);
+      if (token.playerId != null) return resolvePlayer(token.playerId);
+
+      return null;
+    }
+
+    var raw = clean(token);
+    if (!raw) return null;
+
+    var byName = list.find(function(p){
+      return rawPlayerName(p).toLowerCase() === raw.toLowerCase() ||
+        playerName(p).toLowerCase() === stripLeadingPlayerNumber(raw).toLowerCase();
+    });
+
+    if (byName) return byName;
+
+    var n = Number(raw);
+    if (!Number.isInteger(n)) return null;
+
+    var base = detectBase();
+
+    if (base === "oneBased" && n > 0 && list[n - 1]) return list[n - 1];
+
+    var byId = list.find(function(p){
+      return p && String(p.id) === String(n);
+    });
+
+    if (base === "id" && byId) return byId;
+    if (list[n]) return list[n];
+    if (n > 0 && list[n - 1]) return list[n - 1];
+    if (byId) return byId;
+
+    return null;
+  }
+
+  function teamName(team){
+    if (!Array.isArray(team)) {
+      var p = resolvePlayer(team);
+      return p ? esc(playerName(p)) : esc(stripLeadingPlayerNumber(team || "—"));
+    }
+
+    var names = team.map(function(token){
+      var p = resolvePlayer(token);
+
+      if (!p) return esc(stripLeadingPlayerNumber(token));
+
+      var name = playerName(p) || stripLeadingPlayerNumber(token);
+
+      var suffix = "";
+      if (p.active === false) {
+        suffix = '<span style="font-size:0.6rem;color:var(--red);font-weight:700;margin-left:2px" title="This player has left">✕</span>';
+      }
+
+      return esc(name) + suffix;
+    }).filter(Boolean);
+
+    return names.length ? names.join(" & ") : "—";
+  }
+
+  window.matchTeamName = function(playerIdxArr){
+    return teamName(playerIdxArr);
+  };
+
+  try {
+    matchTeamName = window.matchTeamName;
+  } catch(e) {}
+
+  function rerenderSchedule(){
+    try {
+      if (typeof renderSchedule === "function") renderSchedule();
+    } catch(e) {}
+  }
+
+  window.pbScheduleNamesNoNumbersStatusV10 = function(){
+    var sample = [];
+
+    try {
+      (state.schedule || []).slice(0, 2).forEach(function(round){
+        (round || []).slice(0, 4).forEach(function(match){
+          if (!match) return;
+
+          sample.push({
+            rawA: match.teamA,
+            nameA: teamName(match.teamA).replace(/<[^>]+>/g, ""),
+            rawB: match.teamB,
+            nameB: teamName(match.teamB).replace(/<[^>]+>/g, "")
+          });
+        });
+      });
+    } catch(e) {}
+
+    return {
+      installed: true,
+      scheduleOnly: true,
+      detectedBase: detectBase(),
+      playerCount: players().length,
       sample: sample
     };
   };
