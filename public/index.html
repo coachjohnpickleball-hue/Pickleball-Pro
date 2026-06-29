@@ -30743,6 +30743,282 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_PLAYER_NAMES_NO_PREFIX_V11 */
+(function(){
+  if (window.__pbPlayerNamesNoPrefixV11) return;
+  window.__pbPlayerNamesNoPrefixV11 = true;
+
+  var lastRun = {
+    stateFixed: 0,
+    domFixed: 0,
+    inputFixed: 0,
+    examples: []
+  };
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function stripOneName(name){
+    var original = String(name == null ? "" : name);
+
+    var fixed = original
+      .replace(/^\s*(?:#\s*)?(?:player\s*)?\d+\s*[\.\)\]\-–—:]?\s+(?=[A-Za-zÀ-ÖØ-öø-ÿ])/i, "")
+      .replace(/^\s*(?:seed|rank)\s*\d+\s*[\.\)\]\-–—:]?\s+(?=[A-Za-zÀ-ÖØ-öø-ÿ])/i, "");
+
+    return fixed;
+  }
+
+  function stripTeamText(text){
+    var original = String(text == null ? "" : text);
+
+    return original
+      .replace(/(^|[\s\/&,;+|])(?:#\s*)?(?:player\s*)?\d+\s*[\.\)\]\-–—:]?\s+(?=[A-Za-zÀ-ÖØ-öø-ÿ])/gi, "$1")
+      .replace(/(^|[\s\/&,;+|])(?:seed|rank)\s*\d+\s*[\.\)\]\-–—:]?\s+(?=[A-Za-zÀ-ÖØ-öø-ÿ])/gi, "$1");
+  }
+
+  function shouldSkipAfterStrip(stripped){
+    var x = clean(stripped).toLowerCase();
+
+    return /^(court|courts|round|rounds|step|dupr|rating|rank|seed|score|wins|losses|players|complete|completed|match|matches)\b/.test(x);
+  }
+
+  function rememberExample(before, after){
+    before = clean(before);
+    after = clean(after);
+
+    if (!before || !after || before === after) return;
+    if (lastRun.examples.length >= 8) return;
+
+    lastRun.examples.push({ before: before, after: after });
+  }
+
+  function cleanPlayerObject(obj){
+    if (!obj || typeof obj !== "object") return 0;
+
+    var changed = 0;
+    var fields = ["name", "Name", "playerName", "displayName", "fullName"];
+
+    fields.forEach(function(field){
+      if (typeof obj[field] !== "string") return;
+
+      var before = obj[field];
+      var after = stripOneName(before);
+
+      if (after !== before && !shouldSkipAfterStrip(after)) {
+        obj[field] = after;
+        changed += 1;
+        rememberExample(before, after);
+      }
+    });
+
+    return changed;
+  }
+
+  function cleanKnownPlayerArrays(){
+    var changed = 0;
+    var arrays = [];
+
+    try {
+      if (window.state && Array.isArray(window.state.players)) arrays.push(window.state.players);
+      if (window.state && Array.isArray(window.state.playerList)) arrays.push(window.state.playerList);
+      if (window.state && Array.isArray(window.state.roster)) arrays.push(window.state.roster);
+      if (Array.isArray(window.players)) arrays.push(window.players);
+      if (Array.isArray(window.playerList)) arrays.push(window.playerList);
+      if (Array.isArray(window.roster)) arrays.push(window.roster);
+    } catch(e) {}
+
+    arrays.forEach(function(arr){
+      arr.forEach(function(player){
+        changed += cleanPlayerObject(player);
+      });
+    });
+
+    return changed;
+  }
+
+  function cleanPlayerInputs(){
+    var fixed = 0;
+
+    document.querySelectorAll("input").forEach(function(input){
+      var meta = clean([
+        input.id,
+        input.name,
+        input.placeholder,
+        input.className,
+        input.getAttribute("aria-label")
+      ].join(" ")).toLowerCase();
+
+      if (
+        meta.indexOf("player") < 0 &&
+        meta.indexOf("name") < 0
+      ) {
+        return;
+      }
+
+      if (typeof input.value !== "string") return;
+
+      var before = input.value;
+      var after = stripOneName(before);
+
+      if (after !== before && !shouldSkipAfterStrip(after)) {
+        input.value = after;
+        fixed += 1;
+        rememberExample(before, after);
+      }
+    });
+
+    return fixed;
+  }
+
+  function cleanTextNodes(root){
+    var fixed = 0;
+
+    if (!root) return fixed;
+
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node){
+        var parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+
+        var tag = parent.tagName ? parent.tagName.toLowerCase() : "";
+        if (["script", "style", "textarea", "select", "option"].indexOf(tag) >= 0) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        var text = node.nodeValue || "";
+        if (!/^\s*(?:#\s*)?(?:player\s*)?\d+\s*[\.\)\]\-–—:]?\s+[A-Za-zÀ-ÖØ-öø-ÿ]/i.test(text) &&
+            !/(^|[\s\/&,;+|])(?:#\s*)?(?:player\s*)?\d+\s*[\.\)\]\-–—:]?\s+[A-Za-zÀ-ÖØ-öø-ÿ]/i.test(text)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    nodes.forEach(function(node){
+      var before = node.nodeValue;
+      var after = stripTeamText(before);
+
+      if (after !== before && !shouldSkipAfterStrip(after)) {
+        node.nodeValue = after;
+        fixed += 1;
+        rememberExample(before, after);
+      }
+    });
+
+    return fixed;
+  }
+
+  function cleanVisibleDom(){
+    var fixed = 0;
+
+    [
+      "#sec-players",
+      "#sec-schedule",
+      "#sec-standings",
+      "#sec-report",
+      "#sec-playerstats",
+      "#sec-dashboard"
+    ].forEach(function(selector){
+      document.querySelectorAll(selector).forEach(function(root){
+        fixed += cleanTextNodes(root);
+      });
+    });
+
+    return fixed;
+  }
+
+  function wrapRenderFunction(name){
+    var fn = window[name];
+
+    if (typeof fn !== "function" || fn.__pbPlayerNamesNoPrefixV11) return;
+
+    window[name] = function(){
+      var result = fn.apply(this, arguments);
+
+      setTimeout(apply, 20);
+      setTimeout(apply, 160);
+
+      return result;
+    };
+
+    window[name].__pbPlayerNamesNoPrefixV11 = true;
+  }
+
+  function wrapKnownFunctions(){
+    [
+      "showTab",
+      "renderPlayers",
+      "renderSchedule",
+      "renderStandings",
+      "renderPlayerStats",
+      "renderDashboard",
+      "renderReport"
+    ].forEach(wrapRenderFunction);
+
+    if (
+      typeof window.matchTeamName === "function" &&
+      !window.matchTeamName.__pbPlayerNamesNoPrefixV11
+    ) {
+      var originalMatchTeamName = window.matchTeamName;
+
+      window.matchTeamName = function(){
+        return stripTeamText(originalMatchTeamName.apply(this, arguments));
+      };
+
+      window.matchTeamName.__pbPlayerNamesNoPrefixV11 = true;
+    }
+  }
+
+  function apply(){
+    lastRun = {
+      stateFixed: 0,
+      domFixed: 0,
+      inputFixed: 0,
+      examples: []
+    };
+
+    wrapKnownFunctions();
+
+    lastRun.stateFixed = cleanKnownPlayerArrays();
+    lastRun.inputFixed = cleanPlayerInputs();
+    lastRun.domFixed = cleanVisibleDom();
+
+    return {
+      installed: true,
+      stateFixed: lastRun.stateFixed,
+      inputFixed: lastRun.inputFixed,
+      domFixed: lastRun.domFixed,
+      examples: lastRun.examples,
+      matchTeamNameWrapped: !!(window.matchTeamName && window.matchTeamName.__pbPlayerNamesNoPrefixV11),
+      staticFinalNavFound: typeof window.pbStaticFinalNavStatusV4 === "function"
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 150);
+    setTimeout(apply, 700);
+    setTimeout(apply, 1600);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 80);
+  }, true);
+
+  setTimeout(apply, 250);
+  setTimeout(apply, 1100);
+  setTimeout(apply, 2400);
+
+  window.pbStripPlayerNumberPrefixV11 = stripOneName;
+  window.pbPlayerNamesNoPrefixesStatusV11 = apply;
+})();
+
 </script>
 
 </body>
