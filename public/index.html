@@ -2163,6 +2163,150 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   opacity: 0 !important;
 }
 
+
+
+/* PB_DELETE_ACCESS_RECORDS_BUTTON_CSS_V1 */
+.pb-access-records-card-v1 {
+  margin: 14px 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.035);
+}
+
+.pb-access-records-card-v1 h3 {
+  margin: 0 0 6px;
+}
+
+.pb-access-records-note-v1 {
+  color: var(--txt3, rgba(255,255,255,0.7));
+  font-size: 0.88rem;
+  margin: 4px 0 12px;
+}
+
+.pb-delete-access-records-btn-v1 {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #ff4d4d;
+  color: #fff;
+}
+
+.pb-delete-access-records-btn-v1:hover {
+  filter: brightness(1.08);
+}
+
+.pb-access-records-status-v1 {
+  margin-top: 10px;
+  font-size: 0.84rem;
+  color: var(--txt3, rgba(255,255,255,0.7));
+}
+
+
+
+/* PB_ACCESS_LOG_DELETE_OPTIONS_CSS_V2 */
+.pb-access-log-delete-card-v2 {
+  margin: 14px 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.035);
+}
+
+.pb-access-log-delete-card-v2 h3 {
+  margin: 0 0 6px;
+}
+
+.pb-access-log-delete-note-v2 {
+  color: var(--txt3, rgba(255,255,255,0.7));
+  font-size: 0.88rem;
+  margin: 4px 0 12px;
+}
+
+.pb-delete-access-log-records-btn-v2 {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #ff4d4d;
+  color: #fff;
+}
+
+.pb-delete-access-log-records-btn-v2:hover {
+  filter: brightness(1.08);
+}
+
+.pb-access-log-delete-status-v2 {
+  margin-top: 10px;
+  font-size: 0.84rem;
+  color: var(--txt3, rgba(255,255,255,0.7));
+}
+
+#pb-access-records-card-v1.pb-access-log-delete-moved-v2 {
+  display: none !important;
+}
+
+
+
+/* PB_ACCESS_LOG_ROUTE_DELETE_CSS_V4 */
+.pb-access-log-route-delete-card-v4 {
+  margin: 12px 0 16px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.045);
+}
+
+.pb-access-log-route-delete-card-v4 h3 {
+  margin: 0 0 6px;
+}
+
+.pb-access-log-route-delete-note-v4 {
+  color: var(--txt3, rgba(255,255,255,0.72));
+  font-size: 0.88rem;
+  margin: 4px 0 12px;
+}
+
+.pb-access-log-route-delete-actions-v4 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.pb-delete-access-log-route-btn-v4,
+.pb-download-access-log-backup-btn-v4 {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  color: #fff;
+}
+
+.pb-delete-access-log-route-btn-v4 {
+  background: #ff4d4d;
+}
+
+.pb-download-access-log-backup-btn-v4 {
+  background: rgba(255,255,255,0.14);
+}
+
+.pb-access-log-route-delete-status-v4 {
+  margin-top: 10px;
+  font-size: 0.84rem;
+  color: var(--txt3, rgba(255,255,255,0.72));
+}
+
+#pb-access-records-card-v1,
+#pb-access-log-delete-card-v2,
+#pb-access-log-delete-card-v3 {
+  display: none !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -2196,6 +2340,82 @@ body.pb-non-admin a[href^="/admin/"]{
   display:none!important; visibility:hidden!important; pointer-events:none!important;
 }
 </style>
+
+<style>
+/* PB_NAV_HOVER_BRIDGE_CSS_V7 */
+
+/* Bigger main menu buttons */
+.pb-static-final-nav-v4 .pb-static-menu-btn-v4,
+.pb-static-final-nav-v4 button,
+.pb-static-final-nav-v4 a {
+  min-height: 42px !important;
+}
+
+/* Give dropdown holders a forgiving hover area */
+.pb-static-final-nav-v4 .pb-nav-item,
+.pb-static-final-nav-v4 .nav-group,
+.pb-static-final-nav-v4 [class*="menu"],
+.pb-static-final-nav-v4 [class*="dropdown"] {
+  pointer-events: auto !important;
+}
+
+/* Main static dropdown */
+.pb-static-final-nav-v4 .pb-static-dropdown-v4 {
+  margin-top: 0 !important;
+  top: calc(100% - 1px) !important;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+/* Invisible bridge between button and submenu */
+.pb-static-final-nav-v4 .pb-static-dropdown-v4::before,
+.nav-menu::before,
+.dropdown-menu::before,
+.dropdown-content::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: -20px !important;
+  height: 20px !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+/* Keep dropdown open while button/parent/dropdown is hovered or focused */
+.pb-static-final-nav-v4 .pb-static-menu-btn-v4:hover + .pb-static-dropdown-v4,
+.pb-static-final-nav-v4 .pb-static-dropdown-v4:hover,
+.pb-static-final-nav-v4 .pb-static-dropdown-v4:focus-within,
+.pb-static-final-nav-v4 *:hover > .pb-static-dropdown-v4,
+.pb-static-final-nav-v4 *:focus-within > .pb-static-dropdown-v4,
+.nav-group:hover .nav-menu,
+.nav-group:focus-within .nav-menu,
+.nav-menu:hover,
+.nav-menu:focus-within,
+.dropdown:hover .dropdown-menu,
+.dropdown:focus-within .dropdown-menu,
+.dropdown-menu:hover,
+.dropdown-menu:focus-within {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+/* Make submenu items easier to hit */
+.pb-static-final-nav-v4 .pb-static-dropdown-v4 button,
+.pb-static-final-nav-v4 .pb-static-dropdown-v4 a,
+.nav-menu button,
+.nav-menu a,
+.dropdown-menu button,
+.dropdown-menu a {
+  min-height: 38px !important;
+  padding-top: 9px !important;
+  padding-bottom: 9px !important;
+}
+</style>
+
 </head>
 <body>
 <script id="admin-hard-hide-early">
@@ -17453,6 +17673,20 @@ function emBuildHtml(player) {
       </div>
     </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </body></html>`;
 }
 
@@ -31017,6 +31251,1308 @@ function exportEndSessionSummary(){
 
   window.pbStripPlayerNumberPrefixV11 = stripOneName;
   window.pbPlayerNamesNoPrefixesStatusV11 = apply;
+})();
+
+
+
+/* PB_DELETE_ACCESS_RECORDS_BUTTON_JS_V1 */
+(function(){
+  if (window.__pbDeleteAccessRecordsButtonV1) return;
+  window.__pbDeleteAccessRecordsButtonV1 = true;
+
+  var BACKUP_KEY = "pbAccessRecordsLastDeletedBackupV1";
+
+  var stateKeys = [
+    "accessRecords",
+    "accessLog",
+    "accessLogs",
+    "accessHistory",
+    "accessAudit",
+    "accessAudits",
+    "accessEvents",
+    "portalAccessRecords",
+    "portalAccessLog",
+    "portalAccessLogs",
+    "portalAccessHistory",
+    "portalAccessEvents",
+    "playerAccessRecords",
+    "playerAccessLog",
+    "playerAccessLogs",
+    "playerAccessHistory",
+    "playerAccessEvents",
+    "mobileAccessRecords",
+    "mobileAccessLog",
+    "mobileAccessLogs",
+    "mobileAccessHistory",
+    "mobileAccessEvents",
+    "checkinAccessRecords",
+    "checkinAccessLog",
+    "checkinAccessLogs",
+    "checkinAccessHistory",
+    "checkinAccessEvents"
+  ];
+
+  var lastResult = {
+    installed: true,
+    deletedAt: "",
+    stateKeysCleared: [],
+    localStorageKeysRemoved: [],
+    backupKey: BACKUP_KEY
+  };
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function cloneValue(v){
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch(e) {
+      return String(v);
+    }
+  }
+
+  function keyLooksLikeAccessRecords(key){
+    var k = String(key || "").toLowerCase();
+
+    if (!k.includes("access")) return false;
+
+    var hasRecordWord =
+      k.includes("record") ||
+      k.includes("records") ||
+      k.includes("log") ||
+      k.includes("logs") ||
+      k.includes("history") ||
+      k.includes("audit") ||
+      k.includes("event") ||
+      k.includes("events");
+
+    if (!hasRecordWord) return false;
+
+    /*
+      Do not remove config/secrets/connection settings.
+    */
+    var looksLikeConfig =
+      k.includes("token") ||
+      k.includes("secret") ||
+      k.includes("auth") ||
+      k.includes("sid") ||
+      k.includes("config") ||
+      k.includes("setting") ||
+      k.includes("settings") ||
+      k.includes("url") ||
+      k.includes("endpoint") ||
+      k.includes("enabled") ||
+      k.includes("twilio");
+
+    return !looksLikeConfig;
+  }
+
+  function getState(){
+    try {
+      if (window.state && typeof window.state === "object") return window.state;
+    } catch(e) {}
+
+    return null;
+  }
+
+  function currentAccessRecordSummary(){
+    var st = getState();
+    var stateMatches = [];
+
+    if (st) {
+      stateKeys.forEach(function(key){
+        if (Object.prototype.hasOwnProperty.call(st, key)) {
+          var value = st[key];
+
+          stateMatches.push({
+            key: key,
+            type: Array.isArray(value) ? "array" : typeof value,
+            count: Array.isArray(value)
+              ? value.length
+              : value && typeof value === "object"
+                ? Object.keys(value).length
+                : value ? 1 : 0
+          });
+        }
+      });
+    }
+
+    var localMatches = [];
+
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+
+        if (keyLooksLikeAccessRecords(key)) {
+          var raw = localStorage.getItem(key);
+
+          localMatches.push({
+            key: key,
+            chars: raw ? raw.length : 0
+          });
+        }
+      }
+    } catch(e) {}
+
+    return {
+      stateMatches: stateMatches,
+      localStorageMatches: localMatches,
+      backupExists: !!localStorage.getItem(BACKUP_KEY),
+      backupKey: BACKUP_KEY
+    };
+  }
+
+  function saveAppState(){
+    [
+      "saveState",
+      "save",
+      "persistState",
+      "saveTournament",
+      "pbSaveState"
+    ].forEach(function(name){
+      try {
+        if (typeof window[name] === "function") window[name]();
+      } catch(e) {}
+    });
+
+    try {
+      window.dispatchEvent(new Event("storage"));
+    } catch(e) {}
+  }
+
+  function clearAccessRecords(){
+    var summary = currentAccessRecordSummary();
+    var total =
+      summary.stateMatches.reduce(function(sum, x){ return sum + (x.count || 0); }, 0) +
+      summary.localStorageMatches.length;
+
+    if (!summary.stateMatches.length && !summary.localStorageMatches.length) {
+      alert("No access records were found to delete.");
+      return currentAccessRecordSummary();
+    }
+
+    var ok = confirm(
+      "Delete access records?\n\n" +
+      "This will clear access logs/history/records only.\n" +
+      "Players, schedules, scores, tournament details, and settings will be kept.\n\n" +
+      "A backup will be saved locally first."
+    );
+
+    if (!ok) return currentAccessRecordSummary();
+
+    var typed = prompt('Type DELETE to confirm deleting access records.');
+
+    if (typed !== "DELETE") {
+      alert("Delete cancelled.");
+      return currentAccessRecordSummary();
+    }
+
+    var backup = {
+      createdAt: new Date().toISOString(),
+      state: {},
+      localStorage: {}
+    };
+
+    var st = getState();
+    var stateKeysCleared = [];
+    var localStorageKeysRemoved = [];
+
+    if (st) {
+      stateKeys.forEach(function(key){
+        if (!Object.prototype.hasOwnProperty.call(st, key)) return;
+
+        backup.state[key] = cloneValue(st[key]);
+
+        if (Array.isArray(st[key])) {
+          st[key] = [];
+        } else if (st[key] && typeof st[key] === "object") {
+          st[key] = {};
+        } else {
+          st[key] = null;
+        }
+
+        stateKeysCleared.push(key);
+      });
+    }
+
+    try {
+      summary.localStorageMatches.forEach(function(match){
+        backup.localStorage[match.key] = localStorage.getItem(match.key);
+      });
+
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+
+      summary.localStorageMatches.forEach(function(match){
+        localStorage.removeItem(match.key);
+        localStorageKeysRemoved.push(match.key);
+      });
+    } catch(e) {}
+
+    lastResult = {
+      installed: true,
+      deletedAt: new Date().toISOString(),
+      stateKeysCleared: stateKeysCleared,
+      localStorageKeysRemoved: localStorageKeysRemoved,
+      backupKey: BACKUP_KEY
+    };
+
+    saveAppState();
+    renderCard();
+
+    alert(
+      "Access records deleted.\n\n" +
+      "State keys cleared: " + stateKeysCleared.length + "\n" +
+      "Local storage keys removed: " + localStorageKeysRemoved.length + "\n\n" +
+      "Backup saved as: " + BACKUP_KEY
+    );
+
+    return lastResult;
+  }
+
+  function adminRoot(){
+    return document.getElementById("sec-admin") ||
+      document.getElementById("admin") ||
+      Array.from(document.querySelectorAll("section, .section, .card, div")).find(function(el){
+        var id = String(el.id || "").toLowerCase();
+        return id === "admin" || id === "sec-admin";
+      }) ||
+      null;
+  }
+
+  function renderCard(){
+    var root = adminRoot();
+    if (!root) return false;
+
+    var existing = document.getElementById("pb-access-records-card-v1");
+    var summary = currentAccessRecordSummary();
+
+    var stateCount = summary.stateMatches.reduce(function(sum, x){ return sum + (x.count || 0); }, 0);
+    var localCount = summary.localStorageMatches.length;
+
+    if (!existing) {
+      existing = document.createElement("div");
+      existing.id = "pb-access-records-card-v1";
+      existing.className = "pb-access-records-card-v1";
+
+      var title = document.createElement("h3");
+      title.textContent = "Access Records";
+
+      var note = document.createElement("div");
+      note.className = "pb-access-records-note-v1";
+      note.textContent = "Delete access logs/history/records without deleting players, schedules, scores, or tournament settings.";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pb-delete-access-records-btn-v1";
+      btn.textContent = "Delete Access Records";
+      btn.addEventListener("click", clearAccessRecords);
+
+      var status = document.createElement("div");
+      status.className = "pb-access-records-status-v1";
+      status.id = "pb-access-records-status-v1";
+
+      existing.appendChild(title);
+      existing.appendChild(note);
+      existing.appendChild(btn);
+      existing.appendChild(status);
+
+      root.insertBefore(existing, root.firstChild || null);
+    }
+
+    var statusEl = document.getElementById("pb-access-records-status-v1");
+
+    if (statusEl) {
+      statusEl.textContent =
+        "Found " + stateCount + " state record(s) across " + summary.stateMatches.length +
+        " key(s), and " + localCount + " local storage access record key(s)." +
+        (summary.backupExists ? " Last-delete backup exists." : "");
+    }
+
+    return true;
+  }
+
+  function wrapShowTab(){
+    if (typeof window.showTab !== "function" || window.showTab.__pbDeleteAccessRecordsButtonV1) return;
+
+    var original = window.showTab;
+
+    window.showTab = function(){
+      var result = original.apply(this, arguments);
+      setTimeout(renderCard, 80);
+      setTimeout(renderCard, 250);
+      return result;
+    };
+
+    window.showTab.__pbDeleteAccessRecordsButtonV1 = true;
+  }
+
+  function apply(){
+    wrapShowTab();
+    renderCard();
+
+    return {
+      installed: true,
+      cardFound: !!document.getElementById("pb-access-records-card-v1"),
+      buttonFound: !!document.querySelector(".pb-delete-access-records-btn-v1"),
+      summary: currentAccessRecordSummary(),
+      lastResult: lastResult
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 200);
+    setTimeout(apply, 900);
+    setTimeout(apply, 1800);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 120);
+  }, true);
+
+  setTimeout(apply, 300);
+  setTimeout(apply, 1300);
+  setTimeout(apply, 2600);
+
+  window.pbDeleteAccessRecordsNowV1 = clearAccessRecords;
+  window.pbDeleteAccessRecordsStatusV1 = apply;
+})();
+
+
+
+/* PB_ACCESS_LOG_DELETE_OPTIONS_JS_V2 */
+(function(){
+  if (window.__pbAccessLogDeleteOptionsV2) return;
+  window.__pbAccessLogDeleteOptionsV2 = true;
+
+  var BACKUP_KEY = "pbAccessRecordsLastDeletedBackupV2";
+
+  var accessStateKeys = [
+    "accessRecords",
+    "accessLog",
+    "accessLogs",
+    "accessHistory",
+    "accessAudit",
+    "accessAudits",
+    "accessEvents",
+    "portalAccessRecords",
+    "portalAccessLog",
+    "portalAccessLogs",
+    "portalAccessHistory",
+    "portalAccessEvents",
+    "playerAccessRecords",
+    "playerAccessLog",
+    "playerAccessLogs",
+    "playerAccessHistory",
+    "playerAccessEvents",
+    "mobileAccessRecords",
+    "mobileAccessLog",
+    "mobileAccessLogs",
+    "mobileAccessHistory",
+    "mobileAccessEvents",
+    "checkinAccessRecords",
+    "checkinAccessLog",
+    "checkinAccessLogs",
+    "checkinAccessHistory",
+    "checkinAccessEvents"
+  ];
+
+  var lastResult = {
+    installed: true,
+    deletedAt: "",
+    stateKeysCleared: [],
+    localStorageKeysRemoved: [],
+    backupKey: BACKUP_KEY
+  };
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getState(){
+    try {
+      if (window.state && typeof window.state === "object") return window.state;
+    } catch(e) {}
+
+    return null;
+  }
+
+  function cloneValue(v){
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch(e) {
+      return String(v);
+    }
+  }
+
+  function keyLooksLikeAccessRecords(key){
+    var k = String(key || "").toLowerCase();
+
+    if (!k.includes("access")) return false;
+
+    var hasRecordWord =
+      k.includes("record") ||
+      k.includes("records") ||
+      k.includes("log") ||
+      k.includes("logs") ||
+      k.includes("history") ||
+      k.includes("audit") ||
+      k.includes("event") ||
+      k.includes("events");
+
+    if (!hasRecordWord) return false;
+
+    var looksLikeConfig =
+      k.includes("token") ||
+      k.includes("secret") ||
+      k.includes("auth") ||
+      k.includes("sid") ||
+      k.includes("config") ||
+      k.includes("setting") ||
+      k.includes("settings") ||
+      k.includes("url") ||
+      k.includes("endpoint") ||
+      k.includes("enabled") ||
+      k.includes("twilio");
+
+    return !looksLikeConfig;
+  }
+
+  function accessLogRoot(){
+    var direct =
+      document.getElementById("sec-accesslog") ||
+      document.getElementById("sec-access-log") ||
+      document.getElementById("sec-accesslogs") ||
+      document.getElementById("accesslog") ||
+      document.getElementById("access-log") ||
+      document.getElementById("accesslogs");
+
+    if (direct) return direct;
+
+    var byIdClass = Array.from(document.querySelectorAll("section, .section, .card, main > div, div")).find(function(el){
+      var meta = clean([
+        el.id,
+        el.className,
+        el.getAttribute("data-tab"),
+        el.getAttribute("data-section")
+      ].join(" ")).toLowerCase();
+
+      return meta.includes("access") && meta.includes("log");
+    });
+
+    if (byIdClass) return byIdClass;
+
+    var heading = Array.from(document.querySelectorAll("h1,h2,h3,h4,.card-title,.section-title")).find(function(el){
+      var txt = clean(el.textContent).toLowerCase();
+      return txt === "access log" || txt === "access logs" || txt.includes("access log");
+    });
+
+    if (heading) {
+      return heading.closest("section, .section, .card, div") || heading.parentElement;
+    }
+
+    return null;
+  }
+
+  function hideAdminDeleteCard(){
+    var old = document.getElementById("pb-access-records-card-v1");
+
+    if (old) {
+      old.classList.add("pb-access-log-delete-moved-v2");
+      old.style.display = "none";
+    }
+  }
+
+  function summary(){
+    var st = getState();
+    var stateMatches = [];
+
+    if (st) {
+      accessStateKeys.forEach(function(key){
+        if (!Object.prototype.hasOwnProperty.call(st, key)) return;
+
+        var value = st[key];
+
+        stateMatches.push({
+          key: key,
+          type: Array.isArray(value) ? "array" : typeof value,
+          count: Array.isArray(value)
+            ? value.length
+            : value && typeof value === "object"
+              ? Object.keys(value).length
+              : value ? 1 : 0
+        });
+      });
+    }
+
+    var localStorageMatches = [];
+
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+
+        if (keyLooksLikeAccessRecords(key)) {
+          var raw = localStorage.getItem(key);
+          localStorageMatches.push({
+            key: key,
+            chars: raw ? raw.length : 0
+          });
+        }
+      }
+    } catch(e) {}
+
+    return {
+      stateMatches: stateMatches,
+      localStorageMatches: localStorageMatches,
+      backupExists: !!localStorage.getItem(BACKUP_KEY),
+      backupKey: BACKUP_KEY
+    };
+  }
+
+  function saveAppState(){
+    [
+      "saveState",
+      "save",
+      "persistState",
+      "saveTournament",
+      "pbSaveState"
+    ].forEach(function(name){
+      try {
+        if (typeof window[name] === "function") window[name]();
+      } catch(e) {}
+    });
+  }
+
+  function deleteAccessRecords(){
+    var beforeSummary = summary();
+
+    if (!beforeSummary.stateMatches.length && !beforeSummary.localStorageMatches.length) {
+      alert("No access records were found to delete.");
+      return beforeSummary;
+    }
+
+    var ok = confirm(
+      "Delete Access Log records?\n\n" +
+      "This clears access logs/history/records only.\n" +
+      "Players, schedules, scores, tournament details, and settings will be kept.\n\n" +
+      "A backup will be saved locally first."
+    );
+
+    if (!ok) return beforeSummary;
+
+    var typed = prompt('Type DELETE to confirm clearing Access Log records.');
+
+    if (typed !== "DELETE") {
+      alert("Delete cancelled.");
+      return beforeSummary;
+    }
+
+    var backup = {
+      createdAt: new Date().toISOString(),
+      source: "Access Log delete options",
+      state: {},
+      localStorage: {}
+    };
+
+    var st = getState();
+    var stateKeysCleared = [];
+    var localStorageKeysRemoved = [];
+
+    if (st) {
+      accessStateKeys.forEach(function(key){
+        if (!Object.prototype.hasOwnProperty.call(st, key)) return;
+
+        backup.state[key] = cloneValue(st[key]);
+
+        if (Array.isArray(st[key])) {
+          st[key] = [];
+        } else if (st[key] && typeof st[key] === "object") {
+          st[key] = {};
+        } else {
+          st[key] = null;
+        }
+
+        stateKeysCleared.push(key);
+      });
+    }
+
+    try {
+      beforeSummary.localStorageMatches.forEach(function(match){
+        backup.localStorage[match.key] = localStorage.getItem(match.key);
+      });
+
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+
+      beforeSummary.localStorageMatches.forEach(function(match){
+        localStorage.removeItem(match.key);
+        localStorageKeysRemoved.push(match.key);
+      });
+    } catch(e) {}
+
+    lastResult = {
+      installed: true,
+      deletedAt: new Date().toISOString(),
+      stateKeysCleared: stateKeysCleared,
+      localStorageKeysRemoved: localStorageKeysRemoved,
+      backupKey: BACKUP_KEY
+    };
+
+    saveAppState();
+    render();
+
+    alert(
+      "Access Log records deleted.\n\n" +
+      "State keys cleared: " + stateKeysCleared.length + "\n" +
+      "Local storage keys removed: " + localStorageKeysRemoved.length + "\n\n" +
+      "Backup saved as: " + BACKUP_KEY
+    );
+
+    return lastResult;
+  }
+
+  function render(){
+    hideAdminDeleteCard();
+
+    var root = accessLogRoot();
+    if (!root) return false;
+
+    var card = document.getElementById("pb-access-log-delete-card-v2");
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-access-log-delete-card-v2";
+      card.className = "pb-access-log-delete-card-v2";
+
+      var title = document.createElement("h3");
+      title.textContent = "Access Log Records";
+
+      var note = document.createElement("div");
+      note.className = "pb-access-log-delete-note-v2";
+      note.textContent = "Clear access log/history records only. Players, schedules, scores, and settings are kept.";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pb-delete-access-log-records-btn-v2";
+      btn.textContent = "Delete Access Log Records";
+      btn.addEventListener("click", deleteAccessRecords);
+
+      var status = document.createElement("div");
+      status.id = "pb-access-log-delete-status-v2";
+      status.className = "pb-access-log-delete-status-v2";
+
+      card.appendChild(title);
+      card.appendChild(note);
+      card.appendChild(btn);
+      card.appendChild(status);
+
+      root.insertBefore(card, root.firstChild || null);
+    }
+
+    var statusEl = document.getElementById("pb-access-log-delete-status-v2");
+    var s = summary();
+
+    var stateCount = s.stateMatches.reduce(function(sum, x){
+      return sum + (x.count || 0);
+    }, 0);
+
+    if (statusEl) {
+      statusEl.textContent =
+        "Found " + stateCount + " state record(s) across " + s.stateMatches.length +
+        " key(s), and " + s.localStorageMatches.length +
+        " local storage access-log key(s)." +
+        (s.backupExists ? " Backup exists." : "");
+    }
+
+    return true;
+  }
+
+  function addAccessLogToStaticMore(){
+    var staticMore = document.querySelector(".pb-static-final-nav-v4 .pb-static-nav-item-v4:last-child .pb-static-dropdown-v4");
+    if (!staticMore) return false;
+
+    var already = Array.from(staticMore.querySelectorAll("button")).some(function(btn){
+      return clean(btn.textContent).toLowerCase() === "access log";
+    });
+
+    if (already) return true;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pb-static-menu-btn-v4 pb-access-log-menu-entry-v2";
+    btn.textContent = "Access Log";
+
+    btn.addEventListener("click", function(event){
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+      } catch(e) {}
+
+      ["accesslog", "accesslogs", "access-log", "admin"].some(function(tab){
+        try {
+          if (typeof showTab === "function") {
+            showTab(tab, event);
+            setTimeout(render, 120);
+            setTimeout(render, 350);
+            return !!accessLogRoot();
+          }
+        } catch(e) {}
+
+        return false;
+      });
+    });
+
+    staticMore.appendChild(btn);
+    return true;
+  }
+
+  function wrapShowTab(){
+    if (typeof window.showTab !== "function" || window.showTab.__pbAccessLogDeleteOptionsV2) return;
+
+    var original = window.showTab;
+
+    window.showTab = function(){
+      var result = original.apply(this, arguments);
+      setTimeout(render, 80);
+      setTimeout(render, 260);
+      setTimeout(addAccessLogToStaticMore, 180);
+      return result;
+    };
+
+    window.showTab.__pbAccessLogDeleteOptionsV2 = true;
+  }
+
+  function apply(){
+    wrapShowTab();
+    hideAdminDeleteCard();
+    addAccessLogToStaticMore();
+    render();
+
+    return {
+      installed: true,
+      accessLogRootFound: !!accessLogRoot(),
+      cardFound: !!document.getElementById("pb-access-log-delete-card-v2"),
+      buttonFound: !!document.querySelector(".pb-delete-access-log-records-btn-v2"),
+      adminCardHidden: !!document.querySelector("#pb-access-records-card-v1.pb-access-log-delete-moved-v2"),
+      staticMoreAccessLogEntryFound: !!document.querySelector(".pb-access-log-menu-entry-v2"),
+      summary: summary(),
+      lastResult: lastResult
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 200);
+    setTimeout(apply, 900);
+    setTimeout(apply, 1800);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 120);
+  }, true);
+
+  setTimeout(apply, 300);
+  setTimeout(apply, 1300);
+  setTimeout(apply, 2600);
+
+  window.pbDeleteAccessLogRecordsNowV2 = deleteAccessRecords;
+  window.pbAccessLogDeleteOptionsStatusV2 = apply;
+})();
+
+
+
+/* PB_ACCESS_LOG_ROUTE_DELETE_JS_V4 */
+(function(){
+  if (window.__pbAccessLogRouteDeleteV4) return;
+  window.__pbAccessLogRouteDeleteV4 = true;
+
+  var BACKUP_KEY = "pbAccessLogLastDeletedBackupV4";
+  var lastResult = null;
+
+  var stateKeys = [
+    "accessRecords","accessLog","accessLogs","accessHistory","accessAudit","accessAudits","accessEvents",
+    "portalAccessRecords","portalAccessLog","portalAccessLogs","portalAccessHistory","portalAccessEvents",
+    "playerAccessRecords","playerAccessLog","playerAccessLogs","playerAccessHistory","playerAccessEvents",
+    "mobileAccessRecords","mobileAccessLog","mobileAccessLogs","mobileAccessHistory","mobileAccessEvents",
+    "checkinAccessRecords","checkinAccessLog","checkinAccessLogs","checkinAccessHistory","checkinAccessEvents"
+  ];
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function isAccessLogRoute(){
+    var path = String(location.pathname || "").toLowerCase();
+    if (path.indexOf("/admin/access-log") >= 0) return true;
+    if (path.indexOf("/access-log") >= 0) return true;
+    if (path.indexOf("/accesslog") >= 0) return true;
+
+    var h = Array.from(document.querySelectorAll("h1,h2,h3,.title,.page-title,.card-title")).some(function(el){
+      return clean(el.textContent).toLowerCase().indexOf("access log") >= 0;
+    });
+
+    return h;
+  }
+
+  function getState(){
+    try {
+      if (window.state && typeof window.state === "object") return window.state;
+    } catch(e) {}
+    return null;
+  }
+
+  function cloneValue(v){
+    try { return JSON.parse(JSON.stringify(v)); }
+    catch(e) { return String(v); }
+  }
+
+  function keyLooksLikeAccessLog(key){
+    var k = String(key || "").toLowerCase();
+
+    if (!k.includes("access")) return false;
+
+    var hasRecordWord =
+      k.includes("record") ||
+      k.includes("records") ||
+      k.includes("log") ||
+      k.includes("logs") ||
+      k.includes("history") ||
+      k.includes("audit") ||
+      k.includes("event") ||
+      k.includes("events");
+
+    if (!hasRecordWord) return false;
+
+    var looksLikeConfig =
+      k.includes("token") ||
+      k.includes("secret") ||
+      k.includes("auth") ||
+      k.includes("sid") ||
+      k.includes("config") ||
+      k.includes("setting") ||
+      k.includes("settings") ||
+      k.includes("url") ||
+      k.includes("endpoint") ||
+      k.includes("enabled") ||
+      k.includes("twilio");
+
+    return !looksLikeConfig;
+  }
+
+  function storageMatches(storage){
+    var matches = [];
+
+    try {
+      for (var i = 0; i < storage.length; i++) {
+        var key = storage.key(i);
+        if (keyLooksLikeAccessLog(key)) {
+          var raw = storage.getItem(key);
+          matches.push({ key: key, chars: raw ? raw.length : 0 });
+        }
+      }
+    } catch(e) {}
+
+    return matches;
+  }
+
+  function stateMatches(){
+    var st = getState();
+    var matches = [];
+
+    if (!st) return matches;
+
+    stateKeys.forEach(function(key){
+      if (!Object.prototype.hasOwnProperty.call(st, key)) return;
+
+      var value = st[key];
+
+      matches.push({
+        key: key,
+        type: Array.isArray(value) ? "array" : typeof value,
+        count: Array.isArray(value)
+          ? value.length
+          : value && typeof value === "object"
+            ? Object.keys(value).length
+            : value ? 1 : 0
+      });
+    });
+
+    return matches;
+  }
+
+  function visibleAccessRows(){
+    var card = document.getElementById("pb-access-log-route-delete-card-v4");
+
+    return Array.from(document.querySelectorAll("table tbody tr, .access-log-row, [data-access-log-row]")).filter(function(row){
+      if (card && card.contains(row)) return false;
+
+      var txt = clean(row.textContent);
+      return txt.length > 0;
+    }).length;
+  }
+
+  function summary(){
+    return {
+      routeMatch: isAccessLogRoute(),
+      stateMatches: stateMatches(),
+      localStorageMatches: storageMatches(localStorage),
+      sessionStorageMatches: storageMatches(sessionStorage),
+      visibleRows: visibleAccessRows(),
+      backupExists: !!localStorage.getItem(BACKUP_KEY),
+      backupKey: BACKUP_KEY
+    };
+  }
+
+  function saveAppState(){
+    ["saveState","save","persistState","saveTournament","pbSaveState"].forEach(function(name){
+      try { if (typeof window[name] === "function") window[name](); } catch(e) {}
+    });
+  }
+
+  function callKnownClearFunctions(){
+    var called = [];
+
+    [
+      "clearAccessLog",
+      "clearAccessLogs",
+      "deleteAccessLog",
+      "deleteAccessLogs",
+      "resetAccessLog",
+      "resetAccessLogs",
+      "pbClearAccessLog",
+      "pbClearAccessLogs",
+      "pbDeleteAccessLog",
+      "pbDeleteAccessLogs",
+      "pbResetAccessLog",
+      "pbResetAccessLogs"
+    ].forEach(function(name){
+      try {
+        if (typeof window[name] === "function") {
+          window[name]();
+          called.push(name);
+        }
+      } catch(e) {}
+    });
+
+    return called;
+  }
+
+  function clearVisibleRows(){
+    var cleared = 0;
+
+    document.querySelectorAll("table tbody").forEach(function(tbody){
+      var nearText = clean((tbody.closest("section,main,div") || document.body).textContent).toLowerCase();
+
+      if (nearText.indexOf("access log") >= 0 || location.pathname.toLowerCase().indexOf("access-log") >= 0) {
+        cleared += tbody.querySelectorAll("tr").length;
+        tbody.innerHTML = "";
+      }
+    });
+
+    document.querySelectorAll(".access-log-row, [data-access-log-row]").forEach(function(row){
+      row.remove();
+      cleared += 1;
+    });
+
+    return cleared;
+  }
+
+  function deleteAccessLogRecords(){
+    var before = summary();
+
+    var totalKnown =
+      before.stateMatches.reduce(function(sum, x){ return sum + (x.count || 0); }, 0) +
+      before.localStorageMatches.length +
+      before.sessionStorageMatches.length +
+      before.visibleRows;
+
+    if (!totalKnown) {
+      alert("No Access Log records were found to delete.");
+      return before;
+    }
+
+    var ok = confirm(
+      "Delete Access Log records?\n\n" +
+      "This clears Access Log records only.\n" +
+      "Players, schedules, scores, tournament details, and settings will be kept.\n\n" +
+      "A backup will be saved locally first."
+    );
+
+    if (!ok) return before;
+
+    var typed = prompt("Type DELETE to confirm clearing Access Log records.");
+
+    if (typed !== "DELETE") {
+      alert("Delete cancelled.");
+      return before;
+    }
+
+    var backup = {
+      createdAt: new Date().toISOString(),
+      route: location.href,
+      source: "PB_ACCESS_LOG_ROUTE_DELETE_JS_V4",
+      state: {},
+      localStorage: {},
+      sessionStorage: {},
+      visibleTextSnapshot: clean(document.body ? document.body.textContent : "").slice(0, 20000)
+    };
+
+    var st = getState();
+    var clearedStateKeys = [];
+    var removedLocalStorageKeys = [];
+    var removedSessionStorageKeys = [];
+
+    if (st) {
+      before.stateMatches.forEach(function(match){
+        var key = match.key;
+
+        backup.state[key] = cloneValue(st[key]);
+
+        if (Array.isArray(st[key])) st[key] = [];
+        else if (st[key] && typeof st[key] === "object") st[key] = {};
+        else st[key] = null;
+
+        clearedStateKeys.push(key);
+      });
+    }
+
+    before.localStorageMatches.forEach(function(match){
+      try {
+        backup.localStorage[match.key] = localStorage.getItem(match.key);
+      } catch(e) {}
+    });
+
+    before.sessionStorageMatches.forEach(function(match){
+      try {
+        backup.sessionStorage[match.key] = sessionStorage.getItem(match.key);
+      } catch(e) {}
+    });
+
+    try {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+    } catch(e) {}
+
+    before.localStorageMatches.forEach(function(match){
+      try {
+        localStorage.removeItem(match.key);
+        removedLocalStorageKeys.push(match.key);
+      } catch(e) {}
+    });
+
+    before.sessionStorageMatches.forEach(function(match){
+      try {
+        sessionStorage.removeItem(match.key);
+        removedSessionStorageKeys.push(match.key);
+      } catch(e) {}
+    });
+
+    var calledFunctions = callKnownClearFunctions();
+    var visibleRowsCleared = clearVisibleRows();
+
+    saveAppState();
+
+    lastResult = {
+      deletedAt: new Date().toISOString(),
+      clearedStateKeys: clearedStateKeys,
+      removedLocalStorageKeys: removedLocalStorageKeys,
+      removedSessionStorageKeys: removedSessionStorageKeys,
+      calledFunctions: calledFunctions,
+      visibleRowsCleared: visibleRowsCleared,
+      backupKey: BACKUP_KEY
+    };
+
+    render();
+
+    alert(
+      "Access Log records deleted.\n\n" +
+      "State keys cleared: " + clearedStateKeys.length + "\n" +
+      "Local storage keys removed: " + removedLocalStorageKeys.length + "\n" +
+      "Session storage keys removed: " + removedSessionStorageKeys.length + "\n" +
+      "Visible rows cleared: " + visibleRowsCleared + "\n\n" +
+      "Backup saved as: " + BACKUP_KEY
+    );
+
+    return lastResult;
+  }
+
+  function downloadBackup(){
+    var raw = localStorage.getItem(BACKUP_KEY);
+
+    if (!raw) {
+      alert("No Access Log backup found yet.");
+      return false;
+    }
+
+    var blob = new Blob([raw], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+
+    a.href = url;
+    a.download = "access-log-backup-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json";
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(function(){
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 1000);
+
+    return true;
+  }
+
+  function pageRoot(){
+    return document.querySelector("main") ||
+      document.querySelector("#app") ||
+      document.querySelector(".app") ||
+      document.body;
+  }
+
+  function placeCard(card){
+    var root = pageRoot();
+    if (!root) return false;
+
+    var heading = Array.from(document.querySelectorAll("h1,h2,h3,.page-title,.title,.card-title")).find(function(el){
+      return clean(el.textContent).toLowerCase().indexOf("access log") >= 0;
+    });
+
+    if (heading && heading.parentNode) {
+      if (heading.nextSibling) {
+        heading.parentNode.insertBefore(card, heading.nextSibling);
+      } else {
+        heading.parentNode.appendChild(card);
+      }
+
+      return true;
+    }
+
+    root.insertBefore(card, root.firstChild || null);
+    return true;
+  }
+
+  function updateStatus(){
+    var s = summary();
+    var status = document.getElementById("pb-access-log-route-delete-status-v4");
+
+    if (!status) return;
+
+    var stateCount = s.stateMatches.reduce(function(sum, x){ return sum + (x.count || 0); }, 0);
+
+    status.textContent =
+      "Found " + stateCount + " state record(s) across " + s.stateMatches.length +
+      " key(s), " + s.localStorageMatches.length + " local storage key(s), " +
+      s.sessionStorageMatches.length + " session storage key(s), and " +
+      s.visibleRows + " visible row(s)." +
+      (s.backupExists ? " Backup exists." : "");
+  }
+
+  function render(){
+    if (!isAccessLogRoute()) return false;
+
+    ["pb-access-records-card-v1", "pb-access-log-delete-card-v2", "pb-access-log-delete-card-v3"].forEach(function(id){
+      var old = document.getElementById(id);
+      if (old) old.style.display = "none";
+    });
+
+    var card = document.getElementById("pb-access-log-route-delete-card-v4");
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-access-log-route-delete-card-v4";
+      card.className = "pb-access-log-route-delete-card-v4";
+
+      var title = document.createElement("h3");
+      title.textContent = "Access Log Delete Options";
+
+      var note = document.createElement("div");
+      note.className = "pb-access-log-route-delete-note-v4";
+      note.textContent = "Clear Access Log records only. Players, schedules, scores, tournament details, and settings are kept.";
+
+      var actions = document.createElement("div");
+      actions.className = "pb-access-log-route-delete-actions-v4";
+
+      var deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "pb-delete-access-log-route-btn-v4";
+      deleteBtn.textContent = "Delete Access Log Records";
+      deleteBtn.addEventListener("click", deleteAccessLogRecords);
+
+      var backupBtn = document.createElement("button");
+      backupBtn.type = "button";
+      backupBtn.className = "pb-download-access-log-backup-btn-v4";
+      backupBtn.textContent = "Download Last Backup";
+      backupBtn.addEventListener("click", downloadBackup);
+
+      var status = document.createElement("div");
+      status.id = "pb-access-log-route-delete-status-v4";
+      status.className = "pb-access-log-route-delete-status-v4";
+
+      actions.appendChild(deleteBtn);
+      actions.appendChild(backupBtn);
+
+      card.appendChild(title);
+      card.appendChild(note);
+      card.appendChild(actions);
+      card.appendChild(status);
+    }
+
+    placeCard(card);
+    updateStatus();
+
+    return true;
+  }
+
+  function patchHistory(){
+    if (history.__pbAccessLogRouteDeleteV4) return;
+
+    ["pushState", "replaceState"].forEach(function(name){
+      var original = history[name];
+
+      history[name] = function(){
+        var result = original.apply(this, arguments);
+        setTimeout(render, 120);
+        setTimeout(render, 500);
+        return result;
+      };
+    });
+
+    window.addEventListener("popstate", function(){
+      setTimeout(render, 120);
+      setTimeout(render, 500);
+    });
+
+    history.__pbAccessLogRouteDeleteV4 = true;
+  }
+
+  function apply(){
+    patchHistory();
+    render();
+
+    return {
+      installed: true,
+      route: location.pathname,
+      routeMatch: isAccessLogRoute(),
+      cardFound: !!document.getElementById("pb-access-log-route-delete-card-v4"),
+      deleteButtonFound: !!document.querySelector(".pb-delete-access-log-route-btn-v4"),
+      backupButtonFound: !!document.querySelector(".pb-download-access-log-backup-btn-v4"),
+      summary: summary(),
+      lastResult: lastResult
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 700);
+    setTimeout(apply, 1600);
+  });
+
+  setInterval(function(){
+    if (isAccessLogRoute()) render();
+  }, 1000);
+
+  setTimeout(apply, 150);
+  setTimeout(apply, 900);
+  setTimeout(apply, 2200);
+
+  window.pbDeleteAccessLogRouteRecordsNowV4 = deleteAccessLogRecords;
+  window.pbAccessLogRouteDeleteStatusV4 = apply;
 })();
 
 </script>
