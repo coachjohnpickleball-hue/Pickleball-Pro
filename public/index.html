@@ -1885,6 +1885,89 @@ button[data-pb-hidden-floating-showtime-v4="1"],
   font-weight: 900 !important;
 }
 
+
+
+/* PB_DASHBOARD_STEP_CHECKMARKS_V2 */
+.pb-session-flow-step-v1.pb-step-complete-v2 {
+  border-color: rgba(198,255,0,0.45) !important;
+  box-shadow: 0 0 0 1px rgba(198,255,0,0.16), 0 12px 30px rgba(0,0,0,0.16) !important;
+}
+
+.pb-session-flow-step-v1 .pb-step-check-inline-v2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.35rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(198,255,0,0.18);
+  border: 1px solid rgba(198,255,0,0.62);
+  color: var(--lime);
+  font-weight: 950;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+
+
+/* PB_TOURNAMENT_DETAILS_V1 */
+.pb-tournament-details-v1 {
+  margin: 0.85rem 0 1rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.035);
+}
+
+.pb-tournament-details-v1-title {
+  font-weight: 900;
+  font-size: 0.9rem;
+  margin-bottom: 0.65rem;
+  color: var(--txt);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pb-tournament-details-v1-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.7fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.pb-tournament-details-v1 label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--txt3);
+  margin-bottom: 0.3rem;
+}
+
+.pb-tournament-details-v1 input {
+  width: 100%;
+}
+
+.pb-tournament-details-v1-note {
+  margin-top: 0.55rem;
+  font-size: 0.76rem;
+  color: var(--txt3);
+}
+
+@media (max-width: 700px) {
+  .pb-tournament-details-v1-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .pb-tournament-details-v1 {
+    display: block !important;
+    break-inside: avoid;
+  }
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -28147,6 +28230,509 @@ function exportEndSessionSummary(){
 
   window.pbFunFactsMoreStatusV8 = ensureFunFactsInMore;
   window.pbOpenFunFactsMoreV8 = openFunFacts;
+})();
+
+
+
+/* PB_DASHBOARD_STEP_CHECKMARKS_V2 */
+(function(){
+  if (window.__pbDashboardStepCheckmarksV2) return;
+  window.__pbDashboardStepCheckmarksV2 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function activePlayers(){
+    try {
+      return (state.players || []).filter(function(p){
+        return p && p.active !== false && p.waitlist !== true;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function totalMatches(){
+    try {
+      return (state.schedule || []).reduce(function(sum, round){
+        return sum + ((round || []).length || 0);
+      }, 0);
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function completedMatches(){
+    try {
+      var count = 0;
+
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(m){
+          if (!m) return;
+
+          var hasScore =
+            clean(m.scoreA) !== "" ||
+            clean(m.scoreB) !== "" ||
+            clean(m.aScore) !== "" ||
+            clean(m.bScore) !== "" ||
+            clean(m.teamAScore) !== "" ||
+            clean(m.teamBScore) !== "";
+
+          if (m.complete || m.completed || hasScore) count++;
+        });
+      });
+
+      return count;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function commsComplete(){
+    try {
+      if (localStorage.getItem("pbDashboardCommsStepCompleteV2") === "1") return true;
+      if (localStorage.getItem("pbDashboardCommsStepCompleteV1") === "1") return true;
+    } catch(e) {}
+
+    try {
+      if (window.msState && (msState.code || msState.workerUrl)) return true;
+    } catch(e) {}
+
+    return false;
+  }
+
+  function completion(){
+    return {
+      players: activePlayers() > 0,
+      schedule: totalMatches() > 0,
+      communications: commsComplete(),
+      reporting: completedMatches() > 0
+    };
+  }
+
+  function stepKey(step){
+    var tab = clean(step.getAttribute("data-tab")).toLowerCase();
+    var txt = clean(step.textContent).toLowerCase();
+
+    if (tab === "players" || txt.indexOf("import players") >= 0 || txt.indexOf("step 1") >= 0) return "players";
+    if (tab === "schedule" || txt.indexOf("create schedule") >= 0 || txt.indexOf("step 2") >= 0) return "schedule";
+    if (tab === "communications" || txt.indexOf("manage comms") >= 0 || txt.indexOf("step 3") >= 0) return "communications";
+    if (tab === "standings" || txt.indexOf("reporting") >= 0 || txt.indexOf("step 4") >= 0) return "reporting";
+
+    return "";
+  }
+
+  function ensureCheck(step, isComplete){
+    var num = step.querySelector(".pb-session-flow-num-v1") || step;
+
+    Array.from(num.querySelectorAll(".pb-step-check-inline-v2")).forEach(function(el){
+      el.remove();
+    });
+
+    step.classList.toggle("pb-step-complete-v2", !!isComplete);
+    step.setAttribute("data-pb-step-complete-v2", isComplete ? "1" : "0");
+
+    if (isComplete) {
+      var mark = document.createElement("span");
+      mark.className = "pb-step-check-inline-v2";
+      mark.textContent = "✓";
+      mark.setAttribute("aria-label", "Completed");
+      num.appendChild(mark);
+    }
+  }
+
+  function apply(){
+    var flow = document.getElementById("pb-session-flow-v1");
+    var done = completion();
+
+    if (!flow) {
+      return {
+        installed: true,
+        applied: false,
+        reason: "pb-session-flow-v1-not-found-yet",
+        completion: done
+      };
+    }
+
+    var steps = Array.from(flow.querySelectorAll(".pb-session-flow-step-v1"));
+    var found = [];
+
+    steps.forEach(function(step){
+      var key = stepKey(step);
+      if (!key) return;
+
+      ensureCheck(step, !!done[key]);
+
+      found.push({
+        key: key,
+        complete: !!done[key],
+        text: clean(step.textContent)
+      });
+    });
+
+    return {
+      installed: true,
+      applied: true,
+      flowFound: true,
+      stepCount: steps.length,
+      completion: done,
+      foundSteps: found
+    };
+  }
+
+  function markComms(tab){
+    tab = String(tab || "").toLowerCase();
+
+    if (["communications", "mobilesync", "sms", "email"].indexOf(tab) >= 0) {
+      try {
+        localStorage.setItem("pbDashboardCommsStepCompleteV2", "1");
+      } catch(e) {}
+    }
+  }
+
+  var originalShowTab = window.showTab;
+  if (typeof originalShowTab === "function" && !originalShowTab.__pbDashboardStepCheckmarksV2) {
+    window.showTab = function(tab){
+      markComms(tab);
+      var result = originalShowTab.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 250);
+      setTimeout(apply, 800);
+      return result;
+    };
+    window.showTab.__pbDashboardStepCheckmarksV2 = true;
+  }
+
+  var originalRenderDashboard = window.renderDashboard;
+  if (typeof originalRenderDashboard === "function" && !originalRenderDashboard.__pbDashboardStepCheckmarksV2) {
+    window.renderDashboard = function(){
+      var result = originalRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 250);
+      setTimeout(apply, 800);
+      return result;
+    };
+    window.renderDashboard.__pbDashboardStepCheckmarksV2 = true;
+  }
+
+  function scheduleApply(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 500);
+    setTimeout(apply, 1200);
+  }
+
+  document.addEventListener("DOMContentLoaded", scheduleApply);
+  document.addEventListener("click", scheduleApply, true);
+  document.addEventListener("change", scheduleApply, true);
+  document.addEventListener("input", scheduleApply, true);
+
+  if (window.MutationObserver) {
+    try {
+      var obs = new MutationObserver(function(){
+        clearTimeout(window.__pbDashboardStepCheckmarksV2Timer);
+        window.__pbDashboardStepCheckmarksV2Timer = setTimeout(apply, 120);
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    } catch(e) {}
+  }
+
+  setTimeout(apply, 500);
+  setTimeout(apply, 1500);
+  setTimeout(apply, 3000);
+  setInterval(apply, 2500);
+
+  window.pbDashboardStepChecksStatusV2 = apply;
+})();
+
+
+
+/* PB_TOURNAMENT_DETAILS_V1 */
+(function(){
+  if (window.__pbTournamentDetailsV1) return;
+  window.__pbTournamentDetailsV1 = true;
+
+  var STORAGE_KEY = "pbTournamentDetailsV1";
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function readStored(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) {
+      return {};
+    }
+  }
+
+  function readState(){
+    try {
+      if (!window.state) return {};
+      return {
+        name: clean(state.tournamentName || state.eventName || state.sessionName || state.title || ""),
+        date: clean(state.tournamentDate || state.eventDate || state.sessionDate || "")
+      };
+    } catch(e) {
+      return {};
+    }
+  }
+
+  function getDetails(){
+    var fromState = readState();
+    var fromStore = readStored();
+
+    return {
+      name: clean(fromState.name || fromStore.name || ""),
+      date: clean(fromState.date || fromStore.date || "")
+    };
+  }
+
+  function writeDetails(details){
+    details = details || {};
+
+    var name = clean(details.name);
+    var date = clean(details.date);
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        name: name,
+        date: date,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch(e) {}
+
+    try {
+      if (window.state) {
+        state.tournamentName = name;
+        state.tournamentDate = date;
+
+        /*
+          Aliases for older export/print/backup code.
+        */
+        state.eventName = name;
+        state.eventDate = date;
+        state.sessionName = name;
+        state.sessionDate = date;
+      }
+    } catch(e) {}
+
+    try {
+      document.body.setAttribute("data-tournament-name", name);
+      document.body.setAttribute("data-tournament-date", date);
+    } catch(e) {}
+
+    try {
+      if (name) document.title = name + " · Pickleball Pro";
+    } catch(e) {}
+
+    try {
+      if (typeof autoSave === "function") autoSave();
+    } catch(e) {}
+
+    return getDetails();
+  }
+
+  function root(){
+    return document.getElementById("sec-dashboard") ||
+      document.getElementById("dashboard") ||
+      document.querySelector(".section.active") ||
+      document.body;
+  }
+
+  function insertCard(){
+    var r = root();
+    if (!r) return false;
+
+    var existing = document.getElementById("pb-tournament-details-v1");
+    if (existing) return true;
+
+    var card = document.createElement("div");
+    card.id = "pb-tournament-details-v1";
+    card.className = "pb-tournament-details-v1";
+    card.innerHTML =
+      '<div class="pb-tournament-details-v1-title">🏷️ Tournament Details</div>' +
+      '<div class="pb-tournament-details-v1-grid">' +
+        '<div>' +
+          '<label for="pb-tournament-name-v1">Tournament Name</label>' +
+          '<input id="pb-tournament-name-v1" type="text" placeholder="Example: Men’s Happy Hour Pickleball">' +
+        '</div>' +
+        '<div>' +
+          '<label for="pb-tournament-date-v1">Date</label>' +
+          '<input id="pb-tournament-date-v1" type="date">' +
+        '</div>' +
+      '</div>' +
+      '<div class="pb-tournament-details-v1-note">Used for prints, exports, backups, and saved tournament records.</div>';
+
+    var flow = document.getElementById("pb-session-flow-v1");
+    var kpis = r.querySelector(".dashboard-kpis");
+
+    if (flow && flow.parentNode) {
+      flow.insertAdjacentElement("afterend", card);
+    } else if (kpis && kpis.parentNode) {
+      kpis.insertAdjacentElement("afterend", card);
+    } else {
+      r.insertBefore(card, r.firstChild || null);
+    }
+
+    var current = getDetails();
+    var nameInput = document.getElementById("pb-tournament-name-v1");
+    var dateInput = document.getElementById("pb-tournament-date-v1");
+
+    if (nameInput) nameInput.value = current.name || "";
+    if (dateInput) dateInput.value = current.date || "";
+
+    function saveFromInputs(){
+      writeDetails({
+        name: nameInput ? nameInput.value : "",
+        date: dateInput ? dateInput.value : ""
+      });
+    }
+
+    if (nameInput && !nameInput.__pbTournamentDetailsV1) {
+      nameInput.addEventListener("input", saveFromInputs);
+      nameInput.addEventListener("change", saveFromInputs);
+      nameInput.__pbTournamentDetailsV1 = true;
+    }
+
+    if (dateInput && !dateInput.__pbTournamentDetailsV1) {
+      dateInput.addEventListener("input", saveFromInputs);
+      dateInput.addEventListener("change", saveFromInputs);
+      dateInput.__pbTournamentDetailsV1 = true;
+    }
+
+    writeDetails(current);
+
+    return true;
+  }
+
+  function patchSnapshots(){
+    /*
+      Existing snapshot backups are stored in localStorage.
+      This adds tournament name/date to saved snapshots after backup runs.
+    */
+    try {
+      var raw = localStorage.getItem("pb_round_snapshots_v1");
+      if (!raw) return 0;
+
+      var list = JSON.parse(raw);
+      if (!Array.isArray(list)) return 0;
+
+      var details = getDetails();
+      var changed = 0;
+
+      list.forEach(function(item){
+        if (!item) return;
+
+        if (details.name && item.tournamentName !== details.name) {
+          item.tournamentName = details.name;
+          changed++;
+        }
+
+        if (details.date && item.tournamentDate !== details.date) {
+          item.tournamentDate = details.date;
+          changed++;
+        }
+
+        item.tournamentDetails = Object.assign({}, item.tournamentDetails || {}, details);
+      });
+
+      if (changed) {
+        localStorage.setItem("pb_round_snapshots_v1", JSON.stringify(list));
+      }
+
+      return changed;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function wrapSnapshotFunction(){
+    if (typeof window.pbSnapshotCompletedRoundsLite === "function" && !window.pbSnapshotCompletedRoundsLite.__pbTournamentDetailsV1) {
+      var original = window.pbSnapshotCompletedRoundsLite;
+
+      window.pbSnapshotCompletedRoundsLite = function(){
+        writeDetails(getDetails());
+        var result = original.apply(this, arguments);
+        setTimeout(patchSnapshots, 50);
+        setTimeout(patchSnapshots, 300);
+        return result;
+      };
+
+      window.pbSnapshotCompletedRoundsLite.__pbTournamentDetailsV1 = true;
+    }
+  }
+
+  function apply(){
+    insertCard();
+    writeDetails(getDetails());
+    wrapSnapshotFunction();
+    patchSnapshots();
+
+    var details = getDetails();
+
+    return {
+      installed: true,
+      cardFound: !!document.getElementById("pb-tournament-details-v1"),
+      nameInputFound: !!document.getElementById("pb-tournament-name-v1"),
+      dateInputFound: !!document.getElementById("pb-tournament-date-v1"),
+      details: details,
+      stateValues: {
+        tournamentName: window.state ? state.tournamentName || "" : "",
+        tournamentDate: window.state ? state.tournamentDate || "" : "",
+        eventName: window.state ? state.eventName || "" : "",
+        eventDate: window.state ? state.eventDate || "" : ""
+      },
+      snapshotPatchFound: typeof window.pbSnapshotCompletedRoundsLite === "function"
+    };
+  }
+
+  var originalShowTab = window.showTab;
+  if (typeof originalShowTab === "function" && !originalShowTab.__pbTournamentDetailsV1) {
+    window.showTab = function(){
+      var result = originalShowTab.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 300);
+      return result;
+    };
+    window.showTab.__pbTournamentDetailsV1 = true;
+  }
+
+  var originalRenderDashboard = window.renderDashboard;
+  if (typeof originalRenderDashboard === "function" && !originalRenderDashboard.__pbTournamentDetailsV1) {
+    window.renderDashboard = function(){
+      var result = originalRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 300);
+      return result;
+    };
+    window.renderDashboard.__pbTournamentDetailsV1 = true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 250);
+    setTimeout(apply, 1000);
+    setTimeout(apply, 2500);
+  });
+
+  document.addEventListener("input", function(e){
+    if (e && e.target && (e.target.id === "pb-tournament-name-v1" || e.target.id === "pb-tournament-date-v1")) {
+      setTimeout(apply, 50);
+    }
+  }, true);
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 100);
+    setTimeout(apply, 500);
+  }, true);
+
+  setTimeout(apply, 500);
+  setTimeout(apply, 1500);
+  setTimeout(apply, 3000);
+
+  window.pbTournamentDetailsStatusV1 = apply;
+  window.pbTournamentDetailsSaveV1 = writeDetails;
 })();
 
 </script>
