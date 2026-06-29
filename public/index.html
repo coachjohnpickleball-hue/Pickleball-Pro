@@ -1865,6 +1865,26 @@ button[data-pb-hidden-floating-showtime-v4="1"],
 
 
 
+
+
+
+
+
+
+
+
+/* PB_FUN_FACTS_MORE_STATIC_V7 */
+.pb-fun-facts-more-v7 {
+  font-weight: 900 !important;
+}
+
+
+
+/* PB_FUN_FACTS_MORE_REINSERT_V8 */
+.pb-fun-facts-more-v8 {
+  font-weight: 900 !important;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -27852,6 +27872,282 @@ function exportEndSessionSummary(){
 
 
 
+
+
+
+
+
+
+
+
+/* PB_FUN_FACTS_MORE_STATIC_V7 */
+(function(){
+  if (window.__pbFunFactsMoreStaticV7) return;
+  window.__pbFunFactsMoreStaticV7 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  window.pbOpenFunFactsMoreV7 = function(event){
+    if (event) {
+      try { event.preventDefault(); } catch(e) {}
+      try { event.stopPropagation(); } catch(e) {}
+    }
+
+    try {
+      if (typeof showTab === "function") showTab("playerstats", event);
+    } catch(e) {}
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof populateH2HDropdowns === "function") populateH2HDropdowns(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+
+      var target =
+        document.getElementById("ps-h2h-card") ||
+        document.getElementById("h2h-body") ||
+        Array.from(document.querySelectorAll("#sec-playerstats th, #sec-playerstats table, #sec-playerstats .card, #sec-playerstats div")).find(function(el){
+          var txt = clean(el.textContent).toLowerCase();
+          return txt.indexOf("nemesis") >= 0 ||
+            txt.indexOf("head-to-head") >= 0 ||
+            txt.indexOf("head to head") >= 0 ||
+            txt.indexOf("favorite partner") >= 0 ||
+            txt.indexOf("streak") >= 0;
+        });
+
+      if (target) {
+        try {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch(e) {
+          target.scrollIntoView();
+        }
+
+        target.style.outline = "3px solid rgba(255,213,79,.85)";
+        target.style.outlineOffset = "4px";
+
+        setTimeout(function(){
+          target.style.outline = "";
+          target.style.outlineOffset = "";
+        }, 1400);
+      }
+    }, 250);
+  };
+
+  window.pbFunFactsMoreStatusV7 = function(){
+    var item = document.querySelector(".pb-fun-facts-more-v7");
+    var navMenu = item ? item.closest(".nav-menu") : null;
+    var navGroup = item ? item.closest(".nav-group") : null;
+
+    return {
+      installed: true,
+      itemFound: !!item,
+      inNavMenu: !!navMenu,
+      inNavGroup: !!navGroup,
+      text: item ? clean(item.textContent) : "",
+      previousExperimentsRemoved: !document.querySelector(".pb-fun-stats-hub-v1, .pb-fun-stats-visible-v2, .pb-more-fun-facts-menu-v3, .pb-fun-facts-more-click-v5, .pb-fun-facts-more-static-v6"),
+      createdNewCalculations: false
+    };
+  };
+})();
+
+
+
+/* PB_FUN_FACTS_MORE_REINSERT_V8 */
+(function(){
+  if (window.__pbFunFactsMoreReinsertV8) return;
+  window.__pbFunFactsMoreReinsertV8 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getMoreGroup(){
+    return document.querySelector('.nav-group[data-tabs~="display"]') ||
+      Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+        var tabs = String(g.getAttribute("data-tabs") || "").toLowerCase();
+        return tabs.indexOf("playerlookup") >= 0 &&
+          tabs.indexOf("fairness") >= 0 &&
+          tabs.indexOf("admin") >= 0;
+      }) ||
+      null;
+  }
+
+  function makeButton(){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab-btn pb-fun-facts-more-v8";
+    btn.textContent = "🏆 Fun Facts";
+    btn.setAttribute("data-pb-fun-facts-more-v8", "1");
+
+    btn.addEventListener("click", function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      openFunFacts();
+    });
+
+    return btn;
+  }
+
+  function openFunFacts(){
+    try {
+      if (typeof showTab === "function") showTab("playerstats");
+    } catch(e) {}
+
+    setTimeout(function(){
+      try { if (typeof renderPlayerStats === "function") renderPlayerStats(); } catch(e) {}
+      try { if (typeof populateH2HDropdowns === "function") populateH2HDropdowns(); } catch(e) {}
+      try { if (typeof renderH2H === "function") renderH2H(); } catch(e) {}
+
+      var target =
+        document.getElementById("ps-h2h-card") ||
+        document.getElementById("h2h-body") ||
+        Array.from(document.querySelectorAll("#sec-playerstats th, #sec-playerstats table, #sec-playerstats .card, #sec-playerstats div")).find(function(el){
+          var txt = clean(el.textContent).toLowerCase();
+          return txt.indexOf("nemesis") >= 0 ||
+            txt.indexOf("head-to-head") >= 0 ||
+            txt.indexOf("head to head") >= 0 ||
+            txt.indexOf("favorite partner") >= 0 ||
+            txt.indexOf("streak") >= 0;
+        });
+
+      if (target) {
+        try {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch(e) {
+          target.scrollIntoView();
+        }
+
+        target.style.outline = "3px solid rgba(255,213,79,.85)";
+        target.style.outlineOffset = "4px";
+
+        setTimeout(function(){
+          target.style.outline = "";
+          target.style.outlineOffset = "";
+        }, 1400);
+      }
+    }, 250);
+  }
+
+  function ensureFunFactsInMore(){
+    var moreGroup = getMoreGroup();
+
+    if (!moreGroup) {
+      return {
+        installed: true,
+        inserted: false,
+        reason: "more-group-not-found"
+      };
+    }
+
+    var menu = moreGroup.querySelector(".nav-menu");
+
+    if (!menu) {
+      return {
+        installed: true,
+        inserted: false,
+        reason: "more-nav-menu-not-found",
+        moreTabs: moreGroup.getAttribute("data-tabs") || ""
+      };
+    }
+
+    /*
+      Remove old failed Fun Facts buttons anywhere outside the real More menu.
+    */
+    document.querySelectorAll(".pb-fun-facts-more-v7, .pb-fun-facts-more-v8").forEach(function(el){
+      if (el.closest(".nav-group") !== moreGroup) {
+        el.remove();
+      }
+    });
+
+    /*
+      If V7 exists inside More but is being rebuilt/hidden, replace it with V8.
+    */
+    menu.querySelectorAll(".pb-fun-facts-more-v7").forEach(function(el){
+      el.remove();
+    });
+
+    var existing = menu.querySelector(".pb-fun-facts-more-v8");
+
+    if (!existing) {
+      var btn = makeButton();
+
+      var playerLookup = Array.from(menu.querySelectorAll("button")).find(function(el){
+        return clean(el.textContent).toLowerCase() === "player lookup";
+      });
+
+      if (playerLookup && playerLookup.nextSibling) {
+        menu.insertBefore(btn, playerLookup.nextSibling);
+      } else if (playerLookup) {
+        menu.appendChild(btn);
+      } else {
+        menu.insertBefore(btn, menu.firstChild || null);
+      }
+    }
+
+    return {
+      installed: true,
+      inserted: !!menu.querySelector(".pb-fun-facts-more-v8"),
+      itemFound: !!menu.querySelector(".pb-fun-facts-more-v8"),
+      inMoreMenu: true,
+      moreButtonText: clean((moreGroup.querySelector(":scope > .tab-btn") || {}).textContent || ""),
+      moreTabs: moreGroup.getAttribute("data-tabs") || "",
+      moreItems: Array.from(menu.querySelectorAll("button")).map(function(el){
+        return clean(el.textContent);
+      }),
+      createdNewCalculations: false
+    };
+  }
+
+  function apply(){
+    ensureFunFactsInMore();
+  }
+
+  /*
+    Important: existing nav cleanup scripts rebuild the More menu repeatedly.
+    So V8 reinserts after those rebuilds.
+  */
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(apply, 300);
+    setTimeout(apply, 900);
+    setTimeout(apply, 1800);
+    setTimeout(apply, 3000);
+  });
+
+  document.addEventListener("click", function(){
+    setTimeout(apply, 50);
+    setTimeout(apply, 250);
+  }, true);
+
+  var originalShowTab = window.showTab;
+  if (typeof originalShowTab === "function" && !originalShowTab.__pbFunFactsMoreV8) {
+    window.showTab = function(){
+      var result = originalShowTab.apply(this, arguments);
+      setTimeout(apply, 50);
+      setTimeout(apply, 250);
+      return result;
+    };
+    window.showTab.__pbFunFactsMoreV8 = true;
+  }
+
+  if (window.MutationObserver) {
+    var obs = new MutationObserver(function(){
+      clearTimeout(window.__pbFunFactsMoreV8Timer);
+      window.__pbFunFactsMoreV8Timer = setTimeout(apply, 80);
+    });
+
+    try {
+      obs.observe(document.body, { childList: true, subtree: true });
+    } catch(e) {}
+  }
+
+  setTimeout(apply, 500);
+  setTimeout(apply, 1500);
+  setTimeout(apply, 3000);
+
+  window.pbFunFactsMoreStatusV8 = ensureFunFactsInMore;
+  window.pbOpenFunFactsMoreV8 = openFunFacts;
+})();
 
 </script>
 
