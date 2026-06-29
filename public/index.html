@@ -1317,6 +1317,294 @@ html body #global-round-timer.pb-global-timer-hidden {
   .pb-dash-v2 { grid-template-columns: 1fr; }
 }
 
+
+
+/* PB_CLEAN_EFFICIENT_NAV_V1 */
+.nav-group[data-tabs~="communications"] {
+  order: 50;
+}
+.nav-group[data-tabs~="display"] {
+  order: 60;
+}
+.user-menu,
+.user-dropdown,
+.user-menu-wrap {
+  order: 70;
+}
+#sec-dashboard .quick-action[data-pb-dashboard-v2-hidden="1"],
+#sec-dashboard .quick-action.pb-hide-duplicate-dashboard-schedule,
+#sec-dashboard .quick-action.pb-hide-dashboard-integration-tile {
+  display: none !important;
+}
+#sec-dashboard .quick-action-grid {
+  display: none !important;
+}
+#pb-dashboard-clean-command-center-v2 .pb-dash-v2-card:nth-child(3) {
+  display: none !important;
+}
+#pb-dashboard-clean-command-center-v2 {
+  grid-template-columns: 1.25fr 1fr !important;
+}
+@media(max-width: 980px) {
+  #pb-dashboard-clean-command-center-v2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+
+/* PB_MINIMAL_DASHBOARD_AND_COMMS_RESTORE_V1 */
+#pb-dashboard-clean-command-center-v2,
+#pb-dashboard-command-center-v1,
+.pb-dash-v2,
+.pb-dashboard-command-center {
+  display: none !important;
+}
+
+/* Home should be simple: hero + KPI cards. */
+#sec-dashboard .quick-action-grid,
+#sec-dashboard .quick-action,
+#sec-dashboard [data-pb-dashboard-nav-hidden],
+#sec-dashboard [data-pb-dashboard-v2-hidden] {
+  display: none !important;
+}
+
+/* Keep the original dashboard hero/KPI cards visible. */
+#sec-dashboard .dashboard-hero,
+#sec-dashboard .dashboard-kpis,
+#sec-dashboard .dashboard-kpi {
+  display: revert;
+}
+
+/* Make dashboard less visually heavy. */
+.dashboard-hero {
+  padding-bottom: 1rem;
+}
+.dashboard-kpis {
+  margin-top: .9rem !important;
+  margin-bottom: .75rem !important;
+}
+.dashboard-kpi {
+  min-height: auto;
+}
+
+/* Ensure Comms dropdown behaves like the other nav dropdowns. */
+.nav-group[data-tabs~="communications"] .nav-menu {
+  z-index: 9999;
+}
+
+
+
+/* PB_FLOW_NAV_DASHBOARD_CLEAN_V1 */
+#pb-dashboard-clean-command-center-v2,
+#pb-dashboard-command-center-v1,
+.pb-dash-v2,
+.pb-dashboard-command-center,
+#sec-dashboard .quick-action-grid,
+#sec-dashboard .quick-action {
+  display: none !important;
+}
+
+.pb-session-flow-v1 {
+  margin: .9rem 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(145px, 1fr));
+  gap: .65rem;
+}
+
+.pb-session-flow-step-v1 {
+  border: 1px solid rgba(198,255,0,.16);
+  background: rgba(255,255,255,.035);
+  color: var(--txt);
+  border-radius: 14px;
+  padding: .75rem .85rem;
+  cursor: pointer;
+  text-align: left;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.pb-session-flow-step-v1:hover {
+  transform: translateY(-1px);
+  border-color: rgba(198,255,0,.38);
+  background: rgba(198,255,0,.07);
+}
+
+.pb-session-flow-num-v1 {
+  color: var(--lime);
+  font-weight: 950;
+  font-size: .78rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: .25rem;
+}
+
+.pb-session-flow-title-v1 {
+  font-weight: 950;
+  font-size: .95rem;
+  line-height: 1.15;
+}
+
+.pb-session-flow-note-v1 {
+  color: var(--txt3);
+  font-size: .78rem;
+  margin-top: .22rem;
+  line-height: 1.25;
+}
+
+.nav-group[data-tabs~="communications"] > .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+/* If an older injected Comms button still has the wrong class, visually normalize it. */
+.nav-group[data-tabs~="communications"] > .nav-group-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: var(--txt);
+  padding: .55rem .85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media(max-width: 900px) {
+  .pb-session-flow-v1 {
+    grid-template-columns: repeat(2, minmax(140px,1fr));
+  }
+}
+
+@media(max-width: 520px) {
+  .pb-session-flow-v1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+/* PB_DEDUPE_PLAYERS_NAV_V1 */
+.nav-group[data-pb-hidden-duplicate-players="1"] {
+  display: none !important;
+}
+
+.nav-group[data-tabs~="players"] > .tab-btn,
+.nav-group[data-tabs~="communications"] > .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+
+
+/* PB_RESTORE_MORE_ADVANCED_MENU_V1 */
+.nav-group[data-tabs~="communications"] > button,
+.nav-group[data-tabs~="communications"] > .tab-btn,
+.nav-group[data-tabs~="communications"] > .nav-group-btn,
+.nav-group[data-tabs~="display"] > button,
+.nav-group[data-tabs~="display"] > .tab-btn,
+.nav-group[data-tabs~="display"] > .nav-group-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+/* Hide only duplicate standalone Comms groups, not the real Comms dropdown. */
+.nav-group[data-pb-hidden-extra-comms="1"] {
+  display: none !important;
+}
+
+/* Dashboard remains simple: flow + KPI, not a tile wall. */
+#pb-dashboard-clean-command-center-v2,
+#pb-dashboard-command-center-v1,
+.pb-dash-v2,
+.pb-dashboard-command-center,
+#sec-dashboard .quick-action-grid,
+#sec-dashboard .quick-action {
+  display: none !important;
+}
+
+
+
+/* PB_FORCE_MORE_MENU_VISIBLE_V2 */
+.nav-group[data-tabs~="display"] {
+  display: flex !important;
+  order: 60 !important;
+}
+
+.nav-group[data-tabs~="display"] > .tab-btn,
+.nav-group[data-tabs~="communications"] > .tab-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: .35rem;
+}
+
+.nav-group[data-tabs~="display"][data-pb-hidden-duplicate-players="1"] {
+  display: flex !important;
+}
+
+
+
+/* PB_SIMPLIFY_MORE_AND_REPORTING_MENU_V3 */
+.nav-group[data-tabs~="display"],
+.nav-group[data-tabs~="standings"],
+.nav-group[data-tabs~="communications"] {
+  display: flex !important;
+}
+
+.nav-group[data-tabs~="display"] > .tab-btn,
+.nav-group[data-tabs~="standings"] > .tab-btn,
+.nav-group[data-tabs~="communications"] > .tab-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: .35rem;
+}
+
+.nav-menu .pb-nav-menu-note-v3 {
+  padding: .35rem .65rem .2rem;
+  color: var(--txt3);
+  font-size: .68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  pointer-events: none;
+}
+
+
+
+/* PB_REPORTING_AFTER_COMMS_V1 */
+.nav-group[data-tabs~="dashboard"] { order: 10 !important; }
+.nav-group[data-tabs~="players"] { order: 20 !important; }
+.nav-group[data-tabs~="schedule"] { order: 30 !important; }
+.nav-group[data-tabs~="communications"] { order: 40 !important; }
+.nav-group[data-tabs~="standings"] { order: 50 !important; }
+.nav-group[data-tabs~="display"] { order: 60 !important; }
+.user-menu-wrap,
+.user-menu,
+.user-dropdown-wrap {
+  order: 80 !important;
+}
+
+
+
+/* PB_FIX_REPORTING_MENU_REAL_SECTIONS_V1 */
+.nav-group[data-tabs~="communications"] { order: 40 !important; }
+.nav-group[data-tabs~="standings"] { order: 50 !important; }
+.nav-group[data-tabs~="display"] { order: 60 !important; }
+
+.nav-group[data-tabs~="communications"],
+.nav-group[data-tabs~="standings"],
+.nav-group[data-tabs~="display"] {
+  display: flex !important;
+}
+
+.nav-group[data-tabs~="communications"] > .tab-btn,
+.nav-group[data-tabs~="standings"] > .tab-btn,
+.nav-group[data-tabs~="display"] > .tab-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: .35rem;
+}
+
 </style>
 
 <style id="premium-functions-css">
@@ -1450,7 +1738,7 @@ body.pb-non-admin a[href^="/admin/"]{
 
       <!-- PB_COMMS_BEFORE_MORE_DROPDOWN_V1 -->
   <div class="nav-group" data-tabs="communications mobilesync sms email">
-    <button class="tab-btn" onclick="showTab('communications', event)">📲 Comms <span class="nav-caret">▾</span></button>
+    <button class="nav-group-btn">📲 Comms ▾</button>
     <div class="nav-menu">
       <button class="tab-btn" onclick="showTab('communications', event)">Communications Hub</button>
       <button class="tab-btn" onclick="showTab('mobilesync', event)">Mobile Sync</button>
@@ -20524,230 +20812,8 @@ function exportEndSessionSummary(){
 /* PB_COMMS_BUTTON_STYLE_MATCH_V1 */
 
 
-/* PB_TEAM_NAMES_DUPR_DISPLAY_RESTORE_V1 */
-(function(){
-  function esc(v){
-    return String(v == null ? "" : v)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
 
-  function stripSeed(name){
-    return String(name || "").trim().replace(/^#?\s*\d+\s*\.?\s+/, "").trim();
-  }
 
-  function playerObj(member){
-    if (typeof member === "number") {
-      return window.state && state.players ? state.players[member] : null;
-    }
-    if (member && typeof member === "object") return member;
-    return null;
-  }
-
-  function playerName(member){
-    var p = playerObj(member);
-    var idx = typeof member === "number" ? member : -1;
-
-    if (!p) return idx >= 0 ? "Player " + (idx + 1) : "Player";
-
-    var candidates = [
-      p.name,
-      p.playerName,
-      p.fullName,
-      p.displayName,
-      p.label,
-      p.nickname,
-      [p.firstName, p.lastName].filter(Boolean).join(" ")
-    ];
-
-    for (var i = 0; i < candidates.length; i++) {
-      var n = stripSeed(candidates[i]);
-      if (n && !/^#?\d+\.?$/.test(n)) return n;
-    }
-
-    return idx >= 0 ? "Player " + (idx + 1) : "Player";
-  }
-
-  function playerRating(member){
-    var p = playerObj(member);
-    if (!p) return 0;
-
-    try {
-      if (typeof pRating === "function") {
-        var r = Number(pRating(p));
-        if (!isNaN(r) && r > 0) return r;
-      }
-    } catch(e) {}
-
-    var raw = p.dupr || p.DUPR || p.clubRating || p.rating || p.skill || p.level || p.provisionalDupr || 0;
-    var v = Number(raw);
-    return isNaN(v) ? 0 : v;
-  }
-
-  function teamAvg(team){
-    if (!Array.isArray(team) || !team.length) return "";
-
-    var nums = team.map(playerRating).filter(function(v){
-      return !isNaN(v) && v > 0;
-    });
-
-    if (!nums.length) return "";
-
-    var avg = nums.reduce(function(a,b){ return a + b; }, 0) / nums.length;
-    return avg.toFixed(2);
-  }
-
-  function teamHtml(team){
-    if (!Array.isArray(team)) return "";
-
-    var names = team.map(function(member){
-      return esc(playerName(member));
-    }).join(" & ");
-
-    var avg = teamAvg(team);
-
-    if (!avg) return names;
-
-    return names + ' <span class="pb-team-dupr-restore">· DUPR ' + esc(avg) + '</span>';
-  }
-
-  function allMatches(){
-    var out = [];
-    try {
-      (state.schedule || []).forEach(function(round){
-        (round || []).forEach(function(m){
-          if (m) out.push(m);
-        });
-      });
-    } catch(e) {}
-    return out;
-  }
-
-  function patchScheduleCells(){
-    if (!window.state || !Array.isArray(state.schedule)) return;
-
-    var byId = {};
-    allMatches().forEach(function(m){
-      if (m && m.id != null) byId[String(m.id)] = m;
-    });
-
-    document.querySelectorAll("tr").forEach(function(row){
-      var cells = row.querySelectorAll("td");
-      if (!cells || cells.length < 4) return;
-
-      var first = String(cells[0].textContent || "").trim();
-      var idMatch = first.match(/^#?\s*(\d+)$/);
-      if (!idMatch) return;
-
-      var match = byId[idMatch[1]];
-      if (!match || !Array.isArray(match.teamA) || !Array.isArray(match.teamB)) return;
-
-      cells[2].innerHTML = teamHtml(match.teamA);
-      cells[3].innerHTML = teamHtml(match.teamB);
-    });
-  }
-
-  function patchSoon(){
-    [0, 50, 150, 350, 800, 1500, 2500].forEach(function(ms){
-      setTimeout(patchScheduleCells, ms);
-    });
-  }
-
-  function wrap(name){
-    var fn = window[name];
-    if (typeof fn !== "function" || fn.__pbTeamNamesDuprRestoreV1) return;
-
-    var wrapped = function(){
-      var result = fn.apply(this, arguments);
-      patchSoon();
-      return result;
-    };
-
-    wrapped.__pbTeamNamesDuprRestoreV1 = true;
-    window[name] = wrapped;
-  }
-
-  function stopOldHeartbeats(){
-    [
-      "__pbTeamNameHeartbeatV2",
-      "__pbTeamNameOnlyHeartbeatV3",
-      "__pbTeamNameDuprFinalHeartbeatV4",
-      "__pbSeedStripDuprFinalHeartbeatV5",
-      "__pbDuprBlueFinalHeartbeatV6",
-      "__pbDuprBracketColorHeartbeatV7",
-      "__pbForcedBracketColorsHeartbeatV8",
-      "__pbPlayerDuprColorsHeartbeatV9",
-      "__pbDuprFinalBracketDisplayHeartbeatV10",
-      "__pbTeamDuprNumericColorHeartbeatV11"
-    ].forEach(function(k){
-      try {
-        if (window[k]) {
-          clearInterval(window[k]);
-          window[k] = null;
-        }
-      } catch(e) {}
-    });
-  }
-
-  function install(){
-    stopOldHeartbeats();
-
-    [
-      "renderSchedule",
-      "generateSchedule",
-      "promptGenerateSchedule",
-      "regenerateRemaining",
-      "regenerateSchedulePreview",
-      "publishDraftRound",
-      "publishPreviewRound",
-      "showTab",
-      "renderCourtsGrid",
-      "renderDashboard"
-    ].forEach(wrap);
-
-    patchSoon();
-  }
-
-  document.addEventListener("click", patchSoon, true);
-  document.addEventListener("change", patchSoon, true);
-
-  document.addEventListener("DOMContentLoaded", function(){
-    install();
-    setTimeout(install, 500);
-    setTimeout(install, 1500);
-  });
-
-  setTimeout(install, 300);
-  setTimeout(install, 1000);
-  setTimeout(install, 2500);
-
-  if (!window.__pbTeamNamesDuprRestoreHeartbeatV1) {
-    window.__pbTeamNamesDuprRestoreHeartbeatV1 = setInterval(function(){
-      try {
-        if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
-          patchScheduleCells();
-        }
-      } catch(e) {}
-    }, 1000);
-  }
-
-  window.pbPatchScheduleTeamNamesNow = function(){
-    patchScheduleCells();
-    return window.pbTeamNamesDuprRestoreStatusV1();
-  };
-
-  window.pbTeamNamesDuprRestoreStatusV1 = function(){
-    return {
-      installed: true,
-      sampleTeams: Array.from(document.querySelectorAll("tr td:nth-child(3), tr td:nth-child(4)"))
-        .slice(0, 10)
-        .map(function(td){ return td.textContent.trim(); })
-    };
-  };
-})();
 
 
 
@@ -23464,6 +23530,2342 @@ function exportEndSessionSummary(){
       progress: progress()
     };
   };
+})();
+
+
+
+/* PB_CLEAN_EFFICIENT_NAV_V1 */
+(function(){
+  if (window.__pbCleanEfficientNavV1) return;
+  window.__pbCleanEfficientNavV1 = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function text(el){
+    return String(el && (el.textContent || el.value) || "").trim().toLowerCase();
+  }
+
+  function isCommsTab(tab){
+    return tab === "communications" || tab === "mobilesync" || tab === "sms" || tab === "email";
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function cleanDuplicateMenuItems(){
+    var seenTop = {};
+
+    document.querySelectorAll(".nav-group > .tab-btn").forEach(function(btn){
+      var key = text(btn).replace(/\s*▾\s*/g, "").replace(/\s+/g, " ");
+      if (!key) return;
+
+      if (seenTop[key]) {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-nav-hidden", "duplicate-top");
+      } else {
+        seenTop[key] = true;
+      }
+    });
+
+    /*
+      More should not duplicate Comms.
+      User Menu should not duplicate Comms either.
+    */
+    document.querySelectorAll('.nav-menu .tab-btn, .user-dropdown-item').forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      var label = text(btn);
+
+      var duplicateComms =
+        tab === "mobilesync" ||
+        tab === "sms" ||
+        tab === "email" ||
+        label === "mobile sync" ||
+        label === "sms" ||
+        label === "email" ||
+        label.indexOf("mobile sync") >= 0;
+
+      if (duplicateComms) {
+        var parentGroup = btn.closest(".nav-group");
+        var isDedicatedComms = parentGroup && String(parentGroup.getAttribute("data-tabs") || "").indexOf("communications") >= 0;
+
+        if (!isDedicatedComms) {
+          btn.style.display = "none";
+          btn.setAttribute("data-pb-nav-hidden", "duplicate-comms");
+        }
+      }
+    });
+  }
+
+  function cleanDashboardAsMenu(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return;
+
+    /*
+      Dashboard should not act as a second nav menu.
+      Keep next action + setup. Hide navigation tile grid.
+    */
+    sec.querySelectorAll(".quick-action-grid").forEach(function(grid){
+      grid.style.display = "none";
+      grid.setAttribute("data-pb-dashboard-nav-hidden", "tile-grid");
+    });
+
+    sec.querySelectorAll(".quick-action").forEach(function(tile){
+      var tab = tabFromOnclick(tile);
+      if (tab && tab !== "dashboard") {
+        tile.style.display = "none";
+        tile.setAttribute("data-pb-dashboard-nav-hidden", "duplicate-nav-tile");
+      }
+    });
+
+    var quickJumps = byId("pb-dashboard-clean-command-center-v2");
+    if (quickJumps) {
+      var cards = quickJumps.querySelectorAll(".pb-dash-v2-card");
+      if (cards[2]) {
+        cards[2].style.display = "none";
+        cards[2].setAttribute("data-pb-dashboard-nav-hidden", "quick-jumps");
+      }
+    }
+  }
+
+  function labelTopNav(){
+    document.querySelectorAll(".nav-group").forEach(function(group){
+      var tabs = String(group.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("communications") >= 0) {
+        var b = group.querySelector(":scope > .tab-btn");
+        if (b && text(b).indexOf("comms") < 0) b.innerHTML = "📲 Comms <span class=\"nav-caret\">▾</span>";
+      }
+
+      if (tabs.indexOf("display") >= 0) {
+        var m = group.querySelector(":scope > .tab-btn");
+        if (m && text(m).indexOf("more") < 0) m.innerHTML = "⋯ More <span class=\"nav-caret\">▾</span>";
+      }
+    });
+  }
+
+  function status(){
+    var top = [];
+    document.querySelectorAll(".nav-group > .tab-btn").forEach(function(btn){
+      if (btn.offsetParent !== null && btn.style.display !== "none") {
+        top.push(text(btn).replace(/\s+/g, " "));
+      }
+    });
+
+    var hidden = document.querySelectorAll('[data-pb-nav-hidden], [data-pb-dashboard-nav-hidden]').length;
+
+    return {
+      installed: true,
+      topNav: top,
+      hiddenDuplicates: hidden,
+      commsLinksVisibleInCommsOnly: Array.from(document.querySelectorAll('.nav-menu .tab-btn, .user-dropdown-item'))
+        .filter(function(btn){
+          var tab = tabFromOnclick(btn);
+          return tab === "mobilesync" || tab === "sms" || tab === "email";
+        })
+        .map(function(btn){
+          return {
+            label: btn.textContent.trim(),
+            hidden: btn.style.display === "none",
+            groupTabs: btn.closest(".nav-group") ? btn.closest(".nav-group").getAttribute("data-tabs") : "user-menu"
+          };
+        })
+    };
+  }
+
+  function apply(){
+    labelTopNav();
+    cleanDuplicateMenuItems();
+    cleanDashboardAsMenu();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbCleanEfficientNavV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbCleanEfficientNavV1 = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbCleanEfficientNavV1) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbCleanEfficientNavV1 = true;
+  }
+
+  window.pbCleanNavStatusV1 = function(){
+    apply();
+    return status();
+  };
+})();
+
+
+
+/* PB_MINIMAL_DASHBOARD_AND_COMMS_RESTORE_V1 */
+(function(){
+  if (window.__pbMinimalDashboardAndCommsRestoreV1) return;
+  window.__pbMinimalDashboardAndCommsRestoreV1 = true;
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function cleanRuntimeDupes(){
+    /* Hide extra injected Comms group if still present at runtime. */
+    document.querySelectorAll('.nav-group[data-tabs="mobilesync sms email"]').forEach(function(g){
+      g.style.display = "none";
+      g.setAttribute("data-pb-hidden-extra-comms", "1");
+    });
+
+    /* More should not expose Mobile/SMS/Email. */
+    document.querySelectorAll('.nav-group[data-tabs*="display"] .nav-menu .tab-btn').forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tab === "mobilesync" || tab === "sms" || tab === "email") {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-comms-dupe", "1");
+      }
+    });
+
+    /* User menu should not expose Mobile/SMS/Email. */
+    document.querySelectorAll('.user-dropdown-item').forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tab === "mobilesync" || tab === "sms" || tab === "email") {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-hidden-comms-dupe", "1");
+      }
+    });
+
+    /* Dashboard should not be a second menu. */
+    var dash = document.getElementById("sec-dashboard");
+    if (dash) {
+      dash.querySelectorAll("#pb-dashboard-clean-command-center-v2, #pb-dashboard-command-center-v1, .pb-dash-v2, .pb-dashboard-command-center, .quick-action-grid, .quick-action").forEach(function(el){
+        el.style.display = "none";
+        el.setAttribute("data-pb-minimal-dashboard-hidden", "1");
+      });
+    }
+  }
+
+  function status(){
+    cleanRuntimeDupes();
+
+    return {
+      installed: true,
+      dashboardMinimal: true,
+      commsGroups: Array.from(document.querySelectorAll(".nav-group")).map(function(g){
+        return {
+          button: (g.querySelector("button") || {}).textContent || "",
+          tabs: g.getAttribute("data-tabs"),
+          hidden: g.style.display === "none",
+          items: Array.from(g.querySelectorAll(".nav-menu .tab-btn")).map(function(b){
+            return {
+              text: b.textContent.trim(),
+              tab: tabFromOnclick(b),
+              hidden: b.style.display === "none"
+            };
+          })
+        };
+      }).filter(function(x){
+        return String(x.tabs || "").indexOf("communication") >= 0 ||
+          String(x.tabs || "").indexOf("mobilesync") >= 0 ||
+          String(x.tabs || "").indexOf("display") >= 0;
+      })
+    };
+  }
+
+  function apply(){
+    cleanRuntimeDupes();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbMinimalDashboardAndCommsRestoreV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbMinimalDashboardAndCommsRestoreV1 = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbMinimalDashboardAndCommsRestoreV1) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbMinimalDashboardAndCommsRestoreV1 = true;
+  }
+
+  window.pbMinimalDashboardCommsStatusV1 = status;
+})();
+
+
+
+/* PB_FLOW_NAV_DASHBOARD_CLEAN_V1 */
+(function(){
+  if (window.__pbFlowNavDashboardCleanV1) return;
+  window.__pbFlowNavDashboardCleanV1 = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function firstDirectButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function safeShow(tab){
+    try {
+      if (typeof showTab === "function") showTab(tab);
+    } catch(e) {}
+  }
+
+  function ensureCommsNav(){
+    var groups = Array.from(document.querySelectorAll(".nav-group"));
+    var comms = groups.find(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+      return tabs.indexOf("communications") >= 0;
+    });
+
+    var navParent = null;
+    var homeGroup = groups.find(function(g){
+      return String(g.getAttribute("data-tabs") || "").indexOf("dashboard") >= 0;
+    });
+
+    if (homeGroup) navParent = homeGroup.parentNode;
+
+    if (!comms && navParent) {
+      comms = document.createElement("div");
+      comms.className = "nav-group";
+      comms.setAttribute("data-tabs", "communications mobilesync sms email");
+      comms.innerHTML =
+        '<button class="tab-btn">📲 Comms <span class="nav-caret">▾</span></button>' +
+        '<div class="nav-menu"></div>';
+
+      var moreGroup = groups.find(function(g){
+        return String(g.getAttribute("data-tabs") || "").indexOf("display") >= 0;
+      });
+
+      if (moreGroup) navParent.insertBefore(comms, moreGroup);
+      else navParent.appendChild(comms);
+    }
+
+    if (!comms) return false;
+
+    comms.setAttribute("data-tabs", "communications mobilesync sms email");
+
+    var btn = firstDirectButton(comms);
+    if (!btn) {
+      btn = document.createElement("button");
+      comms.insertBefore(btn, comms.firstChild);
+    }
+
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+
+    var menu = comms.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      comms.appendChild(menu);
+    }
+
+    menu.innerHTML =
+      '<button class="tab-btn" onclick="showTab(\'communications\', event)">Communications Hub</button>' +
+      '<button class="tab-btn" onclick="showTab(\'mobilesync\', event)">Mobile Sync</button>' +
+      '<button class="tab-btn" onclick="showTab(\'sms\', event)">SMS</button>' +
+      '<button class="tab-btn" onclick="showTab(\'email\', event)">Email</button>';
+
+    return true;
+  }
+
+  function removeCommsDupes(){
+    document.querySelectorAll(".nav-group").forEach(function(group){
+      var tabs = String(group.getAttribute("data-tabs") || "");
+      var isCommsGroup = tabs.indexOf("communications") >= 0;
+
+      if (tabs === "mobilesync sms email") {
+        group.style.display = "none";
+        group.setAttribute("data-pb-flow-nav-hidden", "extra-comms-group");
+        return;
+      }
+
+      if (!isCommsGroup) {
+        Array.from(group.querySelectorAll(".nav-menu .tab-btn")).forEach(function(btn){
+          var tab = tabFromOnclick(btn);
+          if (tab === "mobilesync" || tab === "sms" || tab === "email" || tab === "communications") {
+            btn.style.display = "none";
+            btn.setAttribute("data-pb-flow-nav-hidden", "duplicate-comms-link");
+          }
+        });
+      }
+    });
+
+    document.querySelectorAll(".user-dropdown-item").forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tab === "mobilesync" || tab === "sms" || tab === "email" || tab === "communications") {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-flow-nav-hidden", "duplicate-comms-user-menu");
+      }
+    });
+  }
+
+  function setGroupOrder(){
+    document.querySelectorAll(".nav-group").forEach(function(group){
+      var tabs = String(group.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("dashboard") >= 0) group.style.order = "10";
+      else if (tabs.indexOf("players") >= 0) group.style.order = "20";
+      else if (tabs.indexOf("schedule") >= 0) group.style.order = "30";
+      else if (tabs.indexOf("communications") >= 0) group.style.order = "40";
+      else if (tabs.indexOf("standings") >= 0 || tabs.indexOf("report") >= 0 || tabs.indexOf("playerstats") >= 0) group.style.order = "50";
+      else if (tabs.indexOf("display") >= 0 || tabs.indexOf("fairness") >= 0 || tabs.indexOf("admin") >= 0 || tabs.indexOf("history") >= 0) group.style.order = "60";
+      else group.style.order = "70";
+    });
+
+    var userMenu = document.querySelector(".user-menu, .user-menu-wrap, .user-dropdown-wrap");
+    if (userMenu) userMenu.style.order = "80";
+  }
+
+  function relabelTopNav(){
+    document.querySelectorAll(".nav-group").forEach(function(group){
+      var tabs = String(group.getAttribute("data-tabs") || "");
+      var btn = firstDirectButton(group);
+      if (!btn) return;
+
+      if (tabs.indexOf("dashboard") >= 0) {
+        btn.innerHTML = "🏠 Home";
+      } else if (tabs.indexOf("players") >= 0) {
+        btn.innerHTML = '👥 Players <span class="nav-caret">▾</span>';
+      } else if (tabs.indexOf("schedule") >= 0) {
+        btn.innerHTML = "📅 Schedule";
+      } else if (tabs.indexOf("communications") >= 0) {
+        btn.className = "tab-btn";
+        btn.removeAttribute("onclick");
+        btn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+      } else if (tabs.indexOf("standings") >= 0 || tabs.indexOf("report") >= 0 || tabs.indexOf("playerstats") >= 0) {
+        if (group.querySelector(".nav-menu")) {
+          btn.innerHTML = '📊 Reporting <span class="nav-caret">▾</span>';
+        } else {
+          btn.innerHTML = "📊 Reporting";
+        }
+      } else if (tabs.indexOf("display") >= 0) {
+        btn.innerHTML = '⋯ More <span class="nav-caret">▾</span>';
+      }
+    });
+  }
+
+  function ensureDashboardFlow(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return false;
+
+    var existing = byId("pb-session-flow-v1");
+    if (existing) return true;
+
+    var kpis = sec.querySelector(".dashboard-kpis");
+    if (!kpis) return false;
+
+    var flow = document.createElement("div");
+    flow.id = "pb-session-flow-v1";
+    flow.className = "pb-session-flow-v1";
+    flow.innerHTML =
+      '<button type="button" class="pb-session-flow-step-v1" data-tab="players">' +
+        '<div class="pb-session-flow-num-v1">Step 1</div>' +
+        '<div class="pb-session-flow-title-v1">Import Players</div>' +
+        '<div class="pb-session-flow-note-v1">Add, import, check in</div>' +
+      '</button>' +
+      '<button type="button" class="pb-session-flow-step-v1" data-tab="schedule">' +
+        '<div class="pb-session-flow-num-v1">Step 2</div>' +
+        '<div class="pb-session-flow-title-v1">Create Schedule</div>' +
+        '<div class="pb-session-flow-note-v1">Build rounds and courts</div>' +
+      '</button>' +
+      '<button type="button" class="pb-session-flow-step-v1" data-tab="communications">' +
+        '<div class="pb-session-flow-num-v1">Step 3</div>' +
+        '<div class="pb-session-flow-title-v1">Manage Comms</div>' +
+        '<div class="pb-session-flow-note-v1">Mobile, SMS, email</div>' +
+      '</button>' +
+      '<button type="button" class="pb-session-flow-step-v1" data-tab="standings">' +
+        '<div class="pb-session-flow-num-v1">Step 4</div>' +
+        '<div class="pb-session-flow-title-v1">Reporting</div>' +
+        '<div class="pb-session-flow-note-v1">Standings and reports</div>' +
+      '</button>';
+
+    kpis.insertAdjacentElement("afterend", flow);
+
+    Array.from(flow.querySelectorAll("[data-tab]")).forEach(function(btn){
+      btn.addEventListener("click", function(){
+        safeShow(btn.getAttribute("data-tab"));
+      });
+    });
+
+    return true;
+  }
+
+  function simplifyDashboard(){
+    var sec = byId("sec-dashboard");
+    if (!sec) return;
+
+    sec.querySelectorAll("#pb-dashboard-clean-command-center-v2, #pb-dashboard-command-center-v1, .pb-dash-v2, .pb-dashboard-command-center, .quick-action-grid, .quick-action").forEach(function(el){
+      if (el.id !== "pb-session-flow-v1") {
+        el.style.display = "none";
+        el.setAttribute("data-pb-flow-dashboard-hidden", "1");
+      }
+    });
+  }
+
+  function fixDropdownClicks(){
+    if (document.__pbFlowNavDropdownFixV1) return;
+    document.__pbFlowNavDropdownFixV1 = true;
+
+    document.addEventListener("click", function(e){
+      var btn = e.target && e.target.closest ? e.target.closest(".nav-group > .tab-btn") : null;
+      if (!btn) return;
+
+      var group = btn.closest(".nav-group");
+      if (!group || !group.querySelector(".nav-menu")) return;
+
+      if (btn.getAttribute("onclick")) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      document.querySelectorAll(".nav-group.open").forEach(function(g){
+        if (g !== group) g.classList.remove("open");
+      });
+
+      group.classList.toggle("open");
+    }, true);
+  }
+
+  function apply(){
+    ensureCommsNav();
+    removeCommsDupes();
+    setGroupOrder();
+    relabelTopNav();
+    ensureDashboardFlow();
+    simplifyDashboard();
+    fixDropdownClicks();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbFlowNavDashboardCleanV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbFlowNavDashboardCleanV1 = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbFlowNavDashboardCleanV1) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbFlowNavDashboardCleanV1 = true;
+  }
+
+  window.pbFlowNavStatusV1 = function(){
+    apply();
+
+    var commsGroup = document.querySelector('.nav-group[data-tabs~="communications"]');
+    var commsButton = commsGroup ? firstDirectButton(commsGroup) : null;
+
+    return {
+      installed: true,
+      dashboardFlowFound: !!byId("pb-session-flow-v1"),
+      commsGroupFound: !!commsGroup,
+      commsButtonClass: commsButton ? commsButton.className : null,
+      commsButtonText: commsButton ? commsButton.textContent.trim() : null,
+      hiddenDuplicates: document.querySelectorAll("[data-pb-flow-nav-hidden], [data-pb-flow-dashboard-hidden]").length,
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(function(g){
+        var b = firstDirectButton(g);
+        return {
+          text: b ? b.textContent.trim().replace(/\s+/g, " ") : "",
+          tabs: g.getAttribute("data-tabs"),
+          order: g.style.order || ""
+        };
+      })
+    };
+  };
+})();
+
+
+
+/* PB_DEDUPE_PLAYERS_NAV_V1 */
+(function(){
+  if (window.__pbDedupePlayersNavV1) return;
+  window.__pbDedupePlayersNavV1 = true;
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function cleanText(s){
+    return String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function isPlayersGroup(group){
+    var tabs = String(group.getAttribute("data-tabs") || "").toLowerCase();
+    var btn = directButton(group);
+    var label = cleanText(btn ? btn.textContent : "");
+
+    return tabs.split(/\s+/).indexOf("players") >= 0 ||
+      tabFromOnclick(btn) === "players" ||
+      label === "players" ||
+      label.indexOf("players") >= 0;
+  }
+
+  function normalizePlayersGroup(group){
+    var btn = directButton(group);
+    if (!btn) {
+      btn = document.createElement("button");
+      group.insertBefore(btn, group.firstChild);
+    }
+
+    btn.className = "tab-btn";
+
+    if (group.querySelector(".nav-menu")) {
+      btn.removeAttribute("onclick");
+      btn.innerHTML = '👥 Players <span class="nav-caret">▾</span>';
+    } else {
+      btn.setAttribute("onclick", "showTab('players', event)");
+      btn.innerHTML = "👥 Players";
+    }
+
+    var tabs = String(group.getAttribute("data-tabs") || "");
+    if (tabs.split(/\s+/).indexOf("players") < 0) {
+      group.setAttribute("data-tabs", (tabs + " players").trim());
+    }
+  }
+
+  function dedupePlayers(){
+    var groups = Array.from(document.querySelectorAll(".nav-group"));
+    var playerGroups = groups.filter(isPlayersGroup);
+
+    if (!playerGroups.length) return false;
+
+    /*
+      Keep the best Players group:
+      1. prefer one with data-tabs containing players
+      2. prefer one with a dropdown/menu
+      3. otherwise keep the first one
+    */
+    playerGroups.sort(function(a,b){
+      var at = String(a.getAttribute("data-tabs") || "").indexOf("players") >= 0 ? 1 : 0;
+      var bt = String(b.getAttribute("data-tabs") || "").indexOf("players") >= 0 ? 1 : 0;
+      if (bt !== at) return bt - at;
+
+      var am = a.querySelector(".nav-menu") ? 1 : 0;
+      var bm = b.querySelector(".nav-menu") ? 1 : 0;
+      return bm - am;
+    });
+
+    var keep = playerGroups[0];
+    normalizePlayersGroup(keep);
+    keep.removeAttribute("data-pb-hidden-duplicate-players");
+    keep.style.display = "";
+
+    playerGroups.slice(1).forEach(function(group){
+      group.setAttribute("data-pb-hidden-duplicate-players", "1");
+      group.style.display = "none";
+    });
+
+    return true;
+  }
+
+  function keepCommsStyled(){
+    var comms = document.querySelector('.nav-group[data-tabs~="communications"]');
+    if (!comms) return;
+
+    var btn = directButton(comms);
+    if (!btn) return;
+
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+  }
+
+  function apply(){
+    dedupePlayers();
+    keepCommsStyled();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbDedupePlayersNavV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbDedupePlayersNavV1 = true;
+  }
+
+  window.pbPlayersNavDedupeStatusV1 = function(){
+    apply();
+
+    var groups = Array.from(document.querySelectorAll(".nav-group")).map(function(g){
+      var btn = directButton(g);
+      return {
+        text: btn ? btn.textContent.trim().replace(/\s+/g, " ") : "",
+        tabs: g.getAttribute("data-tabs"),
+        hiddenDuplicatePlayers: g.getAttribute("data-pb-hidden-duplicate-players") === "1",
+        visible: g.style.display !== "none"
+      };
+    });
+
+    return {
+      installed: true,
+      visiblePlayersGroups: groups.filter(function(g){
+        return g.visible && String(g.text || "").toLowerCase().indexOf("players") >= 0;
+      }),
+      hiddenDuplicatePlayersGroups: groups.filter(function(g){
+        return g.hiddenDuplicatePlayers;
+      }),
+      allNavGroups: groups
+    };
+  };
+})();
+
+
+
+/* PB_RESTORE_MORE_ADVANCED_MENU_V1 */
+(function(){
+  if (window.__pbRestoreMoreAdvancedMenuV1) return;
+  window.__pbRestoreMoreAdvancedMenuV1 = true;
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function setButton(group, html){
+    var btn = directButton(group);
+    if (!btn) {
+      btn = document.createElement("button");
+      group.insertBefore(btn, group.firstChild);
+    }
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = html;
+    return btn;
+  }
+
+  function ensureMenu(group){
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+    }
+    return menu;
+  }
+
+  function makeBtn(tab, label){
+    var b = document.createElement("button");
+    b.className = "tab-btn";
+    b.setAttribute("onclick", "showTab('" + tab + "', event)");
+    b.textContent = label;
+    return b;
+  }
+
+  function removeTabButtonsOutside(tabList, allowedGroup){
+    document.querySelectorAll(".nav-group .nav-menu .tab-btn, .user-dropdown-item").forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tabList.indexOf(tab) < 0) return;
+
+      var group = btn.closest(".nav-group");
+      if (group === allowedGroup) {
+        btn.style.display = "";
+        btn.removeAttribute("data-pb-more-restore-hidden");
+        return;
+      }
+
+      btn.style.display = "none";
+      btn.setAttribute("data-pb-more-restore-hidden", "duplicate-" + tab);
+    });
+  }
+
+  function ensureComms(){
+    var groups = Array.from(document.querySelectorAll(".nav-group"));
+    var comms = groups.find(function(g){
+      return String(g.getAttribute("data-tabs") || "").indexOf("communications") >= 0;
+    });
+
+    if (!comms) {
+      var more = groups.find(function(g){
+        return String(g.getAttribute("data-tabs") || "").indexOf("display") >= 0;
+      });
+
+      if (!more || !more.parentNode) return null;
+
+      comms = document.createElement("div");
+      comms.className = "nav-group";
+      comms.setAttribute("data-tabs", "communications mobilesync sms email");
+      more.parentNode.insertBefore(comms, more);
+    }
+
+    comms.setAttribute("data-tabs", "communications mobilesync sms email");
+    setButton(comms, '📲 Comms <span class="nav-caret">▾</span>');
+
+    var menu = ensureMenu(comms);
+    menu.innerHTML = "";
+    [
+      ["communications", "Communications Hub"],
+      ["mobilesync", "Mobile Sync"],
+      ["sms", "SMS"],
+      ["email", "Email"]
+    ].forEach(function(x){
+      menu.appendChild(makeBtn(x[0], x[1]));
+    });
+
+    document.querySelectorAll('.nav-group[data-tabs="mobilesync sms email"]').forEach(function(g){
+      if (g !== comms) {
+        g.style.display = "none";
+        g.setAttribute("data-pb-hidden-extra-comms", "1");
+      }
+    });
+
+    removeTabButtonsOutside(["communications", "mobilesync", "sms", "email"], comms);
+
+    return comms;
+  }
+
+  function ensureMore(){
+    var groups = Array.from(document.querySelectorAll(".nav-group"));
+    var more = groups.find(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+      return tabs.indexOf("display") >= 0 || tabs.indexOf("fairness") >= 0 || tabs.indexOf("admin") >= 0;
+    });
+
+    if (!more) return null;
+
+    var moreTabs = [
+      "display",
+      "public",
+      "checkin",
+      "selfcheckin",
+      "playerportaltools",
+      "playerportal",
+      "fairness",
+      "history",
+      "admin",
+      "report",
+      "playerstats",
+      "season",
+      "playoffs"
+    ];
+
+    more.setAttribute("data-tabs", moreTabs.join(" "));
+    setButton(more, '⋯ More <span class="nav-caret">▾</span>');
+
+    var menu = ensureMenu(more);
+    menu.innerHTML = "";
+
+    [
+      ["display", "Public Display"],
+      ["public", "Public View"],
+      ["checkin", "Check-in"],
+      ["selfcheckin", "Self Check-in"],
+      ["playerportal", "Player Portal"],
+      ["playerportaltools", "Player Portal Tools"],
+      ["fairness", "Fairness"],
+      ["playoffs", "Playoffs"],
+      ["season", "Season Board"],
+      ["history", "History"],
+      ["report", "Reports"],
+      ["playerstats", "Player Stats"],
+      ["admin", "Admin"]
+    ].forEach(function(x){
+      menu.appendChild(makeBtn(x[0], x[1]));
+    });
+
+    removeTabButtonsOutside(moreTabs, more);
+
+    return more;
+  }
+
+  function orderTopNav(){
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("dashboard") >= 0) g.style.order = "10";
+      else if (tabs.indexOf("players") >= 0) g.style.order = "20";
+      else if (tabs.indexOf("schedule") >= 0) g.style.order = "30";
+      else if (tabs.indexOf("communications") >= 0) g.style.order = "40";
+      else if (tabs.indexOf("standings") >= 0) g.style.order = "50";
+      else if (tabs.indexOf("display") >= 0) g.style.order = "60";
+      else g.style.order = "70";
+    });
+  }
+
+  function normalizeLabels(){
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+      var btn = directButton(g);
+      if (!btn) return;
+
+      if (tabs.indexOf("dashboard") >= 0) btn.innerHTML = "🏠 Home";
+      else if (tabs.indexOf("players") >= 0) btn.innerHTML = '👥 Players <span class="nav-caret">▾</span>';
+      else if (tabs.indexOf("schedule") >= 0) btn.innerHTML = "📅 Schedule";
+      else if (tabs.indexOf("communications") >= 0) {
+        btn.className = "tab-btn";
+        btn.removeAttribute("onclick");
+        btn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+      }
+      else if (tabs.indexOf("standings") >= 0) btn.innerHTML = '📊 Reporting <span class="nav-caret">▾</span>';
+      else if (tabs.indexOf("display") >= 0) btn.innerHTML = '⋯ More <span class="nav-caret">▾</span>';
+    });
+  }
+
+  function fixDropdownClicks(){
+    if (document.__pbRestoreMoreAdvancedMenuDropdownFixV1) return;
+    document.__pbRestoreMoreAdvancedMenuDropdownFixV1 = true;
+
+    document.addEventListener("click", function(e){
+      var btn = e.target && e.target.closest ? e.target.closest(".nav-group > .tab-btn") : null;
+      if (!btn) return;
+
+      var group = btn.closest(".nav-group");
+      if (!group || !group.querySelector(".nav-menu")) return;
+
+      if (btn.getAttribute("onclick")) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      document.querySelectorAll(".nav-group.open").forEach(function(g){
+        if (g !== group) g.classList.remove("open");
+      });
+
+      group.classList.toggle("open");
+    }, true);
+  }
+
+  function simplifyDashboard(){
+    var dash = document.getElementById("sec-dashboard");
+    if (!dash) return;
+
+    dash.querySelectorAll("#pb-dashboard-clean-command-center-v2, #pb-dashboard-command-center-v1, .pb-dash-v2, .pb-dashboard-command-center, .quick-action-grid, .quick-action").forEach(function(el){
+      el.style.display = "none";
+      el.setAttribute("data-pb-dashboard-simplified", "1");
+    });
+  }
+
+  function apply(){
+    ensureComms();
+    ensureMore();
+    orderTopNav();
+    normalizeLabels();
+    fixDropdownClicks();
+    simplifyDashboard();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 250);
+  setTimeout(apply, 1000);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbRestoreMoreAdvancedMenuV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbRestoreMoreAdvancedMenuV1 = true;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbRestoreMoreAdvancedMenuV1) {
+    window.renderDashboard = function(){
+      var result = oldRenderDashboard.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.renderDashboard.__pbRestoreMoreAdvancedMenuV1 = true;
+  }
+
+  window.pbMoreMenuRestoreStatusV1 = function(){
+    apply();
+
+    function groupSummary(g){
+      var btn = directButton(g);
+      return {
+        button: btn ? btn.textContent.trim().replace(/\s+/g, " ") : "",
+        tabs: g.getAttribute("data-tabs"),
+        hidden: g.style.display === "none",
+        order: g.style.order,
+        items: Array.from(g.querySelectorAll(".nav-menu .tab-btn")).filter(function(b){
+          return b.style.display !== "none";
+        }).map(function(b){
+          return b.textContent.trim();
+        })
+      };
+    }
+
+    return {
+      installed: true,
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(groupSummary),
+      more: groupSummary(document.querySelector('.nav-group[data-tabs~="display"]')),
+      comms: groupSummary(document.querySelector('.nav-group[data-tabs~="communications"]')),
+      hiddenDuplicates: document.querySelectorAll("[data-pb-more-restore-hidden], [data-pb-hidden-extra-comms]").length
+    };
+  };
+})();
+
+
+
+/* PB_FORCE_MORE_MENU_VISIBLE_V2 */
+(function(){
+  if (window.__pbForceMoreMenuVisibleV2) return;
+  window.__pbForceMoreMenuVisibleV2 = true;
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function makeBtn(tab, label){
+    var b = document.createElement("button");
+    b.className = "tab-btn";
+    b.setAttribute("onclick", "showTab('" + tab + "', event)");
+    b.textContent = label;
+    return b;
+  }
+
+  function ensureMenu(group){
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+    }
+    return menu;
+  }
+
+  function findMoreGroup(){
+    return document.querySelector('.nav-group[data-tabs~="display"]') ||
+      Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+        var tabs = String(g.getAttribute("data-tabs") || "");
+        return tabs.indexOf("fairness") >= 0 ||
+          tabs.indexOf("admin") >= 0 ||
+          tabs.indexOf("playerportal") >= 0 ||
+          tabs.indexOf("history") >= 0;
+      });
+  }
+
+  function restoreMore(){
+    var more = findMoreGroup();
+
+    if (!more) return false;
+
+    var tabs = [
+      "display",
+      "public",
+      "checkin",
+      "selfcheckin",
+      "playerportaltools",
+      "playerportal",
+      "fairness",
+      "history",
+      "admin",
+      "report",
+      "playerstats",
+      "season",
+      "playoffs"
+    ];
+
+    more.classList.add("nav-group");
+    more.setAttribute("data-tabs", tabs.join(" "));
+    more.removeAttribute("data-pb-hidden-duplicate-players");
+    more.removeAttribute("data-pb-flow-nav-hidden");
+    more.removeAttribute("data-pb-hidden-extra-comms");
+    more.style.display = "";
+    more.style.order = "60";
+
+    var btn = directButton(more);
+    if (!btn) {
+      btn = document.createElement("button");
+      more.insertBefore(btn, more.firstChild);
+    }
+
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = '⋯ More <span class="nav-caret">▾</span>';
+
+    var menu = ensureMenu(more);
+    menu.innerHTML = "";
+
+    [
+      ["display", "Public Display"],
+      ["public", "Public View"],
+      ["checkin", "Check-in"],
+      ["selfcheckin", "Self Check-in"],
+      ["playerportal", "Player Portal"],
+      ["playerportaltools", "Player Portal Tools"],
+      ["fairness", "Fairness"],
+      ["playoffs", "Playoffs"],
+      ["season", "Season Board"],
+      ["history", "History"],
+      ["report", "Reports"],
+      ["playerstats", "Player Stats"],
+      ["admin", "Admin"]
+    ].forEach(function(x){
+      menu.appendChild(makeBtn(x[0], x[1]));
+    });
+
+    return true;
+  }
+
+  function restoreComms(){
+    var comms = document.querySelector('.nav-group[data-tabs~="communications"]');
+    if (!comms) return false;
+
+    comms.style.display = "";
+    comms.style.order = "40";
+
+    var btn = directButton(comms);
+    if (btn) {
+      btn.className = "tab-btn";
+      btn.removeAttribute("onclick");
+      btn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+    }
+
+    return true;
+  }
+
+  function applyOrder(){
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("dashboard") >= 0) g.style.order = "10";
+      else if (tabs.indexOf("players") >= 0 && tabs.indexOf("playerportal") < 0) g.style.order = "20";
+      else if (tabs.indexOf("schedule") >= 0) g.style.order = "30";
+      else if (tabs.indexOf("communications") >= 0) g.style.order = "40";
+      else if (tabs.indexOf("standings") >= 0) g.style.order = "50";
+      else if (tabs.indexOf("display") >= 0) g.style.order = "60";
+    });
+  }
+
+  function fixPlayersDedupeMistake(){
+    var more = findMoreGroup();
+    if (!more) return;
+
+    more.removeAttribute("data-pb-hidden-duplicate-players");
+    more.style.display = "";
+  }
+
+  function apply(){
+    fixPlayersDedupeMistake();
+    restoreMore();
+    restoreComms();
+    applyOrder();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 100);
+  setTimeout(apply, 500);
+  setTimeout(apply, 1200);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbForceMoreMenuVisibleV2) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbForceMoreMenuVisibleV2 = true;
+  }
+
+  window.pbForceMoreMenuStatusV2 = function(){
+    apply();
+
+    function summary(g){
+      if (!g) return null;
+      var btn = directButton(g);
+      return {
+        button: btn ? btn.textContent.trim().replace(/\s+/g, " ") : "",
+        tabs: g.getAttribute("data-tabs"),
+        hidden: g.style.display === "none",
+        order: g.style.order,
+        duplicatePlayersFlag: g.getAttribute("data-pb-hidden-duplicate-players"),
+        items: Array.from(g.querySelectorAll(".nav-menu .tab-btn")).map(function(b){
+          return b.textContent.trim();
+        })
+      };
+    }
+
+    return {
+      installed: true,
+      more: summary(findMoreGroup()),
+      comms: summary(document.querySelector('.nav-group[data-tabs~="communications"]')),
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(summary)
+    };
+  };
+})();
+
+
+
+/* PB_SIMPLIFY_MORE_AND_REPORTING_MENU_V3 */
+(function(){
+  if (window.__pbSimplifyMoreAndReportingMenuV3) return;
+  window.__pbSimplifyMoreAndReportingMenuV3 = true;
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function setButton(group, html){
+    var btn = directButton(group);
+    if (!btn) {
+      btn = document.createElement("button");
+      group.insertBefore(btn, group.firstChild);
+    }
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = html;
+    return btn;
+  }
+
+  function ensureMenu(group){
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+    }
+    return menu;
+  }
+
+  function makeBtn(tab, label){
+    var b = document.createElement("button");
+    b.className = "tab-btn";
+    b.setAttribute("onclick", "showTab('" + tab + "', event)");
+    b.textContent = label;
+    return b;
+  }
+
+  function note(text){
+    var d = document.createElement("div");
+    d.className = "pb-nav-menu-note-v3";
+    d.textContent = text;
+    return d;
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function findGroupByTabs(required){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+      return required.some(function(t){ return tabs.split(/\s+/).indexOf(t) >= 0; });
+    });
+  }
+
+  function ensureGroup(anchorBefore, tabs, labelHtml){
+    var group = findGroupByTabs(tabs.split(/\s+/));
+
+    if (!group) {
+      group = document.createElement("div");
+      group.className = "nav-group";
+      group.setAttribute("data-tabs", tabs);
+      group.innerHTML = '<button class="tab-btn"></button><div class="nav-menu"></div>';
+
+      var anchor = anchorBefore ? findGroupByTabs(anchorBefore.split(/\s+/)) : null;
+      var parent = anchor ? anchor.parentNode : document.querySelector(".nav-groups, .tabs, nav") || document.querySelector(".nav-group")?.parentNode;
+
+      if (parent && anchor) parent.insertBefore(group, anchor);
+      else if (parent) parent.appendChild(group);
+    }
+
+    group.classList.add("nav-group");
+    group.setAttribute("data-tabs", tabs);
+    group.style.display = "";
+    setButton(group, labelHtml);
+    ensureMenu(group);
+
+    return group;
+  }
+
+  function setMenu(group, sections){
+    var menu = ensureMenu(group);
+    menu.innerHTML = "";
+
+    sections.forEach(function(section){
+      if (section.title) menu.appendChild(note(section.title));
+
+      section.items.forEach(function(item){
+        menu.appendChild(makeBtn(item[0], item[1]));
+      });
+    });
+  }
+
+  function hideTabsOutside(tabList, allowedGroup){
+    document.querySelectorAll(".nav-group .nav-menu .tab-btn, .user-dropdown-item").forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tabList.indexOf(tab) < 0) return;
+
+      var group = btn.closest(".nav-group");
+
+      if (group === allowedGroup) {
+        btn.style.display = "";
+        btn.removeAttribute("data-pb-simplify-more-hidden");
+      } else {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-simplify-more-hidden", "duplicate-" + tab);
+      }
+    });
+  }
+
+  function simplifyMore(){
+    var moreTabs = [
+      "display",
+      "checkin",
+      "selfcheckin",
+      "playerportal",
+      "playerportaltools",
+      "playerlookup",
+      "fairness",
+      "history",
+      "admin"
+    ];
+
+    var more = ensureGroup(
+      "",
+      "display checkin selfcheckin playerportal playerportaltools playerlookup fairness history admin",
+      '⋯ More <span class="nav-caret">▾</span>'
+    );
+
+    more.style.order = "60";
+
+    setMenu(more, [
+      {
+        title: "Session tools",
+        items: [
+          ["checkin", "Check-in"],
+          ["selfcheckin", "Self Check-in QR"],
+          ["display", "Public Display"]
+        ]
+      },
+      {
+        title: "Player tools",
+        items: [
+          ["playerportal", "Player Portal"],
+          ["playerportaltools", "Player Portal QR"],
+          ["playerlookup", "Player Lookup"]
+        ]
+      },
+      {
+        title: "Advanced",
+        items: [
+          ["fairness", "Fairness"],
+          ["history", "Tournament History"],
+          ["admin", "Admin"]
+        ]
+      }
+    ]);
+
+    hideTabsOutside(moreTabs, more);
+
+    return more;
+  }
+
+  function simplifyReporting(){
+    var reportTabs = [
+      "standings",
+      "report",
+      "playerstats",
+      "playoffs",
+      "season",
+      "endsession"
+    ];
+
+    var reporting = ensureGroup(
+      "display",
+      "standings report playerstats playoffs season endsession",
+      '📊 Reporting <span class="nav-caret">▾</span>'
+    );
+
+    reporting.style.order = "50";
+
+    setMenu(reporting, [
+      {
+        title: "Results",
+        items: [
+          ["standings", "Standings"],
+          ["report", "Tournament Report"],
+          ["playerstats", "Player Stats"]
+        ]
+      },
+      {
+        title: "Wrap-up",
+        items: [
+          ["playoffs", "Playoffs"],
+          ["season", "Season Board"],
+          ["endsession", "End Session Summary"]
+        ]
+      }
+    ]);
+
+    hideTabsOutside(reportTabs, reporting);
+
+    return reporting;
+  }
+
+  function keepCommsClean(){
+    var comms = ensureGroup(
+      "standings",
+      "communications mobilesync sms email",
+      '📲 Comms <span class="nav-caret">▾</span>'
+    );
+
+    comms.style.order = "40";
+
+    setMenu(comms, [
+      {
+        title: "Messaging",
+        items: [
+          ["communications", "Communications Hub"],
+          ["mobilesync", "Mobile Sync"],
+          ["sms", "SMS"],
+          ["email", "Email"]
+        ]
+      }
+    ]);
+
+    hideTabsOutside(["communications", "mobilesync", "sms", "email"], comms);
+
+    return comms;
+  }
+
+  function orderMainNav(){
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("dashboard") >= 0) g.style.order = "10";
+      else if (tabs.indexOf("players") >= 0 && tabs.indexOf("playerportal") < 0) g.style.order = "20";
+      else if (tabs.indexOf("schedule") >= 0) g.style.order = "30";
+      else if (tabs.indexOf("communications") >= 0) g.style.order = "40";
+      else if (tabs.indexOf("standings") >= 0) g.style.order = "50";
+      else if (tabs.indexOf("display") >= 0) g.style.order = "60";
+      else g.style.order = "70";
+    });
+
+    var menu = document.querySelector(".user-menu-wrap, .user-menu, .user-dropdown-wrap");
+    if (menu) menu.style.order = "80";
+  }
+
+  function fixDropdownClicks(){
+    if (document.__pbSimplifyMoreDropdownFixV3) return;
+    document.__pbSimplifyMoreDropdownFixV3 = true;
+
+    document.addEventListener("click", function(e){
+      var btn = e.target && e.target.closest ? e.target.closest(".nav-group > .tab-btn") : null;
+      if (!btn) return;
+
+      var group = btn.closest(".nav-group");
+      if (!group || !group.querySelector(".nav-menu")) return;
+
+      if (btn.getAttribute("onclick")) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      document.querySelectorAll(".nav-group.open").forEach(function(g){
+        if (g !== group) g.classList.remove("open");
+      });
+
+      group.classList.toggle("open");
+    }, true);
+  }
+
+  function apply(){
+    keepCommsClean();
+    simplifyReporting();
+    simplifyMore();
+    orderMainNav();
+    fixDropdownClicks();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 150);
+  setTimeout(apply, 600);
+  setTimeout(apply, 1400);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbSimplifyMoreAndReportingMenuV3) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbSimplifyMoreAndReportingMenuV3 = true;
+  }
+
+  window.pbSimplifyMoreMenuStatusV3 = function(){
+    apply();
+
+    function summary(g){
+      if (!g) return null;
+
+      var btn = directButton(g);
+
+      return {
+        button: btn ? btn.textContent.trim().replace(/\s+/g, " ") : "",
+        tabs: g.getAttribute("data-tabs"),
+        hidden: g.style.display === "none",
+        order: g.style.order,
+        items: Array.from(g.querySelectorAll(".nav-menu .tab-btn")).filter(function(b){
+          return b.style.display !== "none";
+        }).map(function(b){
+          return b.textContent.trim();
+        })
+      };
+    }
+
+    return {
+      installed: true,
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(summary),
+      comms: summary(findGroupByTabs(["communications"])),
+      reporting: summary(findGroupByTabs(["standings"])),
+      more: summary(findGroupByTabs(["display"])),
+      hiddenDuplicates: document.querySelectorAll("[data-pb-simplify-more-hidden]").length
+    };
+  };
+})();
+
+
+
+/* PB_REPORTING_AFTER_COMMS_V1 */
+(function(){
+  if (window.__pbReportingAfterCommsV1) return;
+  window.__pbReportingAfterCommsV1 = true;
+
+  function groupByTab(tab){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      return String(g.getAttribute("data-tabs") || "").split(/\s+/).indexOf(tab) >= 0;
+    });
+  }
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function apply(){
+    var home = groupByTab("dashboard");
+    var players = groupByTab("players");
+    var schedule = groupByTab("schedule");
+    var comms = groupByTab("communications");
+    var reporting = groupByTab("standings");
+    var more = groupByTab("display");
+
+    if (home) home.style.order = "10";
+    if (players) players.style.order = "20";
+    if (schedule) schedule.style.order = "30";
+    if (comms) comms.style.order = "40";
+    if (reporting) reporting.style.order = "50";
+    if (more) more.style.order = "60";
+
+    var commsBtn = directButton(comms);
+    if (commsBtn) {
+      commsBtn.className = "tab-btn";
+      commsBtn.removeAttribute("onclick");
+      commsBtn.innerHTML = '📲 Comms <span class="nav-caret">▾</span>';
+    }
+
+    var reportingBtn = directButton(reporting);
+    if (reportingBtn) {
+      reportingBtn.className = "tab-btn";
+      reportingBtn.removeAttribute("onclick");
+      reportingBtn.innerHTML = '📊 Reporting <span class="nav-caret">▾</span>';
+    }
+
+    /*
+      Some nav containers ignore flex order depending on CSS/wrapping.
+      This also physically places Reporting immediately after Comms.
+    */
+    if (comms && reporting && comms.parentNode === reporting.parentNode) {
+      if (comms.nextSibling !== reporting) {
+        comms.parentNode.insertBefore(reporting, comms.nextSibling);
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 150);
+  setTimeout(apply, 600);
+  setTimeout(apply, 1400);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbReportingAfterCommsV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbReportingAfterCommsV1 = true;
+  }
+
+  window.pbReportingAfterCommsStatusV1 = function(){
+    apply();
+
+    return {
+      installed: true,
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(function(g){
+        var b = directButton(g);
+        return {
+          button: b ? b.textContent.trim().replace(/\s+/g, " ") : "",
+          tabs: g.getAttribute("data-tabs"),
+          order: g.style.order
+        };
+      })
+    };
+  };
+})();
+
+
+
+/* PB_FIX_REPORTING_MENU_REAL_SECTIONS_V1 */
+(function(){
+  if (window.__pbFixReportingMenuRealSectionsV1) return;
+  window.__pbFixReportingMenuRealSectionsV1 = true;
+
+  function directButton(group){
+    if (!group) return null;
+    for (var i = 0; i < group.children.length; i++) {
+      var child = group.children[i];
+      if (child && child.tagName && child.tagName.toLowerCase() === "button") return child;
+    }
+    return null;
+  }
+
+  function hasSection(tab){
+    return !!document.getElementById("sec-" + tab);
+  }
+
+  function tabFromOnclick(el){
+    var raw = String(el && el.getAttribute && el.getAttribute("onclick") || "");
+    var m = raw.match(/showTab\(['"]([^'"]+)['"]/);
+    return m ? m[1] : "";
+  }
+
+  function findGroupByAnyTab(tabs){
+    return Array.from(document.querySelectorAll(".nav-group")).find(function(g){
+      var groupTabs = String(g.getAttribute("data-tabs") || "").split(/\s+/);
+      return tabs.some(function(t){ return groupTabs.indexOf(t) >= 0; });
+    });
+  }
+
+  function ensureGroup(tabs, labelHtml, insertAfterGroup){
+    var group = findGroupByAnyTab(tabs.split(/\s+/));
+
+    if (!group) {
+      group = document.createElement("div");
+      group.className = "nav-group";
+      group.setAttribute("data-tabs", tabs);
+
+      var btn = document.createElement("button");
+      btn.className = "tab-btn";
+      group.appendChild(btn);
+
+      var menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+
+      var parent = insertAfterGroup ? insertAfterGroup.parentNode : document.querySelector(".nav-group")?.parentNode;
+      if (parent && insertAfterGroup) parent.insertBefore(group, insertAfterGroup.nextSibling);
+      else if (parent) parent.appendChild(group);
+    }
+
+    group.classList.add("nav-group");
+    group.setAttribute("data-tabs", tabs);
+    group.style.display = "";
+
+    var btn = directButton(group);
+    if (!btn) {
+      btn = document.createElement("button");
+      group.insertBefore(btn, group.firstChild);
+    }
+
+    btn.className = "tab-btn";
+    btn.removeAttribute("onclick");
+    btn.innerHTML = labelHtml;
+
+    var menu = group.querySelector(".nav-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.className = "nav-menu";
+      group.appendChild(menu);
+    }
+
+    return group;
+  }
+
+  function makeBtn(tab, label){
+    var b = document.createElement("button");
+    b.className = "tab-btn";
+    b.setAttribute("onclick", "showTab('" + tab + "', event)");
+    b.textContent = label;
+    return b;
+  }
+
+  function setMenu(group, items){
+    var menu = group.querySelector(".nav-menu");
+    menu.innerHTML = "";
+
+    items.forEach(function(item){
+      menu.appendChild(makeBtn(item[0], item[1]));
+    });
+  }
+
+  function hideTabsOutside(tabs, allowedGroup){
+    document.querySelectorAll(".nav-group .nav-menu .tab-btn, .user-dropdown-item").forEach(function(btn){
+      var tab = tabFromOnclick(btn);
+      if (tabs.indexOf(tab) < 0) return;
+
+      var group = btn.closest(".nav-group");
+      if (group === allowedGroup) {
+        btn.style.display = "";
+        btn.removeAttribute("data-pb-reporting-real-hidden");
+      } else {
+        btn.style.display = "none";
+        btn.setAttribute("data-pb-reporting-real-hidden", "duplicate-" + tab);
+      }
+    });
+  }
+
+  function fixReporting(){
+    var comms = findGroupByAnyTab(["communications"]);
+    var reporting = ensureGroup(
+      "standings report playerstats playoffs season",
+      '📊 Reporting <span class="nav-caret">▾</span>',
+      comms
+    );
+
+    reporting.style.order = "50";
+
+    /*
+      Only include reporting screens that actually exist in the app.
+      This prevents broken menu options.
+    */
+    var candidates = [
+      ["standings", "Standings"],
+      ["report", "Reports"],
+      ["playerstats", "Player Stats"],
+      ["playoffs", "Playoffs"],
+      ["season", "Season Board"]
+    ];
+
+    var available = candidates.filter(function(item){
+      return hasSection(item[0]);
+    });
+
+    /*
+      Standings should always exist. If the section check fails because
+      the app renders it differently, keep it as the safe default.
+    */
+    if (!available.some(function(x){ return x[0] === "standings"; })) {
+      available.unshift(["standings", "Standings"]);
+    }
+
+    setMenu(reporting, available);
+    hideTabsOutside(["standings", "report", "playerstats", "playoffs", "season"], reporting);
+
+    return reporting;
+  }
+
+  function fixMore(){
+    var more = ensureGroup(
+      "display checkin selfcheckin playerportal playerportaltools playerlookup fairness history admin",
+      '⋯ More <span class="nav-caret">▾</span>',
+      findGroupByAnyTab(["standings"])
+    );
+
+    more.style.order = "60";
+
+    var candidates = [
+      ["checkin", "Check-in"],
+      ["selfcheckin", "Self Check-in QR"],
+      ["display", "Public Display"],
+      ["playerportal", "Player Portal"],
+      ["playerportaltools", "Player Portal QR"],
+      ["playerlookup", "Player Lookup"],
+      ["fairness", "Fairness"],
+      ["history", "Tournament History"],
+      ["admin", "Admin"]
+    ];
+
+    var available = candidates.filter(function(item){
+      return hasSection(item[0]);
+    });
+
+    setMenu(more, available);
+    hideTabsOutside(["display", "checkin", "selfcheckin", "playerportal", "playerportaltools", "playerlookup", "fairness", "history", "admin"], more);
+
+    return more;
+  }
+
+  function fixComms(){
+    var comms = ensureGroup(
+      "communications mobilesync sms email",
+      '📲 Comms <span class="nav-caret">▾</span>',
+      findGroupByAnyTab(["schedule"])
+    );
+
+    comms.style.order = "40";
+
+    var candidates = [
+      ["communications", "Communications Hub"],
+      ["mobilesync", "Mobile Sync"],
+      ["sms", "SMS"],
+      ["email", "Email"]
+    ];
+
+    var available = candidates.filter(function(item){
+      return hasSection(item[0]);
+    });
+
+    if (!available.length) available = candidates;
+
+    setMenu(comms, available);
+    hideTabsOutside(["communications", "mobilesync", "sms", "email"], comms);
+
+    return comms;
+  }
+
+  function orderTopNav(){
+    document.querySelectorAll(".nav-group").forEach(function(g){
+      var tabs = String(g.getAttribute("data-tabs") || "");
+
+      if (tabs.indexOf("dashboard") >= 0) g.style.order = "10";
+      else if (tabs.indexOf("players") >= 0 && tabs.indexOf("playerportal") < 0) g.style.order = "20";
+      else if (tabs.indexOf("schedule") >= 0) g.style.order = "30";
+      else if (tabs.indexOf("communications") >= 0) g.style.order = "40";
+      else if (tabs.indexOf("standings") >= 0) g.style.order = "50";
+      else if (tabs.indexOf("display") >= 0) g.style.order = "60";
+      else g.style.order = "70";
+    });
+  }
+
+  function physicallyOrder(){
+    var home = findGroupByAnyTab(["dashboard"]);
+    var players = findGroupByAnyTab(["players"]);
+    var schedule = findGroupByAnyTab(["schedule"]);
+    var comms = findGroupByAnyTab(["communications"]);
+    var reporting = findGroupByAnyTab(["standings"]);
+    var more = findGroupByAnyTab(["display"]);
+
+    var parent = home && home.parentNode;
+    if (!parent) return;
+
+    [home, players, schedule, comms, reporting, more].forEach(function(g){
+      if (g && g.parentNode === parent) parent.appendChild(g);
+    });
+  }
+
+  function fixDropdownClicks(){
+    if (document.__pbFixReportingDropdownClicksV1) return;
+    document.__pbFixReportingDropdownClicksV1 = true;
+
+    document.addEventListener("click", function(e){
+      var btn = e.target && e.target.closest ? e.target.closest(".nav-group > .tab-btn") : null;
+      if (!btn) return;
+
+      var group = btn.closest(".nav-group");
+      if (!group || !group.querySelector(".nav-menu")) return;
+
+      if (btn.getAttribute("onclick")) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      document.querySelectorAll(".nav-group.open").forEach(function(g){
+        if (g !== group) g.classList.remove("open");
+      });
+
+      group.classList.toggle("open");
+    }, true);
+  }
+
+  function apply(){
+    fixComms();
+    fixReporting();
+    fixMore();
+    orderTopNav();
+    physicallyOrder();
+    fixDropdownClicks();
+  }
+
+  document.addEventListener("DOMContentLoaded", apply);
+  setTimeout(apply, 150);
+  setTimeout(apply, 600);
+  setTimeout(apply, 1400);
+  setTimeout(apply, 2500);
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbFixReportingMenuRealSectionsV1) {
+    window.showTab = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(apply, 40);
+      return result;
+    };
+    window.showTab.__pbFixReportingMenuRealSectionsV1 = true;
+  }
+
+  window.pbReportingMenuRealStatusV1 = function(){
+    apply();
+
+    function summary(g){
+      if (!g) return null;
+      var btn = directButton(g);
+      return {
+        button: btn ? btn.textContent.trim().replace(/\s+/g, " ") : "",
+        tabs: g.getAttribute("data-tabs"),
+        hidden: g.style.display === "none",
+        order: g.style.order,
+        items: Array.from(g.querySelectorAll(".nav-menu .tab-btn")).filter(function(b){
+          return b.style.display !== "none";
+        }).map(function(b){
+          return {
+            text: b.textContent.trim(),
+            tab: tabFromOnclick(b),
+            sectionExists: hasSection(tabFromOnclick(b))
+          };
+        })
+      };
+    }
+
+    return {
+      installed: true,
+      topNav: Array.from(document.querySelectorAll(".nav-group")).filter(function(g){
+        return g.style.display !== "none";
+      }).map(summary),
+      comms: summary(findGroupByAnyTab(["communications"])),
+      reporting: summary(findGroupByAnyTab(["standings"])),
+      more: summary(findGroupByAnyTab(["display"])),
+      hiddenDuplicates: document.querySelectorAll("[data-pb-reporting-real-hidden]").length
+    };
+  };
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* PB_REPORT_SOURCE_DIAGNOSTIC_V7 */
+(function(){
+  if (window.__pbReportSourceDiagnosticV7) return;
+  window.__pbReportSourceDiagnosticV7 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function leak(v){
+    return /&/.test(clean(v)) ||
+      /·\s*DUPR/i.test(clean(v)) ||
+      /\bDUPR\s+\d/i.test(clean(v)) ||
+      /\bvs\b/i.test(clean(v));
+  }
+
+  function activeSection(){
+    var el = document.querySelector(".section.active");
+    return el ? el.id : "";
+  }
+
+  function visibleReportRows(){
+    var section = document.querySelector(".section.active") || document;
+    var table = section.querySelector("table");
+    if (!table) return [];
+
+    return Array.from(table.querySelectorAll("tr")).slice(0, 15).map(function(row){
+      return Array.from(row.children).map(function(cell){
+        return clean(cell.textContent);
+      });
+    });
+  }
+
+  window.pbReportSourceStatusV7 = function(){
+    var players = [];
+    try {
+      players = Array.isArray(state.players) ? state.players : [];
+    } catch(e) {}
+
+    var stateLeaks = players.map(function(p, idx){
+      return {
+        idx: idx,
+        name: p && p.name,
+        gender: p && p.gender,
+        dupr: p && p.dupr,
+        clubRating: p && p.clubRating
+      };
+    }).filter(function(x){
+      return leak(x.gender) || leak(x.dupr);
+    });
+
+    var rows = visibleReportRows();
+    var tableLeaks = rows.filter(function(row){
+      return row.some(leak);
+    });
+
+    return {
+      installed: true,
+      activeSection: activeSection(),
+      teamPatchFunction: typeof window.pbPatchScheduleTeamNamesNow,
+      teamPatchStatusFunction: typeof window.pbTeamNamesDuprRestoreStatusV1,
+      statePlayerLeaks: stateLeaks,
+      visibleRows: rows,
+      visibleTableLeakRows: tableLeaks
+    };
+  };
+})();
+
+
+
+
+
+
+
+
+/* PB_MATCH_TEAM_NAME_RESOLVER_V9 */
+(function(){
+  if (window.__pbMatchTeamNameResolverV9) return;
+  window.__pbMatchTeamNameResolverV9 = true;
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function esc(v){
+    return clean(v).replace(/[&<>"']/g, function(c){
+      return c === "&" ? "&amp;" :
+        c === "<" ? "&lt;" :
+        c === ">" ? "&gt;" :
+        c === '"' ? "&quot;" : "&#39;";
+    });
+  }
+
+  function players(){
+    try { return Array.isArray(state.players) ? state.players : []; }
+    catch(e) { return []; }
+  }
+
+  function playerDisplayName(p){
+    if (!p) return "";
+
+    return clean(
+      p.name ||
+      p.playerName ||
+      p.fullName ||
+      p.displayName ||
+      [p.firstName, p.lastName].filter(Boolean).join(" ")
+    );
+  }
+
+  function scheduleNumericTokens(){
+    var out = [];
+
+    try {
+      (state.schedule || []).forEach(function(round){
+        (round || []).forEach(function(match){
+          ["teamA", "teamB"].forEach(function(k){
+            var team = match && match[k];
+            if (!Array.isArray(team)) return;
+
+            team.forEach(function(x){
+              if (typeof x === "number" && Number.isInteger(x)) out.push(x);
+              else if (typeof x === "string" && /^\d+$/.test(x.trim())) out.push(Number(x.trim()));
+            });
+          });
+        });
+      });
+    } catch(e) {}
+
+    return out;
+  }
+
+  function detectBase(){
+    var list = players();
+    var nums = scheduleNumericTokens();
+
+    if (!nums.length || !list.length) return "index";
+
+    var min = Math.min.apply(null, nums);
+    var max = Math.max.apply(null, nums);
+
+    if (min === 0) return "index";
+
+    /*
+      If max equals player count and no zero exists, this is almost certainly
+      a 1-based player number display/storage.
+    */
+    if (min >= 1 && max === list.length) return "oneBased";
+
+    /*
+      If values are all valid IDs, use ID mode.
+    */
+    var allId = nums.every(function(n){
+      return list.some(function(p){ return p && String(p.id) === String(n); });
+    });
+
+    if (allId) return "id";
+
+    return "index";
+  }
+
+  function resolvePlayer(token){
+    var list = players();
+
+    if (!list.length || token == null) return null;
+
+    if (typeof token === "object") {
+      if (playerDisplayName(token)) return token;
+
+      if (token.id != null) {
+        var byObjId = list.find(function(p){ return p && String(p.id) === String(token.id); });
+        if (byObjId) return byObjId;
+      }
+
+      if (token.playerIdx != null) return resolvePlayer(token.playerIdx);
+      if (token.idx != null) return resolvePlayer(token.idx);
+      if (token.playerId != null) return resolvePlayer(token.playerId);
+
+      return null;
+    }
+
+    var raw = clean(token);
+
+    if (!raw) return null;
+
+    /*
+      Already a player name.
+    */
+    var byName = list.find(function(p){
+      return playerDisplayName(p).toLowerCase() === raw.toLowerCase();
+    });
+
+    if (byName) return byName;
+
+    var n = Number(raw);
+
+    if (!Number.isInteger(n)) return null;
+
+    var base = detectBase();
+
+    if (base === "oneBased" && n > 0 && list[n - 1]) return list[n - 1];
+
+    var byId = list.find(function(p){
+      return p && String(p.id) === String(n);
+    });
+
+    if (base === "id" && byId) return byId;
+
+    if (list[n]) return list[n];
+
+    if (n > 0 && list[n - 1]) return list[n - 1];
+
+    if (byId) return byId;
+
+    return null;
+  }
+
+  function teamName(team){
+    if (!Array.isArray(team)) {
+      var p = resolvePlayer(team);
+      return p ? esc(playerDisplayName(p)) : esc(team || "—");
+    }
+
+    var names = team.map(function(token){
+      var p = resolvePlayer(token);
+
+      if (!p) return esc(token);
+
+      var name = playerDisplayName(p) || String(token);
+
+      var suffix = "";
+      if (p.active === false) {
+        suffix = '<span style="font-size:0.6rem;color:var(--red);font-weight:700;margin-left:2px" title="This player has left">✕</span>';
+      }
+
+      return esc(name) + suffix;
+    }).filter(Boolean);
+
+    return names.length ? names.join(" & ") : "—";
+  }
+
+  /*
+    Replace the global schedule display helper.
+    renderSchedule() calls matchTeamName(), so this fixes Schedule at the source.
+  */
+  window.matchTeamName = function(playerIdxArr){
+    return teamName(playerIdxArr);
+  };
+
+  /*
+    If the global binding exists separately from window property, update it too.
+    This is safe in normal browser script scope.
+  */
+  try {
+    matchTeamName = window.matchTeamName;
+  } catch(e) {}
+
+  function rerenderSchedule(){
+    try {
+      if (typeof renderSchedule === "function") renderSchedule();
+    } catch(e) {}
+  }
+
+  window.pbMatchTeamNameResolverStatusV9 = function(){
+    var sample = [];
+
+    try {
+      (state.schedule || []).slice(0, 2).forEach(function(round){
+        (round || []).slice(0, 4).forEach(function(match){
+          if (!match) return;
+          sample.push({
+            round: match.round,
+            court: match.court,
+            rawA: match.teamA,
+            nameA: teamName(match.teamA).replace(/<[^>]+>/g, ""),
+            rawB: match.teamB,
+            nameB: teamName(match.teamB).replace(/<[^>]+>/g, "")
+          });
+        });
+      });
+    } catch(e) {}
+
+    return {
+      installed: true,
+      resolver: "matchTeamName",
+      detectedBase: detectBase(),
+      playerCount: players().length,
+      numericTokenSample: scheduleNumericTokens().slice(0, 20),
+      sample: sample
+    };
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(rerenderSchedule, 250);
+  });
+
+  setTimeout(rerenderSchedule, 500);
 })();
 
 </script>
