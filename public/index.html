@@ -3889,7 +3889,21 @@ body.pb-non-admin a[href^="/admin/"]{
     <!-- Setup -->
     <div class="card">
       <div class="card-title">🔄 Mobile Score Entry</div>
-      <p style="font-size:0.85rem;color:var(--txt2);margin-bottom:1rem;line-height:1.5">
+      
+      <!-- PB_MOBILE_SYNC_SETUP_GUIDE_V1 -->
+      <div style="margin:0.85rem 0 1rem;padding:0.9rem 1rem;border:1px solid rgba(198,255,0,0.32);background:rgba(198,255,0,0.07);border-radius:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--lime);letter-spacing:.4px;margin-bottom:.35rem">📱 Mobile Sync Setup Order</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.55rem;font-size:.82rem;color:var(--txt);line-height:1.4">
+          <div><strong style="color:var(--ball)">1. Worker URL</strong><br><span style="color:var(--txt2)">Use the mobile scorekeeper Worker URL.</span></div>
+          <div><strong style="color:var(--ball)">2. Tournament Code</strong><br><span style="color:var(--txt2)">Generate or enter the code players will type.</span></div>
+          <div><strong style="color:var(--ball)">3. Court PINs</strong><br><span style="color:var(--txt2)">Generate court PINs before players claim courts.</span></div>
+          <div><strong style="color:var(--ball)">4. Push Round</strong><br><span style="color:var(--txt2)">Send the current round to mobile scorekeepers.</span></div>
+          <div><strong style="color:var(--ball)">5. Players Claim</strong><br><span style="color:var(--txt2)">Each player enters the code + court PIN and takes scoring ownership.</span></div>
+        </div>
+        <div style="margin-top:.6rem;color:var(--txt3);font-size:.78rem">Tip: if scoring ownership does not appear, first confirm the tournament code and court PINs were generated for the current round.</div>
+      </div>
+
+<p style="font-size:0.85rem;color:var(--txt2);margin-bottom:1rem;line-height:1.5">
         Let scorekeepers enter scores from their own phones. Each scorekeeper claims a court,
         then submits scores that sync back here automatically — no more walking the modal around.
       </p>

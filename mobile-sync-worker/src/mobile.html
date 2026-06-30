@@ -316,7 +316,8 @@
       <span class="field-label">Court PIN <span style="text-transform:none;font-weight:400;color:var(--txt3)">(posted at your court)</span></span>
       <input type="text" id="pin-input" inputmode="numeric" placeholder="e.g. 4471" autocomplete="off">
     </div>
-    <button class="btn btn-primary btn-block" id="claim-continue">Start Scoring</button>
+    <!-- PB_MOBILE_SCOREKEEPER_OWNERSHIP_LABEL_V1 -->
+    <button class="btn btn-primary btn-block" id="claim-continue">Take ownership of scoring</button>
     <div class="swap-row"><button class="btn btn-secondary btn-block" id="change-code-btn">Use a different tournament code</button></div>
   </section>
 
@@ -815,7 +816,7 @@
     session.token = data.token;
     saveSession(session);
     startPolling();
-    toast('Court ' + selectedCourt + ' claimed!');
+    toast('Court ' + selectedCourt + ' scoring ownership claimed!');
   });
 
   document.getElementById('change-code-btn').addEventListener('click', () => {
