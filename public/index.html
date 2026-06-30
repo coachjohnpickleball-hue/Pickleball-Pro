@@ -2431,6 +2431,15 @@ html[data-pb-schedule-mode-is-dupr-v22="1"] #pb-fixed-partner-dupr-visible-setup
 }
 </style>
 
+
+<style id="pb-corrected-scores-panel-cleanup-style-v1">
+/* PB_CORRECTED_SCORES_PANEL_CLEANUP_V1 */
+
+[data-pb-corrected-score-duplicate-v1="true"] {
+  display: none !important;
+}
+</style>
+
 </head>
 <body>
 <script id="admin-hard-hide-early">
@@ -35440,6 +35449,89 @@ function exportEndSessionSummary(){
   setTimeout(restoreButton, 200);
   setTimeout(restoreButton, 700);
   setTimeout(restoreButton, 1500);
+})();
+
+
+/* PB_CORRECTED_SCORES_PANEL_CLEANUP_V1 */
+(function(){
+  function textOf(el) {
+    return String((el && el.textContent) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function findCorrectedScoresPanel() {
+    var nodes = document.querySelectorAll("section,div,aside");
+
+    var best = null;
+    var bestLen = 999999;
+
+    for (var i = 0; i < nodes.length; i++) {
+      var txt = textOf(nodes[i]);
+
+      if (
+        txt.indexOf("Corrected Scores:") >= 0 &&
+        txt.indexOf("These scores were changed") >= 0
+      ) {
+        if (txt.length < bestLen) {
+          best = nodes[i];
+          bestLen = txt.length;
+        }
+      }
+    }
+
+    return best;
+  }
+
+  function cleanCorrectedScoresPanel() {
+    var panel = findCorrectedScoresPanel();
+
+    if (!panel) return 0;
+
+    var hidden = 0;
+    var nodes = panel.querySelectorAll("*");
+
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var txt = textOf(el);
+
+      // Hide standalone repeated badges only.
+      if (txt === "✏️ Corrected") {
+        el.setAttribute("data-pb-corrected-score-duplicate-v1", "true");
+        hidden++;
+      }
+
+      // Clean duplicated label inside headings like:
+      // Round 9 · Court 2 · ✏️ Corrected
+      // Keep this one because it is useful.
+    }
+
+    return hidden;
+  }
+
+  window.pbCorrectedScoresPanelCleanupStatusV1 = function() {
+    var hiddenNow = cleanCorrectedScoresPanel();
+
+    return {
+      installed: true,
+      panelFound: !!findCorrectedScoresPanel(),
+      hiddenNow: hiddenNow,
+      hiddenTotal: document.querySelectorAll("[data-pb-corrected-score-duplicate-v1='true']").length,
+      note: "Only standalone duplicate Corrected labels are hidden."
+    };
+  };
+
+  var observer = new MutationObserver(function() {
+    clearTimeout(window.__pbCorrectedScoresPanelCleanupTimerV1);
+    window.__pbCorrectedScoresPanelCleanupTimerV1 = setTimeout(cleanCorrectedScoresPanel, 100);
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+
+  setTimeout(cleanCorrectedScoresPanel, 200);
+  setTimeout(cleanCorrectedScoresPanel, 700);
+  setTimeout(cleanCorrectedScoresPanel, 1500);
 })();
 
 </script>
