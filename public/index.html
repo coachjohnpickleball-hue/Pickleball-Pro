@@ -32769,6 +32769,400 @@ function exportEndSessionSummary(){
   }, 500);
 })();
 
+
+/* PB_MOBILE_SYNC_PUSHED_ROUND_STATUS_V2 */
+(function(){
+  function esc(v){
+    try {
+      if (typeof escHtml === "function") return escHtml(String(v == null ? "" : v));
+    } catch(e) {}
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function getCurrentRoundIndex(){
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var p = dashboardGetProgress();
+        if (p && typeof p.currentIdx === "number" && p.currentIdx >= 0) return p.currentIdx;
+      }
+    } catch(e) {}
+
+    try {
+      if (window.state && Array.isArray(state.schedule)) {
+        if (state.startedRounds && typeof state.startedRounds.forEach === "function") {
+          var latestStarted = -1;
+          state.startedRounds.forEach(function(idx){
+            idx = Number(idx);
+            if (Number.isFinite(idx) && idx > latestStarted) latestStarted = idx;
+          });
+          if (latestStarted >= 0) return latestStarted;
+        }
+
+        var firstOpen = state.schedule.findIndex(function(round){
+          return Array.isArray(round) && round.some(function(m){ return m && !m.complete; });
+        });
+
+        if (firstOpen >= 0) return firstOpen;
+        if (state.schedule.length) return state.schedule.length - 1;
+      }
+    } catch(e) {}
+
+    return -1;
+  }
+
+  function getLocalRound(){
+    var idx = getCurrentRoundIndex();
+
+    if (idx < 0 || !window.state || !Array.isArray(state.schedule) || !Array.isArray(state.schedule[idx])) {
+      return {
+        idx: -1,
+        roundNumber: null,
+        matches: [],
+        matchIds: [],
+        courtCount: 0
+      };
+    }
+
+    var matches = state.schedule[idx].filter(function(m){ return !!m; });
+    return {
+      idx: idx,
+      roundNumber: idx + 1,
+      matches: matches,
+      matchIds: matches.map(function(m){ return String(m.id); }).filter(Boolean).sort(),
+      courtCount: matches.length
+    };
+  }
+
+  function getConfigOk(){
+    try {
+      if (window.msState && msState.workerUrl && msState.code) return true;
+    } catch(e) {}
+
+    try {
+      var cfg = JSON.parse(localStorage.getItem("pb_mobile_sync_config") || "{}") || {};
+      return !!(cfg.workerUrl && cfg.code);
+    } catch(e) {}
+
+    return false;
+  }
+
+  function ensurePushRow(){
+    var panel = document.getElementById("pb-mobile-sync-status-panel-v1");
+    if (!panel) return null;
+
+    var row = document.getElementById("pb-mobile-sync-pushed-round-row-v2");
+    if (!row) {
+      row = document.createElement("div");
+      row.id = "pb-mobile-sync-pushed-round-row-v2";
+      row.style.cssText = "margin:.55rem 0 .7rem;padding:.7rem .75rem;border-radius:12px;border:1px solid rgba(249,168,37,.32);background:rgba(249,168,37,.08)";
+
+      var grid = panel.querySelector("div[style*='grid-template-columns']");
+      if (grid && grid.parentNode) {
+        grid.parentNode.insertBefore(row, grid);
+      } else {
+        panel.appendChild(row);
+      }
+    }
+
+    return row;
+  }
+
+  function renderRow(status){
+    var row = ensurePushRow();
+    if (!row) return false;
+
+    var ok = !!status.ok;
+    var icon = ok ? "✅" : "⚠️";
+    var border = ok ? "rgba(102,187,106,.35)" : "rgba(249,168,37,.4)";
+    var bg = ok ? "rgba(102,187,106,.09)" : "rgba(249,168,37,.09)";
+
+    row.style.border = "1px solid " + border;
+    row.style.background = bg;
+
+    row.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap">' +
+        '<div style="display:flex;gap:.55rem;align-items:flex-start">' +
+          '<span style="font-size:1.1rem">' + icon + '</span>' +
+          '<div>' +
+            '<div style="font-weight:900;color:var(--txt);font-size:.88rem">Round Pushed to Mobile</div>' +
+            '<div style="color:' + (ok ? "var(--lime)" : "var(--ball)") + ';font-weight:800;font-size:.82rem;margin-top:.1rem">' + esc(status.label) + '</div>' +
+            '<div style="color:var(--txt3);font-size:.76rem;line-height:1.35;margin-top:.18rem">' + esc(status.detail) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbMobileSyncCheckPushedRoundStatusV2()">Check Worker</button>' +
+      '</div>';
+
+    return true;
+  }
+
+  function compareMatchIds(localIds, remoteIds){
+    if (!localIds.length || !remoteIds.length) return null;
+    if (localIds.length !== remoteIds.length) return false;
+
+    for (var i = 0; i < localIds.length; i++) {
+      if (String(localIds[i]) !== String(remoteIds[i])) return false;
+    }
+
+    return true;
+  }
+
+  window.pbMobileSyncCheckPushedRoundStatusV2 = async function(){
+    var local = getLocalRound();
+
+    if (!getConfigOk() || typeof msApi !== "function") {
+      var needsConfig = {
+        ok: false,
+        label: "Not checked — Mobile Sync is not configured",
+        detail: "Set the Worker URL and Tournament Code first, then push the round."
+      };
+      renderRow(needsConfig);
+      return needsConfig;
+    }
+
+    if (!local.roundNumber || !local.courtCount) {
+      var noLocalRound = {
+        ok: false,
+        label: "No local round ready",
+        detail: "Generate/start a round in Rally before pushing to mobile scorekeepers."
+      };
+      renderRow(noLocalRound);
+      return noLocalRound;
+    }
+
+    renderRow({
+      ok: false,
+      label: "Checking mobile Worker…",
+      detail: "Comparing Rally Round " + local.roundNumber + " against the Worker state."
+    });
+
+    try {
+      var remote = await msApi("/state");
+      window.pbMobileSyncLastRemoteStateV2 = remote;
+
+      var courts = Array.isArray(remote && remote.courts) ? remote.courts : [];
+      var remoteRound = Number(remote && remote.round);
+      var remoteIds = courts.map(function(c){ return String(c.matchId); }).filter(Boolean).sort();
+      var idMatch = compareMatchIds(local.matchIds, remoteIds);
+
+      var status;
+
+      if (!courts.length) {
+        status = {
+          ok: false,
+          label: "Not pushed",
+          detail: "The Worker has no active courts. Players will see no active round until you push Round " + local.roundNumber + "."
+        };
+      } else if (remoteRound && remoteRound !== local.roundNumber) {
+        status = {
+          ok: false,
+          label: "Different round is live on mobile",
+          detail: "Worker has Round " + remoteRound + " with " + courts.length + " court(s), but Rally current round is Round " + local.roundNumber + ". Push the current round if that is not intended."
+        };
+      } else if (idMatch === false) {
+        status = {
+          ok: false,
+          label: "Round number matches, but court list differs",
+          detail: "Worker has Round " + (remoteRound || local.roundNumber) + " with " + courts.length + " court(s), but the match IDs do not match Rally's current round. Push the round again."
+        };
+      } else {
+        status = {
+          ok: true,
+          label: "Round " + local.roundNumber + " is pushed",
+          detail: "Mobile Worker has " + courts.length + " active court(s). Scorekeepers should be able to see and claim their courts."
+        };
+      }
+
+      renderRow(status);
+      return status;
+    } catch(e) {
+      var failed = {
+        ok: false,
+        label: "Could not check Worker",
+        detail: e && e.message ? e.message : String(e)
+      };
+      renderRow(failed);
+      return failed;
+    }
+  };
+
+  window.pbMobileSyncPushedRoundStatusV2 = function(){
+    var local = getLocalRound();
+    var remote = window.pbMobileSyncLastRemoteStateV2 || null;
+    return {
+      installed: true,
+      localRound: local.roundNumber,
+      localCourtCount: local.courtCount,
+      configured: getConfigOk(),
+      remoteRound: remote && remote.round,
+      remoteCourtCount: remote && Array.isArray(remote.courts) ? remote.courts.length : null,
+      rowFound: !!document.getElementById("pb-mobile-sync-pushed-round-row-v2")
+    };
+  };
+
+  function scheduleCheck(){
+    setTimeout(function(){
+      try {
+        if (document.getElementById("sec-mobilesync") && document.getElementById("sec-mobilesync").classList.contains("active")) {
+          window.pbMobileSyncCheckPushedRoundStatusV2();
+        }
+      } catch(e) {}
+    }, 250);
+  }
+
+  var oldRefresh = window.pbMobileSyncStatusPanelRefreshV1;
+  if (typeof oldRefresh === "function" && !oldRefresh.__pbPushedRoundStatusV2) {
+    var wrapped = function(){
+      var result = oldRefresh.apply(this, arguments);
+      scheduleCheck();
+      return result;
+    };
+    wrapped.__pbPushedRoundStatusV2 = true;
+    window.pbMobileSyncStatusPanelRefreshV1 = wrapped;
+  }
+
+  var oldRender = window.renderMobileSyncTab;
+  if (typeof oldRender === "function" && !oldRender.__pbPushedRoundStatusV2) {
+    var renderWrapped = function(){
+      var result = oldRender.apply(this, arguments);
+      scheduleCheck();
+      return result;
+    };
+    renderWrapped.__pbPushedRoundStatusV2 = true;
+    window.renderMobileSyncTab = renderWrapped;
+  }
+
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest ? ev.target.closest("button,a") : null;
+    if (!target) return;
+    var txt = String(target.textContent || "");
+    if (/Push|Sync|Mobile|Round|Start Round|Court PIN/i.test(txt)) {
+      setTimeout(scheduleCheck, 500);
+      setTimeout(scheduleCheck, 1800);
+    }
+  }, true);
+
+  setTimeout(scheduleCheck, 800);
+})();
+
+
+/* PB_MOBILE_SYNC_NO_TWITCH_V3 */
+(function(){
+  var css = document.createElement("style");
+  css.textContent = `
+    /* PB_MOBILE_SYNC_NO_TWITCH_V3 */
+    #sec-mobilesync {
+      overflow-anchor: none !important;
+    }
+
+    #pb-mobile-sync-status-panel-v1 {
+      min-height: 285px !important;
+      contain: layout paint !important;
+    }
+
+    #pb-mobile-sync-pushed-round-row-v2 {
+      min-height: 82px !important;
+    }
+  `;
+  document.head.appendChild(css);
+
+  function isMobileSyncActive(){
+    var sec = document.getElementById("sec-mobilesync");
+    return !!(sec && sec.classList.contains("active"));
+  }
+
+  function preserveScroll(fn){
+    var y = window.scrollY || window.pageYOffset || 0;
+    var x = window.scrollX || window.pageXOffset || 0;
+
+    var result;
+
+    try {
+      result = fn();
+    } catch(e) {
+      requestAnimationFrame(function(){
+        if (isMobileSyncActive()) window.scrollTo(x, y);
+      });
+      throw e;
+    }
+
+    Promise.resolve(result).finally(function(){
+      requestAnimationFrame(function(){
+        if (isMobileSyncActive()) window.scrollTo(x, y);
+      });
+    });
+
+    return result;
+  }
+
+  var oldRender = window.renderMobileSyncTab;
+
+  if (typeof oldRender === "function" && !oldRender.__pbMobileSyncNoTwitchV3) {
+    var renderWrapped = function(){
+      return preserveScroll(function(){
+        return oldRender.apply(this, arguments);
+      }.bind(this));
+    };
+
+    renderWrapped.__pbMobileSyncNoTwitchV3 = true;
+    window.renderMobileSyncTab = renderWrapped;
+  }
+
+  var oldCheck = window.pbMobileSyncCheckPushedRoundStatusV2;
+  var timer = null;
+  var inFlight = false;
+  var lastResult = null;
+
+  if (typeof oldCheck === "function" && !oldCheck.__pbMobileSyncNoTwitchV3) {
+    var checkWrapped = function(){
+      var self = this;
+      var args = arguments;
+
+      clearTimeout(timer);
+
+      return new Promise(function(resolve){
+        timer = setTimeout(async function(){
+          if (inFlight) {
+            resolve(lastResult);
+            return;
+          }
+
+          inFlight = true;
+
+          try {
+            lastResult = await preserveScroll(function(){
+              return oldCheck.apply(self, args);
+            });
+            resolve(lastResult);
+          } catch(e) {
+            throw e;
+          } finally {
+            inFlight = false;
+          }
+        }, 220);
+      });
+    };
+
+    checkWrapped.__pbMobileSyncNoTwitchV3 = true;
+    window.pbMobileSyncCheckPushedRoundStatusV2 = checkWrapped;
+    window.pbMobileSyncCheckPushedRoundStatusV3 = checkWrapped;
+  }
+
+  window.pbMobileSyncNoTwitchStatusV3 = function(){
+    return {
+      installed: true,
+      mobileSyncActive: isMobileSyncActive(),
+      statusPanelFound: !!document.getElementById("pb-mobile-sync-status-panel-v1"),
+      pushedRoundRowFound: !!document.getElementById("pb-mobile-sync-pushed-round-row-v2"),
+      renderWrapped: !!(window.renderMobileSyncTab && window.renderMobileSyncTab.__pbMobileSyncNoTwitchV3),
+      checkWrapped: !!(window.pbMobileSyncCheckPushedRoundStatusV2 && window.pbMobileSyncCheckPushedRoundStatusV2.__pbMobileSyncNoTwitchV3)
+    };
+  };
+})();
+
 </script>
 
 </body>
