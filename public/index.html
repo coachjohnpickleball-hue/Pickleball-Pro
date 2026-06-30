@@ -32825,6 +32825,1422 @@ function exportEndSessionSummary(){
   }, 600);
 })();
 
+
+/* PB_REMOVE_UNDO_BUTTON_V1 */
+(function(){
+  function isUndoElement(el){
+    if (!el) return false;
+
+    var txt = String(el.textContent || "").trim().toLowerCase();
+    var title = String(el.getAttribute && (el.getAttribute("title") || "") || "").toLowerCase();
+    var aria = String(el.getAttribute && (el.getAttribute("aria-label") || "") || "").toLowerCase();
+    var onclick = String(el.getAttribute && (el.getAttribute("onclick") || "") || "").toLowerCase();
+    var id = String(el.id || "").toLowerCase();
+    var cls = String(el.className || "").toLowerCase();
+
+    return /\bundo\b/.test(txt) ||
+      /\bundo\b/.test(title) ||
+      /\bundo\b/.test(aria) ||
+      /\bundo\b/.test(onclick) ||
+      /\bundo\b/.test(id) ||
+      /\bundo\b/.test(cls);
+  }
+
+  function hideUndoButtons(){
+    var hidden = 0;
+
+    document.querySelectorAll("button,a,[role='button'],input[type='button'],input[type='submit']").forEach(function(el){
+      if (!isUndoElement(el)) return;
+
+      el.style.display = "none";
+      el.setAttribute("data-pb-undo-removed-v1", "true");
+      el.setAttribute("aria-hidden", "true");
+      hidden++;
+    });
+
+    return hidden;
+  }
+
+  // Hide existing Undo buttons.
+  hideUndoButtons();
+
+  // Hide Undo buttons if later renders recreate them.
+  var observer = new MutationObserver(function(){
+    hideUndoButtons();
+  });
+
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+
+  // Block app-level Cmd/Ctrl+Z so it cannot restore an old tournament state.
+  // Normal text-field undo is still allowed.
+  document.addEventListener("keydown", function(ev){
+    var key = String(ev.key || "").toLowerCase();
+    var isUndoShortcut = (ev.metaKey || ev.ctrlKey) && key === "z" && !ev.shiftKey;
+
+    if (!isUndoShortcut) return;
+
+    var tag = String(ev.target && ev.target.tagName || "").toLowerCase();
+    var editable = ev.target && (
+      ev.target.isContentEditable ||
+      tag === "input" ||
+      tag === "textarea" ||
+      tag === "select"
+    );
+
+    if (editable) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.stopImmediatePropagation();
+
+    try {
+      if (typeof toast === "function") {
+        toast("Undo has been removed. Edit or clear scores directly instead.", "err");
+      }
+    } catch(e) {}
+
+    return false;
+  }, true);
+
+  // If any hidden Undo button is clicked somehow, block it.
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest
+      ? ev.target.closest("button,a,[role='button'],input")
+      : ev.target;
+
+    if (!isUndoElement(target)) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.stopImmediatePropagation();
+
+    try {
+      if (typeof toast === "function") {
+        toast("Undo has been removed. Edit or clear scores directly instead.", "err");
+      }
+    } catch(e) {}
+
+    return false;
+  }, true);
+
+  window.pbRemoveUndoButtonStatusV1 = function(){
+    return {
+      installed: true,
+      hiddenUndoElements: document.querySelectorAll("[data-pb-undo-removed-v1='true']").length,
+      note: "Undo UI removed. Normal input-field undo still works."
+    };
+  };
+})();
+
+
+/* PB_SCORE_MODIFIED_INDICATOR_V1 */
+(function(){
+  var baselineKey = "pb_score_modified_baseline_v1";
+  var auditKey = "pb_score_modified_audit_v1";
+  var inTrackerSave = false;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function esc(v){
+    try {
+      if (typeof escHtml === "function") return escHtml(String(v == null ? "" : v));
+    } catch(e) {}
+
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function notify(msg, type){
+    try {
+      if (typeof toast === "function") toast(msg, type || "");
+      else console.log(msg);
+    } catch(e) {
+      console.log(msg);
+    }
+  }
+
+  function schedule(){
+    try {
+      return window.state && Array.isArray(state.schedule) ? state.schedule : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function playerName(ref){
+    try {
+      if (ref == null) return "";
+      if (typeof ref === "object" && ref.name) return ref.name;
+
+      var players = window.state && Array.isArray(state.players) ? state.players : [];
+      var p = players[Number(ref)];
+
+      return p && p.name ? p.name : String(ref);
+    } catch(e) {
+      return String(ref == null ? "" : ref);
+    }
+  }
+
+  function teamName(team){
+    if (!Array.isArray(team)) return "";
+    return team.map(playerName).filter(Boolean).join(" / ");
+  }
+
+  function matchKey(m, rIdx, mIdx){
+    if (m && m.id != null) return "id:" + String(m.id);
+    return "r:" + rIdx + "|m:" + mIdx + "|court:" + String(m && m.court != null ? m.court : "");
+  }
+
+  function normScore(v){
+    if (v === undefined || v === null) return "";
+    return String(v).trim();
+  }
+
+  function scoreRecord(m){
+    return {
+      scoreA: normScore(m && m.scoreA),
+      scoreB: normScore(m && m.scoreB),
+      complete: !!(m && m.complete)
+    };
+  }
+
+  function hasScoreRecord(rec){
+    return !!(rec && (rec.scoreA !== "" || rec.scoreB !== "" || rec.complete));
+  }
+
+  function scoresDiffer(a, b){
+    if (!a || !b) return false;
+
+    return String(a.scoreA) !== String(b.scoreA) ||
+      String(a.scoreB) !== String(b.scoreB) ||
+      !!a.complete !== !!b.complete;
+  }
+
+  function currentBaseline(){
+    var base = {};
+
+    schedule().forEach(function(round, rIdx){
+      if (!Array.isArray(round)) return;
+
+      round.forEach(function(m, mIdx){
+        if (!m) return;
+
+        base[matchKey(m, rIdx, mIdx)] = scoreRecord(m);
+      });
+    });
+
+    return base;
+  }
+
+  function loadBaseline(){
+    try {
+      return JSON.parse(localStorage.getItem(baselineKey) || "{}") || {};
+    } catch(e) {
+      return {};
+    }
+  }
+
+  function saveBaseline(base){
+    try {
+      localStorage.setItem(baselineKey, JSON.stringify(base || currentBaseline()));
+    } catch(e) {}
+  }
+
+  function addAudit(entry){
+    try {
+      var audit = JSON.parse(localStorage.getItem(auditKey) || "[]");
+
+      audit.unshift(entry);
+
+      localStorage.setItem(auditKey, JSON.stringify(audit.slice(0, 250)));
+    } catch(e) {}
+  }
+
+  function markModified(m, rIdx, mIdx, before, after){
+    if (!m) return false;
+
+    var now = new Date().toISOString();
+
+    if (!m.scoreModifiedOriginal) {
+      m.scoreModifiedOriginal = {
+        scoreA: before.scoreA,
+        scoreB: before.scoreB,
+        complete: before.complete
+      };
+    }
+
+    m.scoreModified = true;
+    m.scoreModifiedAt = now;
+    m.scoreModifiedCount = Number(m.scoreModifiedCount || 0) + 1;
+
+    addAudit({
+      at: now,
+      round: rIdx + 1,
+      court: m.court || (mIdx + 1),
+      matchId: m.id,
+      teamA: teamName(m.teamA),
+      teamB: teamName(m.teamB),
+      before: before,
+      after: after
+    });
+
+    return true;
+  }
+
+  window.pbScoreModifiedScanV1 = function(){
+    var baseline = loadBaseline();
+
+    if (!Object.keys(baseline).length) {
+      saveBaseline(currentBaseline());
+      return {
+        initialized: true,
+        modified: 0
+      };
+    }
+
+    var modified = 0;
+
+    schedule().forEach(function(round, rIdx){
+      if (!Array.isArray(round)) return;
+
+      round.forEach(function(m, mIdx){
+        if (!m) return;
+
+        var key = matchKey(m, rIdx, mIdx);
+        var before = baseline[key];
+        var after = scoreRecord(m);
+
+        if (!before) return;
+
+        // Do not mark first-time score entry.
+        // Only mark if a previous score/complete state existed and the value changed.
+        if (hasScoreRecord(before) && scoresDiffer(before, after)) {
+          if (markModified(m, rIdx, mIdx, before, after)) modified++;
+        }
+      });
+    });
+
+    saveBaseline(currentBaseline());
+
+    if (modified > 0) {
+      notify("Score correction marked: " + modified + " match" + (modified === 1 ? "" : "es"));
+    }
+
+    return {
+      initialized: false,
+      modified: modified
+    };
+  };
+
+  function modifiedMatches(){
+    var out = [];
+
+    schedule().forEach(function(round, rIdx){
+      if (!Array.isArray(round)) return;
+
+      round.forEach(function(m, mIdx){
+        if (!m || !m.scoreModified) return;
+
+        out.push({
+          rIdx: rIdx,
+          mIdx: mIdx,
+          match: m,
+          round: rIdx + 1,
+          court: m.court || (mIdx + 1),
+          teamA: teamName(m.teamA),
+          teamB: teamName(m.teamB),
+          score: normScore(m.scoreA) + "-" + normScore(m.scoreB),
+          original: m.scoreModifiedOriginal
+            ? normScore(m.scoreModifiedOriginal.scoreA) + "-" + normScore(m.scoreModifiedOriginal.scoreB)
+            : "",
+          at: m.scoreModifiedAt || "",
+          count: Number(m.scoreModifiedCount || 1)
+        });
+      });
+    });
+
+    return out;
+  }
+
+  function fmtTime(iso){
+    try {
+      return new Date(iso).toLocaleTimeString();
+    } catch(e) {
+      return "";
+    }
+  }
+
+  window.pbScoreModifiedIndicatorRenderV1 = function(){
+    var sec = byId("sec-schedule");
+
+    if (!sec) return false;
+
+    var mods = modifiedMatches();
+    var panel = byId("pb-score-modified-indicator-v1");
+
+    if (!mods.length) {
+      if (panel) panel.remove();
+      return true;
+    }
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-score-modified-indicator-v1";
+
+      var host =
+        byId("schedule") ||
+        byId("match-builder") ||
+        sec.querySelector(".card") ||
+        sec.firstElementChild;
+
+      if (host && host.parentNode === sec) {
+        sec.insertBefore(panel, host);
+      } else {
+        sec.insertBefore(panel, sec.firstChild);
+      }
+    }
+
+    panel.style.cssText =
+      "margin:.65rem 0 .9rem;padding:.7rem .85rem;border-radius:13px;border:1px solid rgba(249,168,37,.35);background:rgba(249,168,37,.08)";
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap">' +
+        '<div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.12rem;color:var(--ball);letter-spacing:.35px">✏️ Corrected Scores: ' + mods.length + '</div>' +
+          '<div style="color:var(--txt2);font-size:.78rem">These scores were changed after their original entry. Rounds/courts/players stayed locked.</div>' +
+        '</div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbScoreModifiedIndicatorRenderV1()">Refresh</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.45rem;margin-top:.6rem">' +
+        mods.slice(0, 8).map(function(x){
+          return '<div style="border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.12);border-radius:10px;padding:.5rem .55rem">' +
+            '<div style="font-weight:900;color:var(--txt);font-size:.8rem">Round ' + esc(x.round) + ' · Court ' + esc(x.court) + ' · ✏️ Corrected</div>' +
+            '<div style="color:var(--txt2);font-size:.75rem;line-height:1.35">' + esc(x.teamA) + ' vs ' + esc(x.teamB) + '</div>' +
+            '<div style="color:var(--ball);font-size:.76rem;margin-top:.18rem">Original: ' + esc(x.original || "—") + ' → Current: ' + esc(x.score) + '</div>' +
+            '<div style="color:var(--txt3);font-size:.72rem;margin-top:.12rem">Updated ' + esc(fmtTime(x.at)) + (x.count > 1 ? " · " + x.count + " corrections" : "") + '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>' +
+      (mods.length > 8
+        ? '<div style="margin-top:.45rem;color:var(--txt3);font-size:.74rem">+' + (mods.length - 8) + ' more corrected score(s).</div>'
+        : '');
+
+    return true;
+  };
+
+  function decorateScheduleBadges(){
+    try {
+      // Minimal visual tag in the schedule area without relying on exact row structure.
+      // The compact indicator above is the source of truth.
+      modifiedMatches().forEach(function(x){
+        var scoreText = x.score && x.score !== "-" ? x.score : "";
+        if (!scoreText) return;
+
+        var candidates = Array.from(document.querySelectorAll("#sec-schedule *")).filter(function(el){
+          var t = String(el.textContent || "");
+          return t.indexOf(scoreText) >= 0 &&
+            t.indexOf("Corrected Scores") < 0 &&
+            !el.querySelector(".pb-score-modified-mini-badge-v1");
+        });
+
+        candidates.slice(0, 2).forEach(function(el){
+          if (el.children.length > 8) return;
+
+          var badge = document.createElement("span");
+          badge.className = "pb-score-modified-mini-badge-v1";
+          badge.textContent = " ✏️ Corrected";
+          badge.title = "Score was modified after original entry";
+          badge.style.cssText = "display:inline-block;margin-left:.35rem;color:var(--ball);font-weight:900;font-size:.72rem";
+          el.appendChild(badge);
+        });
+      });
+    } catch(e) {}
+  }
+
+  function refreshAll(){
+    setTimeout(function(){
+      try { window.pbScoreModifiedIndicatorRenderV1(); } catch(e) {}
+      try { decorateScheduleBadges(); } catch(e) {}
+    }, 120);
+  }
+
+  ["saveState", "save", "persistState"].forEach(function(name){
+    try {
+      var fn = window[name];
+
+      if (typeof fn !== "function" || fn.__pbScoreModifiedIndicatorV1) return;
+
+      var wrapped = function(){
+        if (!inTrackerSave) {
+          try { window.pbScoreModifiedScanV1(); } catch(e) { console.warn(e); }
+        }
+
+        var result = fn.apply(this, arguments);
+
+        refreshAll();
+
+        return result;
+      };
+
+      wrapped.__pbScoreModifiedIndicatorV1 = true;
+      window[name] = wrapped;
+    } catch(e) {}
+  });
+
+  var oldRenderSchedule = window.renderSchedule;
+
+  if (typeof oldRenderSchedule === "function" && !oldRenderSchedule.__pbScoreModifiedIndicatorV1) {
+    var wrappedRender = function(){
+      var result = oldRenderSchedule.apply(this, arguments);
+      refreshAll();
+      return result;
+    };
+
+    wrappedRender.__pbScoreModifiedIndicatorV1 = true;
+    window.renderSchedule = wrappedRender;
+  }
+
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest ? ev.target.closest("button,a") : null;
+    if (!target) return;
+
+    var txt = String(target.textContent || "");
+    if (/score|save|complete|clear|edit|correct/i.test(txt)) {
+      setTimeout(function(){
+        try { window.pbScoreModifiedScanV1(); } catch(e) {}
+        try { window.pbScoreModifiedIndicatorRenderV1(); } catch(e) {}
+      }, 400);
+
+      setTimeout(function(){
+        try { window.pbScoreModifiedScanV1(); } catch(e) {}
+        try { window.pbScoreModifiedIndicatorRenderV1(); } catch(e) {}
+      }, 1200);
+    }
+  }, true);
+
+  window.pbScoreModifiedIndicatorStatusV1 = function(){
+    return {
+      installed: true,
+      panelFound: !!byId("pb-score-modified-indicator-v1"),
+      modifiedMatches: modifiedMatches().length,
+      baselineMatches: Object.keys(loadBaseline()).length,
+      auditCount: (function(){
+        try {
+          return JSON.parse(localStorage.getItem(auditKey) || "[]").length;
+        } catch(e) {
+          return 0;
+        }
+      })()
+    };
+  };
+
+  window.pbScoreModifiedResetBaselineV1 = function(){
+    saveBaseline(currentBaseline());
+    notify("Score modification baseline reset to current scores.");
+    return window.pbScoreModifiedIndicatorStatusV1();
+  };
+
+  // Initialize baseline after app loads. Existing scores should not be marked retroactively.
+  setTimeout(function(){
+    try {
+      if (!Object.keys(loadBaseline()).length) saveBaseline(currentBaseline());
+      refreshAll();
+    } catch(e) {}
+  }, 1000);
+})();
+
+
+/* PB_FIXED_PARTNER_DUPR_MODE_V1 */
+(function(){
+  var PAIRS_KEY = "pb_fixed_partner_dupr_pairs_v1";
+
+  function byId(id){ return document.getElementById(id); }
+
+  function notify(msg, type){
+    try {
+      if (typeof toast === "function") toast(msg, type || "");
+      else alert(msg);
+    } catch(e) {
+      alert(msg);
+    }
+  }
+
+  function esc(v){
+    try {
+      if (typeof escHtml === "function") return escHtml(String(v == null ? "" : v));
+    } catch(e) {}
+
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function players(){
+    try {
+      return window.state && Array.isArray(state.players) ? state.players : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function isActivePlayer(p){
+    if (!p) return false;
+    if (p.active === false) return false;
+    if (p.enabled === false) return false;
+    if (p.checkedIn === false && p.includeOnlyCheckedIn === true) return false;
+    return true;
+  }
+
+  function activePlayerRefs(){
+    var out = [];
+
+    players().forEach(function(p, idx){
+      if (isActivePlayer(p)) out.push(idx);
+    });
+
+    return out;
+  }
+
+  function playerName(ref){
+    var p = players()[Number(ref)];
+    return p && p.name ? p.name : "Player " + (Number(ref) + 1);
+  }
+
+  function ratingOf(ref){
+    var p = players()[Number(ref)] || {};
+    var candidates = [
+      p.dupr,
+      p.DUPR,
+      p.duprRating,
+      p.dupr_rating,
+      p.rating,
+      p.clubRating,
+      p.cr,
+      p.CR
+    ];
+
+    for (var i = 0; i < candidates.length; i++) {
+      var n = Number(candidates[i]);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+
+    return 0;
+  }
+
+  function pairKey(pair){
+    return pair.map(Number).sort(function(a,b){ return a-b; }).join("-");
+  }
+
+  function loadPairs(){
+    try {
+      var fromState = window.state && Array.isArray(state.fixedPartnerDuprPairs)
+        ? state.fixedPartnerDuprPairs
+        : null;
+
+      if (fromState && fromState.length) return fromState;
+
+      return JSON.parse(localStorage.getItem(PAIRS_KEY) || "[]") || [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function savePairs(pairs){
+    pairs = sanitizePairs(pairs);
+
+    try {
+      if (window.state) state.fixedPartnerDuprPairs = pairs;
+    } catch(e) {}
+
+    try {
+      localStorage.setItem(PAIRS_KEY, JSON.stringify(pairs));
+    } catch(e) {}
+
+    try {
+      if (typeof saveState === "function") saveState();
+      else if (typeof save === "function") save();
+    } catch(e) {}
+
+    return pairs;
+  }
+
+  function sanitizePairs(pairs){
+    var active = new Set(activePlayerRefs().map(String));
+    var used = new Set();
+    var out = [];
+
+    (pairs || []).forEach(function(pair){
+      if (!Array.isArray(pair) || pair.length < 2) return;
+
+      var a = String(pair[0]);
+      var b = String(pair[1]);
+
+      if (a === b) return;
+      if (!active.has(a) || !active.has(b)) return;
+      if (used.has(a) || used.has(b)) return;
+
+      used.add(a);
+      used.add(b);
+
+      out.push([Number(a), Number(b)]);
+    });
+
+    return out;
+  }
+
+  function pairRating(pair){
+    return ratingOf(pair[0]) + ratingOf(pair[1]);
+  }
+
+  function schedule(){
+    try {
+      if (window.state && Array.isArray(state.schedule)) return state.schedule;
+    } catch(e) {}
+    return [];
+  }
+
+  function nextMatchId(){
+    var max = -1;
+
+    schedule().forEach(function(round){
+      if (!Array.isArray(round)) return;
+
+      round.forEach(function(m){
+        if (m && Number.isFinite(Number(m.id))) {
+          max = Math.max(max, Number(m.id));
+        }
+      });
+    });
+
+    return max + 1;
+  }
+
+  function getCourtCount(){
+    var ids = [
+      "courts",
+      "court-count",
+      "courtCount",
+      "num-courts",
+      "numCourts",
+      "schedule-courts",
+      "builder-courts"
+    ];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+      if (el) {
+        var n = Number(el.value);
+        if (Number.isFinite(n) && n > 0) return Math.floor(n);
+      }
+    }
+
+    var inputs = Array.from(document.querySelectorAll("input,select")).filter(function(el){
+      var id = String(el.id || "").toLowerCase();
+      var name = String(el.name || "").toLowerCase();
+      var label = String(el.getAttribute("aria-label") || "").toLowerCase();
+      return id.indexOf("court") >= 0 || name.indexOf("court") >= 0 || label.indexOf("court") >= 0;
+    });
+
+    for (var j = 0; j < inputs.length; j++) {
+      var v = Number(inputs[j].value);
+      if (Number.isFinite(v) && v > 0 && v < 50) return Math.floor(v);
+    }
+
+    return 3;
+  }
+
+  function teamAppearances(){
+    var counts = {};
+
+    schedule().forEach(function(round){
+      if (!Array.isArray(round)) return;
+
+      round.forEach(function(m){
+        if (!m) return;
+
+        [m.teamA, m.teamB].forEach(function(team){
+          if (!Array.isArray(team) || team.length < 2) return;
+
+          var k = pairKey(team.slice(0, 2));
+          counts[k] = (counts[k] || 0) + 1;
+        });
+      });
+    });
+
+    return counts;
+  }
+
+  function saveAndRender(){
+    try {
+      if (typeof saveState === "function") saveState();
+      else if (typeof save === "function") save();
+      else if (typeof persistState === "function") persistState();
+    } catch(e) {}
+
+    [
+      "renderDashboard",
+      "renderMatchBuilderPanel",
+      "renderSchedule",
+      "renderStandings",
+      "renderFairnessEngine",
+      "renderMobileSyncTab"
+    ].forEach(function(name){
+      try {
+        if (typeof window[name] === "function") window[name]();
+      } catch(e) {}
+    });
+
+    setTimeout(function(){
+      try { window.pbFixedPartnerDuprRenderPanelV1(); } catch(e) {}
+    }, 150);
+  }
+
+  function pairOptions(exclude){
+    exclude = new Set((exclude || []).map(String));
+
+    return activePlayerRefs().map(function(ref){
+      var disabled = exclude.has(String(ref)) ? " disabled" : "";
+      var r = ratingOf(ref);
+      return '<option value="' + ref + '"' + disabled + '>' +
+        esc(playerName(ref)) +
+        (r ? " · DUPR " + r.toFixed(2) : " · no DUPR") +
+        '</option>';
+    }).join("");
+  }
+
+  function selectedModeIsFixedPartnerDupr(){
+    var selects = Array.from(document.querySelectorAll("select"));
+
+    return selects.some(function(sel){
+      var val = String(sel.value || "").toLowerCase();
+      return val === "fixedpartnerdupr" || val === "fixed-partner-dupr" || val === "fixed_partner_dupr";
+    });
+  }
+
+  function installModeOption(){
+    Array.from(document.querySelectorAll("select")).forEach(function(sel){
+      var optionsText = Array.from(sel.options || []).map(function(o){
+        return String(o.textContent || o.value || "").toLowerCase();
+      }).join(" ");
+
+      if (
+        optionsText.indexOf("dupr") < 0 &&
+        optionsText.indexOf("mixed") < 0 &&
+        optionsText.indexOf("separate") < 0 &&
+        optionsText.indexOf("fixed") < 0
+      ) {
+        return;
+      }
+
+      if (Array.from(sel.options || []).some(function(o){ return String(o.value) === "fixedPartnerDupr"; })) {
+        return;
+      }
+
+      var opt = document.createElement("option");
+      opt.value = "fixedPartnerDupr";
+      opt.textContent = "Fixed Partner DUPR";
+      sel.appendChild(opt);
+    });
+  }
+
+  window.pbFixedPartnerDuprAddPairV1 = function(){
+    var a = byId("pb-fp-dupr-player-a-v1");
+    var b = byId("pb-fp-dupr-player-b-v1");
+
+    if (!a || !b || a.value === "" || b.value === "") {
+      notify("Choose two players for the fixed pair", "err");
+      return false;
+    }
+
+    if (a.value === b.value) {
+      notify("A player cannot be paired with themselves", "err");
+      return false;
+    }
+
+    var pairs = loadPairs();
+    var used = new Set();
+
+    pairs.forEach(function(pair){
+      used.add(String(pair[0]));
+      used.add(String(pair[1]));
+    });
+
+    if (used.has(String(a.value)) || used.has(String(b.value))) {
+      notify("One of those players is already in a fixed pair", "err");
+      return false;
+    }
+
+    pairs.push([Number(a.value), Number(b.value)]);
+    savePairs(pairs);
+
+    notify("Fixed partner pair added");
+    window.pbFixedPartnerDuprRenderPanelV1();
+
+    return true;
+  };
+
+  window.pbFixedPartnerDuprRemovePairV1 = function(idx){
+    var pairs = loadPairs();
+    pairs.splice(Number(idx), 1);
+    savePairs(pairs);
+    window.pbFixedPartnerDuprRenderPanelV1();
+    return true;
+  };
+
+  window.pbFixedPartnerDuprClearPairsV1 = function(){
+    if (!confirm("Clear all Fixed Partner DUPR pairs?")) return false;
+    savePairs([]);
+    window.pbFixedPartnerDuprRenderPanelV1();
+    return true;
+  };
+
+  window.pbFixedPartnerDuprAutoPairBalancedV1 = function(){
+    var refs = activePlayerRefs().slice().sort(function(a,b){
+      return ratingOf(b) - ratingOf(a);
+    });
+
+    var pairs = [];
+
+    while (refs.length >= 2) {
+      var high = refs.shift();
+      var low = refs.pop();
+      pairs.push([high, low]);
+    }
+
+    savePairs(pairs);
+    notify("Auto-created balanced fixed partner pairs. Review before generating.");
+    window.pbFixedPartnerDuprRenderPanelV1();
+
+    return pairs;
+  };
+
+  window.pbFixedPartnerDuprGenerateNextRoundV1 = function(){
+    var pairs = sanitizePairs(loadPairs());
+
+    if (pairs.length < 2) {
+      notify("Fixed Partner DUPR needs at least two valid pairs", "err");
+      window.pbFixedPartnerDuprRenderPanelV1();
+      return false;
+    }
+
+    var courts = getCourtCount();
+    var teamCapacity = Math.max(2, courts * 2);
+    var counts = teamAppearances();
+
+    var pairInfo = pairs.map(function(pair){
+      return {
+        pair: pair,
+        key: pairKey(pair),
+        rating: pairRating(pair),
+        appearances: counts[pairKey(pair)] || 0
+      };
+    });
+
+    pairInfo.sort(function(a,b){
+      if (a.appearances !== b.appearances) return a.appearances - b.appearances;
+      return b.rating - a.rating;
+    });
+
+    var take = Math.min(pairInfo.length, teamCapacity);
+
+    if (take % 2 === 1) take--;
+
+    if (take < 2) {
+      notify("Not enough fixed pairs available for a match", "err");
+      return false;
+    }
+
+    var selected = pairInfo.slice(0, take);
+
+    // DUPR competitive grouping: closest combined DUPR pairs play each other.
+    selected.sort(function(a,b){
+      return b.rating - a.rating;
+    });
+
+    var roundIdx = schedule().length;
+    var roundNumber = roundIdx + 1;
+    var id = nextMatchId();
+    var matches = [];
+
+    for (var i = 0; i < selected.length; i += 2) {
+      var tA = selected[i];
+      var tB = selected[i + 1];
+
+      matches.push({
+        id: id++,
+        round: roundNumber,
+        court: matches.length + 1,
+        teamA: tA.pair.slice(),
+        teamB: tB.pair.slice(),
+        scoreA: "",
+        scoreB: "",
+        complete: false,
+        winner: "",
+        mode: "fixedPartnerDupr",
+        modeLabel: "Fixed Partner DUPR",
+        teamADupr: Number(tA.rating.toFixed ? tA.rating.toFixed(3) : tA.rating),
+        teamBDupr: Number(tB.rating.toFixed ? tB.rating.toFixed(3) : tB.rating)
+      });
+    }
+
+    if (!window.state) {
+      notify("Tournament state was not found", "err");
+      return false;
+    }
+
+    if (!Array.isArray(state.schedule)) state.schedule = [];
+
+    state.schedule.push(matches);
+
+    if (!Array.isArray(state.byes)) state.byes = [];
+
+    var selectedPlayers = new Set();
+    selected.forEach(function(x){
+      x.pair.forEach(function(ref){ selectedPlayers.add(String(ref)); });
+    });
+
+    var byeRefs = activePlayerRefs().filter(function(ref){
+      return !selectedPlayers.has(String(ref));
+    });
+
+    state.byes.push(byeRefs);
+
+    if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
+
+    state.roundTeams.push(selected.map(function(x){
+      return [
+        players()[Number(x.pair[0])],
+        players()[Number(x.pair[1])]
+      ];
+    }));
+
+    state.lastGeneratedMode = "fixedPartnerDupr";
+
+    saveAndRender();
+
+    notify("Generated Fixed Partner DUPR Round " + roundNumber + " with " + matches.length + " court(s)");
+
+    return {
+      ok: true,
+      round: roundNumber,
+      courts: matches.length,
+      byes: byeRefs.map(playerName)
+    };
+  };
+
+  window.pbFixedPartnerDuprRenderPanelV1 = function(){
+    installModeOption();
+
+    var sec = byId("sec-schedule");
+    if (!sec) return false;
+
+    var panel = byId("pb-fixed-partner-dupr-panel-v1");
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-fixed-partner-dupr-panel-v1";
+
+      var host =
+        byId("match-builder") ||
+        byId("schedule-builder") ||
+        sec.querySelector(".card") ||
+        sec.firstElementChild;
+
+      if (host && host.parentNode === sec) {
+        sec.insertBefore(panel, host.nextSibling);
+      } else {
+        sec.insertBefore(panel, sec.firstChild);
+      }
+    }
+
+    var pairs = sanitizePairs(loadPairs());
+
+    var used = new Set();
+    pairs.forEach(function(pair){
+      used.add(String(pair[0]));
+      used.add(String(pair[1]));
+    });
+
+    var unpaired = activePlayerRefs().filter(function(ref){
+      return !used.has(String(ref));
+    });
+
+    panel.style.cssText =
+      "margin:.75rem 0 1rem;padding:.9rem 1rem;border-radius:14px;border:1px solid rgba(198,255,0,.28);background:rgba(198,255,0,.055)";
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.22rem;color:var(--lime);letter-spacing:.4px">🤝 Fixed Partner DUPR</div>' +
+          '<div style="color:var(--txt2);font-size:.8rem;line-height:1.35">Partners stay together. Courts are grouped by combined DUPR so closest-rated teams play each other.</div>' +
+        '</div>' +
+        '<button class="btn btn-primary btn-sm" onclick="pbFixedPartnerDuprGenerateNextRoundV1()">🚀 Generate Fixed Partner DUPR Round</button>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:minmax(190px,1fr) minmax(190px,1fr) auto;gap:.5rem;align-items:end;margin-bottom:.65rem">' +
+        '<label style="display:block">' +
+          '<span style="display:block;color:var(--txt3);font-size:.74rem;margin-bottom:.2rem">Partner 1</span>' +
+          '<select id="pb-fp-dupr-player-a-v1" style="width:100%">' +
+            '<option value="">Choose player...</option>' +
+            pairOptions(Array.from(used)) +
+          '</select>' +
+        '</label>' +
+        '<label style="display:block">' +
+          '<span style="display:block;color:var(--txt3);font-size:.74rem;margin-bottom:.2rem">Partner 2</span>' +
+          '<select id="pb-fp-dupr-player-b-v1" style="width:100%">' +
+            '<option value="">Choose player...</option>' +
+            pairOptions(Array.from(used)) +
+          '</select>' +
+        '</label>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDuprAddPairV1()">Add Pair</button>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDuprAutoPairBalancedV1()">Auto-pair balanced by DUPR</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDuprClearPairsV1()">Clear pairs</button>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:.45rem">' +
+        (pairs.length
+          ? pairs.map(function(pair, idx){
+              var r = pairRating(pair);
+              return '<div style="border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.12);border-radius:10px;padding:.55rem .6rem">' +
+                '<div style="font-weight:900;color:var(--txt);font-size:.8rem">' + esc(playerName(pair[0])) + ' / ' + esc(playerName(pair[1])) + '</div>' +
+                '<div style="color:var(--txt3);font-size:.74rem;margin-top:.12rem">Combined DUPR: ' + (r ? esc(r.toFixed(2)) : 'No DUPR') + '</div>' +
+                '<button class="btn btn-secondary btn-sm" style="margin-top:.45rem" onclick="pbFixedPartnerDuprRemovePairV1(' + idx + ')">Remove</button>' +
+              '</div>';
+            }).join("")
+          : '<div style="color:var(--txt3);font-size:.8rem">No fixed partner pairs yet.</div>') +
+      '</div>' +
+
+      (unpaired.length
+        ? '<div style="margin-top:.65rem;color:var(--ball);font-size:.76rem">Unpaired players: ' + esc(unpaired.map(playerName).join(", ")) + '</div>'
+        : '<div style="margin-top:.65rem;color:var(--lime);font-size:.76rem">All active players are paired.</div>');
+
+    return true;
+  };
+
+  window.pbFixedPartnerDuprStatusV1 = function(){
+    installModeOption();
+
+    var pairs = sanitizePairs(loadPairs());
+
+    return {
+      installed: true,
+      modeOptionPresent: Array.from(document.querySelectorAll("select option")).some(function(o){
+        return String(o.value) === "fixedPartnerDupr";
+      }),
+      panelFound: !!byId("pb-fixed-partner-dupr-panel-v1"),
+      activePlayers: activePlayerRefs().length,
+      pairs: pairs.length,
+      courts: getCourtCount(),
+      selectedModeIsFixedPartnerDupr: selectedModeIsFixedPartnerDupr()
+    };
+  };
+
+  var oldRenderSchedule = window.renderSchedule;
+
+  if (typeof oldRenderSchedule === "function" && !oldRenderSchedule.__pbFixedPartnerDuprV1) {
+    var wrappedSchedule = function(){
+      var result = oldRenderSchedule.apply(this, arguments);
+      setTimeout(function(){
+        try { window.pbFixedPartnerDuprRenderPanelV1(); } catch(e) {}
+      }, 120);
+      return result;
+    };
+
+    wrappedSchedule.__pbFixedPartnerDuprV1 = true;
+    window.renderSchedule = wrappedSchedule;
+  }
+
+  var oldRenderBuilder = window.renderMatchBuilderPanel;
+
+  if (typeof oldRenderBuilder === "function" && !oldRenderBuilder.__pbFixedPartnerDuprV1) {
+    var wrappedBuilder = function(){
+      var result = oldRenderBuilder.apply(this, arguments);
+      setTimeout(function(){
+        try { window.pbFixedPartnerDuprRenderPanelV1(); } catch(e) {}
+      }, 150);
+      return result;
+    };
+
+    wrappedBuilder.__pbFixedPartnerDuprV1 = true;
+    window.renderMatchBuilderPanel = wrappedBuilder;
+  }
+
+  // Intercept the existing Generate button only when Fixed Partner DUPR is selected.
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest ? ev.target.closest("button,a") : null;
+    if (!target) return;
+
+    var txt = String(target.textContent || "");
+
+    if (/Generate|Draft Round|Next Round/i.test(txt) && selectedModeIsFixedPartnerDupr()) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+
+      window.pbFixedPartnerDuprGenerateNextRoundV1();
+
+      return false;
+    }
+
+    if (/Schedule|Generate|DUPR|Mode/i.test(txt)) {
+      setTimeout(function(){
+        try { window.pbFixedPartnerDuprRenderPanelV1(); } catch(e) {}
+      }, 250);
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var target = ev.target;
+
+    if (target && (
+      target.id === "pb-fp-dupr-player-a-v1" ||
+      target.id === "pb-fp-dupr-player-b-v1"
+    )) {
+      return;
+    }
+
+    if (target && String(target.tagName || "").toLowerCase() === "select") {
+      setTimeout(function(){
+        try {
+          installModeOption();
+          if (byId("sec-schedule") && byId("sec-schedule").classList.contains("active")) {
+            window.pbFixedPartnerDuprRenderPanelV1();
+          }
+        } catch(e) {}
+      }, 80);
+    }
+  }, true);
+
+  setTimeout(function(){
+    try {
+      installModeOption();
+      if (byId("sec-schedule") && byId("sec-schedule").classList.contains("active")) {
+        window.pbFixedPartnerDuprRenderPanelV1();
+      }
+    } catch(e) {}
+  }, 800);
+})();
+
+
+/* PB_FIXED_PARTNER_DUPR_MENU_REPAIR_V2 */
+(function(){
+  function isLikelyModeSelect(sel){
+    if (!sel || !sel.options) return false;
+
+    var id = String(sel.id || "").toLowerCase();
+    var name = String(sel.name || "").toLowerCase();
+    var aria = String(sel.getAttribute("aria-label") || "").toLowerCase();
+
+    var optionText = Array.from(sel.options).map(function(o){
+      return String(o.textContent || o.value || "").toLowerCase();
+    }).join(" ");
+
+    return (
+      id.indexOf("mode") >= 0 ||
+      name.indexOf("mode") >= 0 ||
+      aria.indexOf("mode") >= 0 ||
+      optionText.indexOf("dupr") >= 0 ||
+      optionText.indexOf("mixed") >= 0 ||
+      optionText.indexOf("separate") >= 0 ||
+      optionText.indexOf("gender") >= 0
+    );
+  }
+
+  function addOptionToSelect(sel){
+    if (!isLikelyModeSelect(sel)) return false;
+
+    var exists = Array.from(sel.options).some(function(o){
+      return String(o.value) === "fixedPartnerDupr" ||
+        /fixed\s*partner\s*dupr/i.test(String(o.textContent || ""));
+    });
+
+    if (exists) return false;
+
+    var opt = document.createElement("option");
+    opt.value = "fixedPartnerDupr";
+    opt.textContent = "Fixed Partner DUPR";
+    opt.setAttribute("data-pb-fixed-partner-dupr-v2", "true");
+
+    sel.appendChild(opt);
+
+    return true;
+  }
+
+  function addOptionToCustomMenus(){
+    var added = 0;
+
+    document.querySelectorAll("select").forEach(function(sel){
+      if (addOptionToSelect(sel)) added++;
+    });
+
+    return added;
+  }
+
+  function selectedModeIsFixedPartnerDupr(){
+    return Array.from(document.querySelectorAll("select")).some(function(sel){
+      var val = String(sel.value || "").toLowerCase();
+      var txt = sel.selectedOptions && sel.selectedOptions[0]
+        ? String(sel.selectedOptions[0].textContent || "").toLowerCase()
+        : "";
+
+      return val === "fixedpartnerdupr" ||
+        val === "fixed-partner-dupr" ||
+        val === "fixed_partner_dupr" ||
+        txt.indexOf("fixed partner dupr") >= 0;
+    });
+  }
+
+  function makeFallbackButton(){
+    var sec = document.getElementById("sec-schedule");
+    if (!sec) return false;
+
+    var panel = document.getElementById("pb-fixed-partner-dupr-panel-v1");
+
+    if (!panel && typeof window.pbFixedPartnerDuprRenderPanelV1 === "function") {
+      try { window.pbFixedPartnerDuprRenderPanelV1(); } catch(e) {}
+      panel = document.getElementById("pb-fixed-partner-dupr-panel-v1");
+    }
+
+    if (!panel) return false;
+
+    var existing = document.getElementById("pb-fixed-partner-dupr-menu-fallback-v2");
+    if (existing) return true;
+
+    var bar = document.createElement("div");
+    bar.id = "pb-fixed-partner-dupr-menu-fallback-v2";
+    bar.style.cssText = "margin:.55rem 0 .75rem;padding:.55rem .65rem;border-radius:11px;border:1px solid rgba(198,255,0,.25);background:rgba(198,255,0,.06);display:flex;gap:.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap";
+
+    bar.innerHTML =
+      '<div style="color:var(--txt2);font-size:.8rem"><strong style="color:var(--lime)">Fixed Partner DUPR</strong> is available here if your Mode dropdown does not show it.</div>' +
+      '<button class="btn btn-primary btn-sm" onclick="pbFixedPartnerDuprGenerateNextRoundV1()">🚀 Generate Fixed Partner DUPR Round</button>';
+
+    panel.parentNode.insertBefore(bar, panel);
+
+    return true;
+  }
+
+  window.pbFixedPartnerDuprMenuRepairV2 = function(){
+    var added = addOptionToCustomMenus();
+
+    try {
+      if (typeof window.pbFixedPartnerDuprRenderPanelV1 === "function") {
+        window.pbFixedPartnerDuprRenderPanelV1();
+      }
+    } catch(e) {}
+
+    makeFallbackButton();
+
+    return {
+      installed: true,
+      optionsAddedThisRun: added,
+      modeSelects: Array.from(document.querySelectorAll("select")).filter(isLikelyModeSelect).map(function(sel){
+        return {
+          id: sel.id || "",
+          name: sel.name || "",
+          value: sel.value || "",
+          options: Array.from(sel.options).map(function(o){ return o.textContent || o.value; })
+        };
+      }),
+      fixedPartnerOptionCount: Array.from(document.querySelectorAll("select option")).filter(function(o){
+        return String(o.value) === "fixedPartnerDupr" || /fixed\s*partner\s*dupr/i.test(String(o.textContent || ""));
+      }).length,
+      fallbackFound: !!document.getElementById("pb-fixed-partner-dupr-menu-fallback-v2"),
+      selectedModeIsFixedPartnerDupr: selectedModeIsFixedPartnerDupr()
+    };
+  };
+
+  var oldRenderSchedule = window.renderSchedule;
+  if (typeof oldRenderSchedule === "function" && !oldRenderSchedule.__pbFixedPartnerDuprMenuRepairV2) {
+    var wrappedSchedule = function(){
+      var result = oldRenderSchedule.apply(this, arguments);
+      setTimeout(function(){ try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {} }, 150);
+      return result;
+    };
+    wrappedSchedule.__pbFixedPartnerDuprMenuRepairV2 = true;
+    window.renderSchedule = wrappedSchedule;
+  }
+
+  var oldRenderBuilder = window.renderMatchBuilderPanel;
+  if (typeof oldRenderBuilder === "function" && !oldRenderBuilder.__pbFixedPartnerDuprMenuRepairV2) {
+    var wrappedBuilder = function(){
+      var result = oldRenderBuilder.apply(this, arguments);
+      setTimeout(function(){ try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {} }, 180);
+      return result;
+    };
+    wrappedBuilder.__pbFixedPartnerDuprMenuRepairV2 = true;
+    window.renderMatchBuilderPanel = wrappedBuilder;
+  }
+
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest ? ev.target.closest("button,a") : null;
+    if (!target) return;
+
+    var txt = String(target.textContent || "");
+    if (/Schedule|DUPR|Mode|Generate|Round/i.test(txt)) {
+      setTimeout(function(){ try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {} }, 250);
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev){
+    var target = ev.target;
+
+    if (target && (
+      target.id === "pb-fp-dupr-player-a-v1" ||
+      target.id === "pb-fp-dupr-player-b-v1"
+    )) {
+      return;
+    }
+
+    if (target && String(target.tagName || "").toLowerCase() === "select") {
+      setTimeout(function(){ try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {} }, 120);
+    }
+  }, true);
+
+  var obs = new MutationObserver(function(){
+    clearTimeout(window.__pbFpDuprMenuRepairTimerV2);
+    window.__pbFpDuprMenuRepairTimerV2 = setTimeout(function(){
+      try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {}
+    }, 250);
+  });
+
+  obs.observe(document.documentElement, { childList: true, subtree: true });
+
+  setTimeout(function(){ try { window.pbFixedPartnerDuprMenuRepairV2(); } catch(e) {} }, 800);
+
+  window.pbFixedPartnerDuprMenuRepairStatusV2 = function(){
+    return window.pbFixedPartnerDuprMenuRepairV2();
+  };
+})();
+
+
+/* PB_FIXED_PARTNER_DUPR_SELECT_STABILITY_V3 */
+(function(){
+  window.pbFixedPartnerDuprSelectStabilityStatusV3 = function(){
+    var a = document.getElementById("pb-fp-dupr-player-a-v1");
+    var b = document.getElementById("pb-fp-dupr-player-b-v1");
+
+    return {
+      installed: true,
+      partnerASelectFound: !!a,
+      partnerBSelectFound: !!b,
+      partnerAValue: a ? a.value : "",
+      partnerBValue: b ? b.value : "",
+      note: "Fixed Partner DUPR pair selects should no longer reset after choosing a player."
+    };
+  };
+})();
+
 </script>
 
 </body>
