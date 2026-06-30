@@ -32569,6 +32569,206 @@ function exportEndSessionSummary(){
   window.pbAccessLogRouteDeleteStatusV4 = apply;
 })();
 
+
+/* PB_MOBILE_SYNC_STATUS_PANEL_V1 */
+(function(){
+  function esc(v){
+    try {
+      if (typeof escHtml === "function") return escHtml(String(v == null ? "" : v));
+    } catch(e) {}
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function getInput(id){
+    var el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function getMobileConfig(){
+    var saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem("pb_mobile_sync_config") || "{}") || {};
+    } catch(e) {
+      saved = {};
+    }
+
+    return {
+      workerUrl: getInput("ms-worker-url") || saved.workerUrl || saved.url || (window.msState && window.msState.workerUrl) || "",
+      code: getInput("ms-code") || saved.code || (window.msState && window.msState.code) || ""
+    };
+  }
+
+  function countPins(){
+    try {
+      if (window.msState && window.msState.courtPins && typeof window.msState.courtPins === "object") {
+        return Object.values(window.msState.courtPins).filter(Boolean).length;
+      }
+    } catch(e) {}
+
+    try {
+      var pinsText = localStorage.getItem("pb_mobile_sync_court_pins") || "";
+      if (pinsText) {
+        var pins = JSON.parse(pinsText);
+        return Object.values(pins || {}).filter(Boolean).length;
+      }
+    } catch(e) {}
+
+    return 0;
+  }
+
+  function countClaims(){
+    try {
+      if (typeof window.msClaimsCache !== "undefined" && window.msClaimsCache) {
+        return Object.values(window.msClaimsCache).filter(function(c){ return c && c.name; }).length;
+      }
+    } catch(e) {}
+
+    try {
+      if (window.msState && window.msState.claims) {
+        return Object.values(window.msState.claims).filter(function(c){ return c && c.name; }).length;
+      }
+    } catch(e) {}
+
+    return 0;
+  }
+
+  function countPending(){
+    try {
+      if (window.msState && Array.isArray(window.msState.pending)) {
+        return window.msState.pending.filter(function(p){ return p && !p.consumed; }).length;
+      }
+    } catch(e) {}
+    return 0;
+  }
+
+  function countCurrentRoundMatches(){
+    try {
+      var schedule = window.state && Array.isArray(window.state.schedule) ? window.state.schedule : [];
+      if (!schedule.length) return 0;
+
+      var idx = schedule.findIndex(function(round){
+        return Array.isArray(round) && round.some(function(m){ return m && !m.complete; });
+      });
+
+      if (idx < 0) idx = schedule.length - 1;
+
+      return Array.isArray(schedule[idx]) ? schedule[idx].length : 0;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function row(ok, label, detail){
+    return '<div style="display:flex;gap:.55rem;align-items:flex-start;padding:.38rem .45rem;border-radius:9px;background:' +
+      (ok ? 'rgba(102,187,106,.075)' : 'rgba(249,168,37,.075)') +
+      ';border:1px solid ' +
+      (ok ? 'rgba(102,187,106,.22)' : 'rgba(249,168,37,.25)') +
+      '"><span style="min-width:1.2rem">' + (ok ? '✅' : '⚠️') + '</span><div><div style="font-weight:800;color:var(--txt);font-size:.82rem">' +
+      esc(label) + '</div><div style="color:var(--txt3);font-size:.76rem;line-height:1.35">' + esc(detail) + '</div></div></div>';
+  }
+
+  window.pbMobileSyncStatusPanelRefreshV1 = function(){
+    var sec = document.getElementById("sec-mobilesync");
+    if (!sec) return false;
+
+    var existing = document.getElementById("pb-mobile-sync-status-panel-v1");
+    if (!existing) {
+      existing = document.createElement("div");
+      existing.id = "pb-mobile-sync-status-panel-v1";
+
+      var insertAfter = sec.querySelector('[id*="ms-code"]');
+      var parentCard = insertAfter ? insertAfter.closest(".card, .premium-panel, div") : null;
+
+      if (parentCard && parentCard.parentNode) {
+        parentCard.parentNode.insertBefore(existing, parentCard.nextSibling);
+      } else {
+        sec.insertBefore(existing, sec.firstChild);
+      }
+    }
+
+    var cfg = getMobileConfig();
+    var pins = countPins();
+    var claims = countClaims();
+    var pending = countPending();
+    var matches = countCurrentRoundMatches();
+
+    existing.style.cssText = "margin:.85rem 0 1rem;padding:.9rem 1rem;border:1px solid rgba(198,255,0,.32);background:rgba(198,255,0,.06);border-radius:14px";
+
+    existing.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.22rem;color:var(--lime);letter-spacing:.4px">📱 Mobile Sync Status</div>' +
+          '<div style="color:var(--txt2);font-size:.8rem">Use this checklist before sharing the scorekeeper link.</div>' +
+        '</div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbMobileSyncStatusPanelRefreshV1()">Refresh Status</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.5rem">' +
+        row(!!cfg.workerUrl, "Worker URL", cfg.workerUrl ? cfg.workerUrl : "Set the mobile scorekeeper Worker URL.") +
+        row(!!cfg.code, "Tournament Code", cfg.code ? cfg.code : "Generate or enter a code players will use.") +
+        row(matches > 0, "Current Round", matches ? matches + " match(es) available in the current round." : "Generate/start a round, then push it to mobile.") +
+        row(pins > 0, "Court PINs", pins ? pins + " court PIN(s) detected." : "Generate court PINs before players claim courts.") +
+        row(claims > 0, "Scoring Ownership", claims ? claims + " court(s) claimed." : "No court claims detected yet.") +
+        row(pending === 0, "Pending Scores", pending ? pending + " score(s) waiting to import." : "No pending mobile scores.") +
+      '</div>' +
+      '<div style="margin-top:.6rem;color:var(--txt3);font-size:.76rem">If ownership looks missing, check Tournament Code + Court PINs first.</div>';
+
+    return true;
+  };
+
+  window.pbMobileSyncStatusPanelStatusV1 = function(){
+    var cfg = getMobileConfig();
+    return {
+      installed: true,
+      panelFound: !!document.getElementById("pb-mobile-sync-status-panel-v1"),
+      workerUrlSet: !!cfg.workerUrl,
+      codeSet: !!cfg.code,
+      pins: countPins(),
+      claims: countClaims(),
+      pending: countPending(),
+      currentRoundMatches: countCurrentRoundMatches()
+    };
+  };
+
+  var oldRender = window.renderMobileSyncTab;
+  if (typeof oldRender === "function" && !oldRender.__pbMobileSyncStatusPanelV1) {
+    var wrapped = function(){
+      var result = oldRender.apply(this, arguments);
+      setTimeout(function(){
+        try { window.pbMobileSyncStatusPanelRefreshV1(); } catch(e) {}
+      }, 60);
+      return result;
+    };
+    wrapped.__pbMobileSyncStatusPanelV1 = true;
+    window.renderMobileSyncTab = wrapped;
+  }
+
+  document.addEventListener("click", function(ev){
+    var target = ev.target && ev.target.closest ? ev.target.closest("button,a") : null;
+    if (!target) return;
+    var txt = String(target.textContent || "");
+    if (/Mobile Sync|Generate Code|Generate code|Court PIN|Push|Sync/i.test(txt)) {
+      setTimeout(function(){
+        try { window.pbMobileSyncStatusPanelRefreshV1(); } catch(e) {}
+      }, 300);
+      setTimeout(function(){
+        try { window.pbMobileSyncStatusPanelRefreshV1(); } catch(e) {}
+      }, 1200);
+    }
+  }, true);
+
+  setTimeout(function(){
+    try {
+      if (document.getElementById("sec-mobilesync") && document.getElementById("sec-mobilesync").classList.contains("active")) {
+        window.pbMobileSyncStatusPanelRefreshV1();
+      }
+    } catch(e) {}
+  }, 500);
+})();
+
 </script>
 
 </body>
