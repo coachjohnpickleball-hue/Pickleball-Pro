@@ -39046,6 +39046,372 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_MOBILE_SYNC_START_SESSION_BUTTON_V3 */
+(function(){
+  if (window.__pbMobileSyncStartSessionButtonV3) return;
+  window.__pbMobileSyncStartSessionButtonV3 = true;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function cleanText(v) {
+    return String(v === null || v === undefined ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function getSchedule() {
+    try {
+      return window.state && Array.isArray(state.schedule) ? state.schedule : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function roundComplete(round) {
+    var matches = Array.isArray(round) ? round : [];
+    var i;
+
+    if (!matches.length) return false;
+
+    for (i = 0; i < matches.length; i++) {
+      if (!matches[i] || matches[i].complete !== true) return false;
+    }
+
+    return true;
+  }
+
+  function currentRoundIndex() {
+    var rounds = getSchedule();
+    var i;
+
+    if (!rounds.length) return -1;
+
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var progress = dashboardGetProgress();
+
+        if (progress && typeof progress.currentIdx === "number" && progress.currentIdx >= 0) {
+          return Math.min(progress.currentIdx, rounds.length - 1);
+        }
+      }
+    } catch(e1) {}
+
+    for (i = 0; i < rounds.length; i++) {
+      if (!roundComplete(rounds[i])) return i;
+    }
+
+    return rounds.length - 1;
+  }
+
+  function isRoundStarted(idx) {
+    try {
+      return !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function currentStatus() {
+    var rounds = getSchedule();
+    var idx = currentRoundIndex();
+    var totalMatches = 0;
+    var completeMatches = 0;
+
+    if (idx >= 0 && Array.isArray(rounds[idx])) {
+      totalMatches = rounds[idx].length;
+
+      rounds[idx].forEach(function(match) {
+        if (match && match.complete === true) completeMatches++;
+      });
+    }
+
+    return {
+      installed: true,
+      marker: "PB_MOBILE_SYNC_START_SESSION_BUTTON_V3",
+      hasSchedule: rounds.length > 0,
+      currentRoundIndex: idx,
+      currentRoundNumber: idx >= 0 ? idx + 1 : null,
+      currentRoundStarted: idx >= 0 ? isRoundStarted(idx) : false,
+      totalRounds: rounds.length,
+      totalMatches: totalMatches,
+      completeMatches: completeMatches
+    };
+  }
+
+  function findMobileSyncRoot() {
+    return byId("sec-mobilesync") || byId("mobilesync") || byId("mobile-sync") || byId("sec-communications");
+  }
+
+  function findCompactStrip() {
+    return byId("pb-mobile-sync-compact-strip-v1");
+  }
+
+  function findChecklistRow() {
+    var strip = findCompactStrip();
+    var rows;
+    var i;
+    var t;
+
+    if (!strip) return null;
+
+    rows = strip.querySelectorAll("div");
+
+    for (i = 0; i < rows.length; i++) {
+      t = cleanText(rows[i].textContent);
+
+      if (t.indexOf("Code") >= 0 && t.indexOf("PIN") >= 0 && t.indexOf("Round") >= 0) {
+        return rows[i];
+      }
+    }
+
+    return strip;
+  }
+
+  function ensureSessionControl() {
+    var row = findChecklistRow();
+    var root = findMobileSyncRoot();
+    var box = byId("pb-mobile-sync-start-session-v3");
+
+    if (box && row && box.parentNode !== row) {
+      box.parentNode.removeChild(box);
+      box = null;
+    }
+
+    if (!box) {
+      box = document.createElement("span");
+      box.id = "pb-mobile-sync-start-session-v3";
+      box.style.cssText = [
+        "display:inline-flex",
+        "align-items:center",
+        "gap:.4rem",
+        "white-space:nowrap",
+        "font-size:.74rem",
+        "margin-left:.15rem"
+      ].join(";");
+
+      if (row) {
+        row.appendChild(box);
+      } else if (root) {
+        box.style.cssText += ";margin:.35rem 0 .6rem;padding:.42rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.045)";
+        root.insertBefore(box, root.firstChild);
+      } else {
+        return null;
+      }
+    }
+
+    return box;
+  }
+
+  function startCurrentSession() {
+    var st = currentStatus();
+    var idx = st.currentRoundIndex;
+
+    if (!st.hasSchedule || idx < 0) {
+      try {
+        if (typeof toast === "function") toast("Generate a schedule before starting a Mobile Sync session.", "err");
+      } catch(e1) {}
+
+      render();
+      return false;
+    }
+
+    if (st.currentRoundStarted) {
+      try {
+        if (typeof toast === "function") toast("Round " + st.currentRoundNumber + " is already started.", "ok");
+      } catch(e2) {}
+
+      render();
+      return true;
+    }
+
+    try {
+      if (typeof lockRound === "function") {
+        lockRound(idx);
+      } else {
+        state.startedRounds = state.startedRounds || new Set();
+        state.startedRounds.add(idx);
+
+        try {
+          if (typeof renderSchedule === "function") renderSchedule();
+        } catch(e3) {}
+
+        try {
+          if (typeof renderDashboard === "function") renderDashboard();
+        } catch(e4) {}
+
+        try {
+          if (typeof autoSave === "function") autoSave();
+        } catch(e5) {}
+
+        try {
+          if (typeof toast === "function") toast("Session started for Round " + (idx + 1) + ".", "ok");
+        } catch(e6) {}
+      }
+    } catch(e7) {
+      try {
+        if (typeof toast === "function") toast("Could not start the session. Open Schedule and click Start Round.", "err");
+      } catch(e8) {}
+
+      return false;
+    }
+
+    setTimeout(render, 80);
+    setTimeout(render, 250);
+
+    try {
+      if (typeof pbMobileSyncStartedInlineCheckStatusV2 === "function") {
+        pbMobileSyncStartedInlineCheckStatusV2();
+      }
+    } catch(e9) {}
+
+    try {
+      if (typeof pbMobileSyncCompactStripRefreshV1 === "function") {
+        pbMobileSyncCompactStripRefreshV1();
+      }
+    } catch(e10) {}
+
+    return true;
+  }
+
+  function render() {
+    var box = ensureSessionControl();
+    var st = currentStatus();
+    var html = "";
+    var btnId = "pb-mobile-sync-start-session-btn-v3";
+
+    if (!box) return false;
+
+    if (!st.hasSchedule) {
+      html += "<span style='color:var(--txt3)'>Session: —</span>";
+      html += "<button type='button' class='btn btn-secondary btn-sm' id='" + btnId + "' disabled style='padding:.24rem .5rem;font-size:.72rem'>Start Session</button>";
+    } else if (st.currentRoundStarted) {
+      html += "<span style='color:var(--lime);font-weight:800'>✅ Session: Round " + st.currentRoundNumber + "</span>";
+      html += "<button type='button' class='btn btn-secondary btn-sm' id='" + btnId + "' disabled style='padding:.24rem .5rem;font-size:.72rem;opacity:.65'>Started</button>";
+    } else {
+      html += "<span style='color:var(--ball);font-weight:800'>Session: Round " + st.currentRoundNumber + "</span>";
+      html += "<button type='button' class='btn btn-primary btn-sm' id='" + btnId + "' style='padding:.24rem .55rem;font-size:.72rem'>Start Session</button>";
+    }
+
+    box.innerHTML = html;
+
+    var btn = byId(btnId);
+
+    if (btn && !btn.__pbMobileSyncStartSessionButtonV3 && !btn.disabled) {
+      btn.__pbMobileSyncStartSessionButtonV3 = true;
+
+      btn.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+
+        startCurrentSession();
+
+        return false;
+      }, true);
+    }
+
+    return true;
+  }
+
+  function wrapRenderMobileSync() {
+    var fn = window.renderMobileSyncTab;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbMobileSyncStartSessionButtonV3) return true;
+
+    window.renderMobileSyncTab = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(render, 60);
+      setTimeout(render, 220);
+
+      return result;
+    };
+
+    window.renderMobileSyncTab.__pbMobileSyncStartSessionButtonV3 = true;
+
+    return true;
+  }
+
+  function wrapCompactRefresh() {
+    var fn = window.pbMobileSyncCompactStripRefreshV1;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbMobileSyncStartSessionButtonV3) return true;
+
+    window.pbMobileSyncCompactStripRefreshV1 = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(render, 40);
+      setTimeout(render, 180);
+
+      return result;
+    };
+
+    window.pbMobileSyncCompactStripRefreshV1.__pbMobileSyncStartSessionButtonV3 = true;
+
+    return true;
+  }
+
+  function wrapLockRound() {
+    var fn = window.lockRound;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbMobileSyncStartSessionButtonV3) return true;
+
+    window.lockRound = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(render, 80);
+      setTimeout(render, 250);
+
+      return result;
+    };
+
+    window.lockRound.__pbMobileSyncStartSessionButtonV3 = true;
+
+    return true;
+  }
+
+  function install() {
+    wrapRenderMobileSync();
+    wrapCompactRefresh();
+    wrapLockRound();
+    render();
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  document.addEventListener("change", function() {
+    setTimeout(install, 60);
+    setTimeout(render, 180);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(render, 140);
+  }, true);
+
+  setTimeout(install, 250);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+  setInterval(install, 3000);
+
+  window.pbMobileSyncStartSessionButtonStatusV3 = function() {
+    install();
+
+    var st = currentStatus();
+
+    st.controlFound = !!byId("pb-mobile-sync-start-session-v3");
+    st.buttonFound = !!byId("pb-mobile-sync-start-session-btn-v3");
+    st.compactStripFound = !!findCompactStrip();
+
+    return st;
+  };
+})();
+
 </script>
 
 </body>
