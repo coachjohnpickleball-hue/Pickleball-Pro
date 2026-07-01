@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>window.__CLIENT__={"client":{"id":"coachjohn","name":"Coach John Pickleball","adminEmail":"coachjohnpickleball@gmail.com"},"branding":{"appName":"Pickleball Pro","logoEmoji":"\ud83c\udfd3","primaryColor":"#C6FF00","accentColor":"#FF9800"},"worker":{"name":"pickleball-relay","kvNamespaceId":"faac1bcc30ef4711a9377e60ef70636d"},"limits":{"maxSmsPerDay":200,"maxEmailPerDay":500},"features":{"sms":true,"email":true,"mobileSync":true,"playoffs":true,"season":true,"duprExport":true}};
+
+<script>window.__CLIENT__={"client":{"id":"coachjohn","name":"Coach John Pickleball","adminEmail":"coachjohnpickleball@gmail.com"},"branding":{"appName":"Pickleball Pro","logoEmoji":"\ud83c\udfd3","primaryColor":"#C6FF00","accentColor":"#FF9800"},"worker":{"name":"pickleball-relay","kvNamespaceId":"faac1bcc30ef4711a9377e60ef70636d"},"limits":{"maxSmsPerDay":200,"maxEmailPerDay":500},"features":{"sms":true,"email":true,"mobileSync":true,"playoffs":true,"season":true,"duprExport":true}};
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17720,20 +17721,6 @@ function emBuildHtml(player) {
         <p style="font-size:12px;color:#999;margin:20px 0 0;text-align:center">Thanks for playing! 🏓</p>
       </div>
     </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 </body></html>`;
 }
@@ -36454,8 +36441,8 @@ function exportEndSessionSummary(){
     if (isFixedPartnerDupr()) {
       setButton(
         btn,
-        "🤝 Generate Fixed Partner Round",
-        "Uses the Fixed Partner DUPR setup and keeps selected partners together.",
+        "🤝 Generate Fixed Partner Draft Rounds",
+        "Uses the Fixed Partner DUPR setup and respects the requested number of rounds.",
         true
       );
       return;
@@ -36573,30 +36560,12 @@ function exportEndSessionSummary(){
   }
 
   function interceptFixedPartnerGenerate(ev) {
-    var target = ev && ev.target;
-    var btn = target && target.closest ? target.closest("button, a.btn, .btn") : null;
-
-    if (!btn) return;
-
-    var isMain =
-      btn.id === "btn-generate-schedule" ||
-      btn.id === "dash-primary-action";
-
-    if (!isMain) return;
-
-    if (!isFixedPartnerDupr()) return;
-
-    if (typeof window.pbFixedPartnerDirectGenerateV28 === "function") {
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      if (ev.stopImmediatePropagation) {
-        ev.stopImmediatePropagation();
-      }
-
-      window.pbFixedPartnerDirectGenerateV28();
-      return false;
-    }
+    // PB_RESTORE_MULTI_ROUND_GENERATE_V2
+    // Do not hijack the main Generate button.
+    // The native generator must respect the requested round count, e.g. 7 rounds.
+    // Fixed Partner validation can still block invalid setup, but generation itself
+    // must stay on the app's normal multi-round path.
+    return;
   }
 
   window.pbGenerateButtonCleanupStatusV1 = function() {
@@ -36668,304 +36637,6 @@ function exportEndSessionSummary(){
   setTimeout(cleanupGenerateButtons, 1000);
   setInterval(cleanupGenerateButtons, 2500);
 })();
-
-
-/* PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3 */
-(function(){
-  if (window.__pbModeChangePreserveCompletedSurgicalV3) {
-    return;
-  }
-
-  window.__pbModeChangePreserveCompletedSurgicalV3 = true;
-
-  function clone(v) {
-    try {
-      return JSON.parse(JSON.stringify(v));
-    } catch(e) {
-      return v;
-    }
-  }
-
-  function hasValue(v) {
-    return v !== null && v !== undefined && String(v).trim() !== "";
-  }
-
-  function ensureArrays() {
-    if (!window.state) {
-      return false;
-    }
-
-    if (!Array.isArray(state.schedule)) state.schedule = [];
-    if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
-    if (!Array.isArray(state.byeRounds)) state.byeRounds = [];
-    if (!Array.isArray(state.roundMeta)) state.roundMeta = [];
-    if (!Array.isArray(state.roundLocks)) state.roundLocks = [];
-
-    try {
-      if (!state.startedRounds || typeof state.startedRounds.has !== "function") {
-        state.startedRounds = new Set();
-      }
-    } catch(e) {
-      state.startedRounds = new Set();
-    }
-
-    return true;
-  }
-
-  function matchHasScore(m) {
-    var k;
-
-    if (!m) return false;
-
-    if (m.complete === true || m.completed === true || m.isComplete === true || m.done === true) {
-      return true;
-    }
-
-    if (hasValue(m.scoreA) || hasValue(m.scoreB)) return true;
-    if (hasValue(m.aScore) || hasValue(m.bScore)) return true;
-    if (hasValue(m.teamAScore) || hasValue(m.teamBScore)) return true;
-    if (hasValue(m.pointsA) || hasValue(m.pointsB)) return true;
-
-    for (k in m) {
-      if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
-
-      var key = String(k).toLowerCase();
-
-      if (key.indexOf("score") >= 0 && hasValue(m[k])) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  function roundStarted(idx) {
-    try {
-      return !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
-    } catch(e) {
-      return false;
-    }
-  }
-
-  function roundLocked(idx) {
-    try {
-      return !!(state.roundLocks && state.roundLocks[idx]);
-    } catch(e) {
-      return false;
-    }
-  }
-
-  function roundProtected(idx) {
-    try {
-      var round = state.schedule[idx] || [];
-
-      if (roundStarted(idx) || roundLocked(idx)) {
-        return true;
-      }
-
-      for (var i = 0; i < round.length; i++) {
-        if (matchHasScore(round[i])) {
-          return true;
-        }
-      }
-    } catch(e) {}
-
-    return false;
-  }
-
-  function snapshotProtectedRounds() {
-    var snap = {
-      rounds: [],
-      startedRounds: []
-    };
-
-    if (!ensureArrays()) {
-      return snap;
-    }
-
-    try {
-      if (state.startedRounds && typeof state.startedRounds.forEach === "function") {
-        state.startedRounds.forEach(function(v) {
-          snap.startedRounds.push(Number(v));
-        });
-      }
-    } catch(e1) {}
-
-    for (var i = 0; i < state.schedule.length; i++) {
-      if (!roundProtected(i)) continue;
-
-      snap.rounds.push({
-        index: i,
-        schedule: clone(state.schedule[i] || []),
-        roundTeams: clone(state.roundTeams[i] || []),
-        byeRounds: clone(state.byeRounds[i] || []),
-        roundMeta: clone(state.roundMeta[i] || null),
-        roundLock: clone(state.roundLocks[i] || null),
-        started: roundStarted(i)
-      });
-    }
-
-    return snap;
-  }
-
-  function rebuildTeamsFlat() {
-    try {
-      state.teams = [];
-
-      (state.roundTeams || []).forEach(function(roundTeams) {
-        (roundTeams || []).forEach(function(team) {
-          state.teams.push(team);
-        });
-      });
-    } catch(e) {}
-  }
-
-  function restoreProtectedOnly(snap) {
-    if (!snap || !snap.rounds || !snap.rounds.length) {
-      return 0;
-    }
-
-    ensureArrays();
-
-    var maxIndex = -1;
-    var restored = 0;
-
-    snap.rounds.forEach(function(item) {
-      var idx = Number(item.index);
-
-      if (!isFinite(idx) || idx < 0) {
-        return;
-      }
-
-      if (idx > maxIndex) {
-        maxIndex = idx;
-      }
-
-      while (state.schedule.length <= idx) state.schedule.push([]);
-      while (state.roundTeams.length <= idx) state.roundTeams.push([]);
-      while (state.byeRounds.length <= idx) state.byeRounds.push([]);
-      while (state.roundMeta.length <= idx) state.roundMeta.push(null);
-      while (state.roundLocks.length <= idx) state.roundLocks.push(null);
-
-      state.schedule[idx] = clone(item.schedule || []);
-      state.roundTeams[idx] = clone(item.roundTeams || []);
-      state.byeRounds[idx] = clone(item.byeRounds || []);
-      state.roundMeta[idx] = clone(item.roundMeta || {
-        preservedBy: "PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3",
-        preservedAt: new Date().toISOString()
-      });
-      state.roundLocks[idx] = clone(item.roundLock || {
-        lockedAt: new Date().toISOString(),
-        reason: "completed/started round preserved during mode change",
-        preservedBy: "PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3"
-      });
-
-      try {
-        if ((item.started || snap.startedRounds.indexOf(idx) >= 0) && state.startedRounds && typeof state.startedRounds.add === "function") {
-          state.startedRounds.add(idx);
-        }
-      } catch(e1) {}
-
-      restored++;
-    });
-
-    if (maxIndex >= 0) {
-      state.schedule = state.schedule.slice(0, maxIndex + 1);
-      state.roundTeams = state.roundTeams.slice(0, maxIndex + 1);
-      state.byeRounds = state.byeRounds.slice(0, maxIndex + 1);
-      state.roundMeta = state.roundMeta.slice(0, maxIndex + 1);
-      state.roundLocks = state.roundLocks.slice(0, maxIndex + 1);
-    }
-
-    rebuildTeamsFlat();
-
-    return restored;
-  }
-
-  function saveAndRenderOnce(restored) {
-    try {
-      if (typeof autoSave === "function") autoSave();
-      else if (typeof saveState === "function") saveState();
-      else if (typeof save === "function") save();
-    } catch(e) {}
-
-    if (!restored) {
-      return;
-    }
-
-    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e1) {}
-    try { if (typeof renderTeams === "function") renderTeams(); } catch(e2) {}
-    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch(e3) {}
-    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e4) {}
-    try { if (typeof updateProgress === "function") updateProgress(); } catch(e5) {}
-
-    try {
-      if (typeof toast === "function") {
-        toast("🔒 Completed rounds preserved. Future drafts cleared for the new mode.", "ok");
-      }
-    } catch(e6) {}
-  }
-
-  function install() {
-    if (typeof window.onModeChange !== "function") {
-      return false;
-    }
-
-    if (window.onModeChange.__pbModeChangePreserveCompletedSurgicalV3) {
-      return true;
-    }
-
-    var original = window.onModeChange;
-
-    var wrapped = function() {
-      var snap = snapshotProtectedRounds();
-      var result;
-
-      result = original.apply(this, arguments);
-
-      var restored = restoreProtectedOnly(snap);
-      saveAndRenderOnce(restored);
-
-      return result;
-    };
-
-    wrapped.__pbModeChangePreserveCompletedSurgicalV3 = true;
-    window.onModeChange = wrapped;
-
-    return true;
-  }
-
-  window.pbModeChangePreserveCompletedSurgicalStatusV3 = function() {
-    install();
-
-    var protectedIndexes = [];
-
-    try {
-      ensureArrays();
-
-      for (var i = 0; i < state.schedule.length; i++) {
-        if (roundProtected(i)) {
-          protectedIndexes.push(i);
-        }
-      }
-    } catch(e) {}
-
-    return {
-      installed: true,
-      onModeChangeWrapped: !!(window.onModeChange && window.onModeChange.__pbModeChangePreserveCompletedSurgicalV3),
-      protectedRoundIndexes: protectedIndexes,
-      protectedRoundNumbers: protectedIndexes.map(function(i) { return i + 1; }),
-      scheduleLength: window.state && Array.isArray(state.schedule) ? state.schedule.length : 0
-    };
-  };
-
-  install();
-
-  document.addEventListener("DOMContentLoaded", install);
-
-  setTimeout(install, 300);
-})();
-
 
 /* PB_FIXED_PARTNER_DUPR_VALIDATION_V1 */
 (function(){
@@ -37466,6 +37137,435 @@ function exportEndSessionSummary(){
   setTimeout(install, 300);
   setTimeout(install, 1000);
   setInterval(install, 3000);
+})();
+
+
+/* PB_OPERATOR_VIEW_V1 */
+(function(){
+  if (window.__pbOperatorViewV1) {
+    return;
+  }
+
+  window.__pbOperatorViewV1 = true;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function textOf(el) {
+    return String((el && (el.innerText || el.textContent || el.value)) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function hasValue(v) {
+    return v !== null && v !== undefined && String(v).trim() !== "";
+  }
+
+  function esc(v) {
+    return String(v === null || v === undefined ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function getSchedule() {
+    try {
+      if (window.state && Array.isArray(state.schedule)) {
+        return state.schedule;
+      }
+    } catch(e) {}
+
+    return [];
+  }
+
+  function matchHasScore(m) {
+    var k;
+
+    if (!m) return false;
+
+    if (m.complete === true || m.completed === true || m.isComplete === true || m.done === true) {
+      return true;
+    }
+
+    if (hasValue(m.scoreA) || hasValue(m.scoreB)) return true;
+    if (hasValue(m.aScore) || hasValue(m.bScore)) return true;
+    if (hasValue(m.teamAScore) || hasValue(m.teamBScore)) return true;
+    if (hasValue(m.pointsA) || hasValue(m.pointsB)) return true;
+
+    for (k in m) {
+      if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+
+      if (String(k).toLowerCase().indexOf("score") >= 0 && hasValue(m[k])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function roundStarted(idx) {
+    try {
+      return !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function roundComplete(round) {
+    if (!round || !round.length) {
+      return false;
+    }
+
+    for (var i = 0; i < round.length; i++) {
+      if (!matchHasScore(round[i])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function activeCourtCount(round) {
+    var n = 0;
+
+    (round || []).forEach(function(m) {
+      if (!m) return;
+
+      if (m.bye === true || m.isBye === true) {
+        return;
+      }
+
+      n++;
+    });
+
+    return n;
+  }
+
+  function summarize() {
+    var schedule = getSchedule();
+    var totalRounds = schedule.length;
+    var totalMatches = 0;
+    var scoredMatches = 0;
+    var missingMatches = 0;
+    var currentRoundIndex = -1;
+    var startedRoundIndex = -1;
+    var completeRounds = 0;
+
+    for (var r = 0; r < schedule.length; r++) {
+      var round = schedule[r] || [];
+      var roundScored = 0;
+
+      if (roundStarted(r)) {
+        startedRoundIndex = r;
+      }
+
+      for (var m = 0; m < round.length; m++) {
+        totalMatches++;
+
+        if (matchHasScore(round[m])) {
+          scoredMatches++;
+          roundScored++;
+        } else {
+          missingMatches++;
+        }
+      }
+
+      if (round.length && roundScored === round.length) {
+        completeRounds++;
+      }
+
+      if (currentRoundIndex < 0 && round.length && roundScored < round.length) {
+        currentRoundIndex = r;
+      }
+    }
+
+    if (startedRoundIndex >= 0) {
+      currentRoundIndex = startedRoundIndex;
+    }
+
+    var currentRound = currentRoundIndex >= 0 ? (schedule[currentRoundIndex] || []) : [];
+    var currentMissing = 0;
+
+    currentRound.forEach(function(m) {
+      if (!matchHasScore(m)) {
+        currentMissing++;
+      }
+    });
+
+    var nextAction = "Add players and generate the first draft round.";
+    var stateLabel = "No schedule yet";
+
+    if (totalRounds > 0 && currentRoundIndex >= 0) {
+      if (roundStarted(currentRoundIndex)) {
+        stateLabel = "Round " + (currentRoundIndex + 1) + " live";
+        nextAction = currentMissing > 0
+          ? "Enter missing scores for Round " + (currentRoundIndex + 1) + "."
+          : "Round " + (currentRoundIndex + 1) + " is scored. Generate the next draft round.";
+      } else {
+        stateLabel = "Round " + (currentRoundIndex + 1) + " ready";
+        nextAction = currentMissing > 0
+          ? "Start or score Round " + (currentRoundIndex + 1) + "."
+          : "Generate the next draft round.";
+      }
+    }
+
+    if (totalRounds > 0 && missingMatches === 0) {
+      stateLabel = "All visible rounds scored";
+      nextAction = "Generate future draft rounds or review standings.";
+    }
+
+    return {
+      totalRounds: totalRounds,
+      totalMatches: totalMatches,
+      scoredMatches: scoredMatches,
+      missingMatches: missingMatches,
+      completeRounds: completeRounds,
+      currentRoundIndex: currentRoundIndex,
+      currentRoundNumber: currentRoundIndex >= 0 ? currentRoundIndex + 1 : 0,
+      currentMissing: currentMissing,
+      currentCourts: activeCourtCount(currentRound),
+      stateLabel: stateLabel,
+      nextAction: nextAction
+    };
+  }
+
+  function findHost() {
+    var ids = [
+      "sec-home",
+      "sec-dashboard",
+      "dashboard",
+      "sec-schedule"
+    ];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+
+      if (el) {
+        return el;
+      }
+    }
+
+    return document.body;
+  }
+
+  function ensurePanel() {
+    var panel = byId("pb-operator-view-v1");
+
+    if (panel) {
+      return panel;
+    }
+
+    var host = findHost();
+
+    panel = document.createElement("div");
+    panel.id = "pb-operator-view-v1";
+    panel.style.cssText = [
+      "margin:0 0 1rem 0",
+      "padding:1rem",
+      "border-radius:18px",
+      "border:1px solid rgba(255,255,255,.14)",
+      "background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(59,130,246,.10))",
+      "box-shadow:0 10px 30px rgba(0,0,0,.12)"
+    ].join(";");
+
+    if (host.firstChild) {
+      host.insertBefore(panel, host.firstChild);
+    } else {
+      host.appendChild(panel);
+    }
+
+    return panel;
+  }
+
+  function clickByText(patterns) {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn, a"));
+
+    for (var i = 0; i < buttons.length; i++) {
+      var txt = textOf(buttons[i]).toLowerCase();
+
+      for (var p = 0; p < patterns.length; p++) {
+        if (txt.indexOf(patterns[p]) >= 0) {
+          buttons[i].click();
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function goSchedule() {
+    try {
+      if (typeof showSection === "function") {
+        showSection("schedule");
+      }
+    } catch(e) {}
+
+    if (!clickByText(["schedule"])) {
+      try {
+        location.hash = "#schedule";
+      } catch(e2) {}
+    }
+
+    var sec = byId("sec-schedule");
+
+    if (sec && sec.scrollIntoView) {
+      sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function triggerGenerate() {
+    var btn = byId("btn-generate-schedule") || byId("dash-primary-action");
+
+    if (btn && typeof btn.click === "function") {
+      btn.click();
+      return;
+    }
+
+    try {
+      if (typeof promptGenerateSchedule === "function") {
+        promptGenerateSchedule();
+        return;
+      }
+    } catch(e) {}
+
+    try {
+      if (typeof generateSchedule === "function") {
+        generateSchedule();
+      }
+    } catch(e2) {}
+  }
+
+  function showLiveDisplay() {
+    if (!clickByText(["live display", "live"])) {
+      goSchedule();
+    }
+  }
+
+  function renderOperatorView() {
+    var panel = ensurePanel();
+    var s = summarize();
+    var html = "";
+
+    html += "<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;flex-wrap:wrap;'>";
+    html += "<div>";
+    html += "<div style='font-size:.78rem;color:var(--txt3);font-weight:800;text-transform:uppercase;letter-spacing:.04em;'>Tournament Operator</div>";
+    html += "<div style='font-size:1.25rem;font-weight:900;margin-top:.15rem;'>🎛️ " + esc(s.stateLabel) + "</div>";
+    html += "<div style='font-size:.88rem;color:var(--txt2);margin-top:.25rem;'>" + esc(s.nextAction) + "</div>";
+    html += "</div>";
+
+    html += "<div style='display:flex;gap:.45rem;flex-wrap:wrap;'>";
+    html += "<button type='button' class='btn btn-primary' id='pb-operator-primary-v1'>Next Action</button>";
+    html += "<button type='button' class='btn btn-secondary' id='pb-operator-schedule-v1'>Schedule</button>";
+    html += "<button type='button' class='btn btn-secondary' id='pb-operator-live-v1'>Live Display</button>";
+    html += "</div>";
+    html += "</div>";
+
+    html += "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.55rem;margin-top:.9rem;'>";
+    html += statBox("Current Round", s.currentRoundNumber ? "Round " + s.currentRoundNumber : "—");
+    html += statBox("Courts", s.currentCourts || "—");
+    html += statBox("Missing Scores", s.missingMatches);
+    html += statBox("Completed Rounds", s.completeRounds + " / " + s.totalRounds);
+    html += "</div>";
+
+    if (panel.__pbLastHtmlV1 !== html) {
+      panel.innerHTML = html;
+      panel.__pbLastHtmlV1 = html;
+    }
+
+    var primary = byId("pb-operator-primary-v1");
+    var scheduleBtn = byId("pb-operator-schedule-v1");
+    var liveBtn = byId("pb-operator-live-v1");
+
+    if (primary && !primary.__pbOperatorV1) {
+      primary.__pbOperatorV1 = true;
+      primary.onclick = function() {
+        var summary = summarize();
+
+        if (!summary.totalRounds || (summary.totalRounds && summary.missingMatches === 0)) {
+          triggerGenerate();
+        } else {
+          goSchedule();
+        }
+      };
+    }
+
+    if (scheduleBtn && !scheduleBtn.__pbOperatorV1) {
+      scheduleBtn.__pbOperatorV1 = true;
+      scheduleBtn.onclick = goSchedule;
+    }
+
+    if (liveBtn && !liveBtn.__pbOperatorV1) {
+      liveBtn.__pbOperatorV1 = true;
+      liveBtn.onclick = showLiveDisplay;
+    }
+
+    return s;
+  }
+
+  function statBox(label, value) {
+    return "<div style='padding:.65rem .75rem;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);'>" +
+      "<div style='font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase;letter-spacing:.04em;'>" + esc(label) + "</div>" +
+      "<div style='font-size:1.08rem;font-weight:900;margin-top:.15rem;'>" + esc(value) + "</div>" +
+      "</div>";
+  }
+
+  function wrapRender(name) {
+    var fn = window[name];
+
+    if (typeof fn !== "function") {
+      return false;
+    }
+
+    if (fn.__pbOperatorViewV1) {
+      return true;
+    }
+
+    var wrapped = function() {
+      var result = fn.apply(this, arguments);
+
+      try {
+        renderOperatorView();
+      } catch(e) {}
+
+      return result;
+    };
+
+    wrapped.__pbOperatorViewV1 = true;
+    window[name] = wrapped;
+
+    return true;
+  }
+
+  function install() {
+    wrapRender("renderDashboard");
+    wrapRender("renderSchedule");
+    renderOperatorView();
+  }
+
+  window.pbOperatorViewStatusV1 = function() {
+    install();
+
+    var s = summarize();
+
+    s.installed = true;
+    s.panelFound = !!byId("pb-operator-view-v1");
+
+    return s;
+  };
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  document.addEventListener("change", function() {
+    setTimeout(renderOperatorView, 80);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(renderOperatorView, 120);
+  }, true);
+
+  setTimeout(install, 300);
+  setTimeout(install, 1200);
+  setInterval(renderOperatorView, 5000);
 })();
 
 </script>
