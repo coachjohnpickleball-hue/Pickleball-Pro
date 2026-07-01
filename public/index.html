@@ -37568,6 +37568,354 @@ function exportEndSessionSummary(){
   setInterval(renderOperatorView, 5000);
 })();
 
+
+
+/* PB_DUPR_COMPLETED_ONLY_SOURCE_V8 */
+(function(){
+  if (window.__pbDuprCompletedOnlySourceV8) return;
+  window.__pbDuprCompletedOnlySourceV8 = true;
+
+  var lastSnapshotV8 = null;
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function clone(v) {
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch(e) {
+      return v;
+    }
+  }
+
+  function hasValue(v) {
+    return v !== null && v !== undefined && String(v).trim() !== "";
+  }
+
+  function getMode() {
+    var mode = el("team-mode");
+    return mode ? String(mode.value || "").toLowerCase() : "";
+  }
+
+  function getFormat() {
+    var ids = [
+      "pb-dupr-format",
+      "pb-dupr-static-format",
+      "dupr-session-format",
+      "pb-dupr-visible-format",
+      "pb-dupr-format-master"
+    ];
+
+    var raw = "open";
+
+    for (var i = 0; i < ids.length; i++) {
+      var select = el(ids[i]);
+
+      if (select) {
+        raw = String(select.value || "").toLowerCase();
+        break;
+      }
+    }
+
+    if (raw === "male" || raw === "men" || raw === "men only") return "male";
+    if (raw === "female" || raw === "women" || raw === "women only") return "female";
+    if (raw === "separate" || raw === "separate men/women" || raw === "separate men women") return "separate";
+    if (raw === "mixed" || raw === "standard mixed") return "mixed";
+
+    return raw || "open";
+  }
+
+  function isTargetDuprGenerate() {
+    var mode = getMode();
+    var format = getFormat();
+
+    return (
+      (mode === "dupr" || mode.indexOf("dupr") >= 0 || mode.indexOf("competitive") >= 0) &&
+      (format === "male" || format === "female" || format === "separate")
+    );
+  }
+
+  function matchCompleted(m) {
+    if (!m) return false;
+
+    return (
+      m.complete === true ||
+      m.completed === true ||
+      m.isComplete === true ||
+      m.done === true ||
+      hasValue(m.scoreA) ||
+      hasValue(m.scoreB) ||
+      hasValue(m.aScore) ||
+      hasValue(m.bScore) ||
+      hasValue(m.teamAScore) ||
+      hasValue(m.teamBScore) ||
+      hasValue(m.pointsA) ||
+      hasValue(m.pointsB) ||
+      hasValue(m.winner) ||
+      hasValue(m.winnerTeam) ||
+      hasValue(m.result)
+    );
+  }
+
+  function roundCompleted(idx, schedule) {
+    var round;
+    var i;
+
+    try {
+      round = Array.isArray(schedule) ? schedule[idx] || [] : [];
+
+      for (i = 0; i < round.length; i++) {
+        if (matchCompleted(round[i])) return true;
+      }
+    } catch(e) {}
+
+    return false;
+  }
+
+  function completedPrefixCount(schedule) {
+    var last = -1;
+    var i;
+
+    if (!Array.isArray(schedule)) return 0;
+
+    for (i = 0; i < schedule.length; i++) {
+      if (roundCompleted(i, schedule)) {
+        last = i;
+      }
+    }
+
+    return last + 1;
+  }
+
+  function rebuildRoundTeamsFromSchedule() {
+    try {
+      state.roundTeams = (state.schedule || []).map(function(round) {
+        var teams = [];
+
+        (round || []).forEach(function(match) {
+          if (!match) return;
+
+          if (Array.isArray(match.teamA) && match.teamA.length >= 2) {
+            teams.push([state.players[match.teamA[0]], state.players[match.teamA[1]]]);
+          }
+
+          if (Array.isArray(match.teamB) && match.teamB.length >= 2) {
+            teams.push([state.players[match.teamB[0]], state.players[match.teamB[1]]]);
+          }
+        });
+
+        return teams;
+      });
+
+      state.teams = [];
+
+      (state.roundTeams || []).forEach(function(roundTeams) {
+        (roundTeams || []).forEach(function(team) {
+          state.teams.push(team);
+        });
+      });
+    } catch(e) {}
+  }
+
+  function takeSnapshot(reason) {
+    if (!window.state || !isTargetDuprGenerate()) return null;
+
+    var schedule = Array.isArray(state.schedule) ? state.schedule : [];
+    var keep = completedPrefixCount(schedule);
+    var started = [];
+
+    try {
+      if (state.startedRounds && typeof state.startedRounds.forEach === "function") {
+        state.startedRounds.forEach(function(v) {
+          started.push(Number(v));
+        });
+      }
+    } catch(e) {}
+
+    lastSnapshotV8 = {
+      reason: reason || "dupr-generate",
+      keep: keep,
+      schedulePrefix: keep > 0 ? clone(schedule.slice(0, keep)) : [],
+      byePrefix: keep > 0 && Array.isArray(state.byeRounds) ? clone(state.byeRounds.slice(0, keep)) : [],
+      roundMetaPrefix: keep > 0 && Array.isArray(state.roundMeta) ? clone(state.roundMeta.slice(0, keep)) : [],
+      roundLocksPrefix: keep > 0 && Array.isArray(state.roundLocks) ? clone(state.roundLocks.slice(0, keep)) : [],
+      startedPrefix: started.filter(function(idx) {
+        return idx < keep;
+      })
+    };
+
+    return lastSnapshotV8;
+  }
+
+  function restoreCompletedOnly(snapshot, reason) {
+    if (!window.state || !snapshot || !snapshot.keep || snapshot.keep < 1) return false;
+
+    var currentSchedule = Array.isArray(state.schedule) ? clone(state.schedule) : [];
+    var currentByes = Array.isArray(state.byeRounds) ? clone(state.byeRounds) : [];
+    var keep = snapshot.keep;
+
+    state.schedule = snapshot.schedulePrefix.concat(currentSchedule.slice(keep));
+    state.byeRounds = snapshot.byePrefix.concat(currentByes.slice(keep));
+    state.startedRounds = new Set(snapshot.startedPrefix || []);
+    state.notifiedRounds = new Set();
+
+    if (snapshot.roundMetaPrefix && snapshot.roundMetaPrefix.length) {
+      state.roundMeta = snapshot.roundMetaPrefix.concat(new Array(Math.max(0, state.schedule.length - keep)).fill(null));
+    }
+
+    if (snapshot.roundLocksPrefix && snapshot.roundLocksPrefix.length) {
+      state.roundLocks = snapshot.roundLocksPrefix.concat(new Array(Math.max(0, state.schedule.length - keep)).fill(null));
+    }
+
+    rebuildRoundTeamsFromSchedule();
+
+    try {
+      console.info("PB_DUPR_COMPLETED_ONLY_SOURCE_V8 preserved completed/scored rounds only", {
+        preservedRounds: keep,
+        totalRounds: state.schedule.length,
+        reason: reason || snapshot.reason
+      });
+    } catch(e) {}
+
+    try {
+      if (typeof renderSchedule === "function") renderSchedule();
+    } catch(e1) {}
+
+    try {
+      if (typeof renderTeams === "function") renderTeams();
+    } catch(e2) {}
+
+    try {
+      if (typeof renderCourtsGrid === "function") renderCourtsGrid();
+    } catch(e3) {}
+
+    try {
+      if (typeof updateProgress === "function") updateProgress();
+    } catch(e4) {}
+
+    try {
+      if (typeof renderDashboard === "function") renderDashboard();
+    } catch(e5) {}
+
+    try {
+      if (typeof autoSave === "function") autoSave();
+    } catch(e6) {}
+
+    try {
+      if (typeof toast === "function") {
+        toast("🔒 Completed/scored rounds preserved. DUPR format rebuilt unscored rounds.", "ok");
+      }
+    } catch(e7) {}
+
+    return true;
+  }
+
+  function afterGenerate(snapshot, reason) {
+    setTimeout(function() {
+      restoreCompletedOnly(snapshot, reason);
+    }, 0);
+
+    setTimeout(function() {
+      restoreCompletedOnly(snapshot, reason);
+    }, 80);
+  }
+
+  function wrapFunction(name) {
+    var fn = window[name];
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbDuprCompletedOnlySourceV8) return true;
+
+    window[name] = function() {
+      var snapshot = takeSnapshot(name);
+      var result = fn.apply(this, arguments);
+
+      afterGenerate(snapshot, name);
+
+      return result;
+    };
+
+    window[name].__pbDuprCompletedOnlySourceV8 = true;
+
+    return true;
+  }
+
+  function looksLikeGenerateControl(node) {
+    var text;
+    var onclick;
+
+    if (!node) return false;
+
+    text = String(node.textContent || node.value || "").toLowerCase();
+    onclick = String(node.getAttribute && node.getAttribute("onclick") || "").toLowerCase();
+
+    return (
+      text.indexOf("generate") >= 0 ||
+      text.indexOf("regenerate") >= 0 ||
+      onclick.indexOf("generateschedule") >= 0 ||
+      onclick.indexOf("promptgenerateschedule") >= 0 ||
+      onclick.indexOf("regenerateschedulepreview") >= 0 ||
+      onclick.indexOf("confirmgenerateschedule") >= 0
+    );
+  }
+
+  function install() {
+    wrapFunction("generateSchedule");
+    wrapFunction("promptGenerateSchedule");
+    wrapFunction("generateBestOfN");
+    wrapFunction("confirmGenerateSchedule");
+    wrapFunction("confirmKeepAndRegenerate");
+    wrapFunction("regenerateSchedulePreview");
+    wrapFunction("pbDuprGenerateSelectedModeV19");
+    wrapFunction("pbDuprGenerateSelectedModeV21");
+    wrapFunction("pbDuprGenerateSelectedModeV22");
+  }
+
+  window.addEventListener("click", function(ev) {
+    if (!isTargetDuprGenerate()) return;
+
+    var target = ev && ev.target;
+    var control = target && target.closest ? target.closest("button,input,a") : target;
+
+    if (!looksLikeGenerateControl(control)) return;
+
+    var snapshot = takeSnapshot("click-capture");
+
+    afterGenerate(snapshot, "click-capture");
+  }, true);
+
+  document.addEventListener("change", function() {
+    setTimeout(install, 50);
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  setTimeout(install, 250);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  window.pbDuprCompletedOnlySourceStatusV8 = function() {
+    var schedule = window.state && Array.isArray(state.schedule) ? state.schedule : [];
+
+    install();
+
+    return {
+      installed: true,
+      marker: "PB_DUPR_COMPLETED_ONLY_SOURCE_V8",
+      mode: getMode(),
+      format: getFormat(),
+      targetDuprGenerate: isTargetDuprGenerate(),
+      completedPrefixCount: completedPrefixCount(schedule),
+      scheduleLength: schedule.length,
+      lastSnapshot: lastSnapshotV8 ? {
+        reason: lastSnapshotV8.reason,
+        keep: lastSnapshotV8.keep
+      } : null
+    };
+  };
+})();
+
 </script>
 
 </body>
