@@ -38625,6 +38625,427 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_MOBILE_SYNC_STARTED_INLINE_CHECK_V2 */
+(function(){
+  if (window.__pbMobileSyncStartedInlineCheckV2) return;
+  window.__pbMobileSyncStartedInlineCheckV2 = true;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function text(v) {
+    return String(v === null || v === undefined ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function schedule() {
+    try {
+      return window.state && Array.isArray(state.schedule) ? state.schedule : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function roundComplete(round) {
+    var matches = Array.isArray(round) ? round : [];
+    var i;
+
+    if (!matches.length) return false;
+
+    for (i = 0; i < matches.length; i++) {
+      if (!matches[i] || matches[i].complete !== true) return false;
+    }
+
+    return true;
+  }
+
+  function currentRoundIndex() {
+    var rounds = schedule();
+    var i;
+
+    if (!rounds.length) return -1;
+
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var p = dashboardGetProgress();
+
+        if (p && typeof p.currentIdx === "number" && p.currentIdx >= 0) {
+          return Math.min(p.currentIdx, rounds.length - 1);
+        }
+      }
+    } catch(e1) {}
+
+    for (i = 0; i < rounds.length; i++) {
+      if (!roundComplete(rounds[i])) return i;
+    }
+
+    return rounds.length - 1;
+  }
+
+  function isStarted(idx) {
+    try {
+      return !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function status() {
+    var rounds = schedule();
+    var idx = currentRoundIndex();
+    var started = idx >= 0 && isStarted(idx);
+    var totalMatches = 0;
+    var completeMatches = 0;
+
+    if (idx >= 0 && Array.isArray(rounds[idx])) {
+      totalMatches = rounds[idx].length;
+
+      rounds[idx].forEach(function(m) {
+        if (m && m.complete === true) completeMatches++;
+      });
+    }
+
+    return {
+      installed: true,
+      marker: "PB_MOBILE_SYNC_STARTED_INLINE_CHECK_V2",
+      hasSchedule: rounds.length > 0,
+      currentRoundIndex: idx,
+      currentRoundNumber: idx >= 0 ? idx + 1 : null,
+      currentRoundStarted: started,
+      totalRounds: rounds.length,
+      totalMatches: totalMatches,
+      completeMatches: completeMatches
+    };
+  }
+
+  function removeOldBigPanel() {
+    var oldPanel = byId("pb-mobile-sync-started-check-v1");
+
+    if (oldPanel && oldPanel.parentNode) {
+      oldPanel.parentNode.removeChild(oldPanel);
+    }
+  }
+
+  function installHideStyle() {
+    if (byId("pb-mobile-sync-started-inline-hide-style-v2")) return;
+
+    var style = document.createElement("style");
+    style.id = "pb-mobile-sync-started-inline-hide-style-v2";
+    style.textContent = "#pb-mobile-sync-started-check-v1{display:none!important}";
+
+    document.head.appendChild(style);
+  }
+
+  function findCompactChecklistRow() {
+    var strip = byId("pb-mobile-sync-compact-strip-v1");
+    var rows;
+    var i;
+
+    if (!strip) return null;
+
+    rows = strip.querySelectorAll("div");
+
+    for (i = 0; i < rows.length; i++) {
+      if (
+        text(rows[i].textContent).indexOf("Code") >= 0 &&
+        text(rows[i].textContent).indexOf("PIN") >= 0 &&
+        text(rows[i].textContent).indexOf("Round") >= 0
+      ) {
+        return rows[i];
+      }
+    }
+
+    return strip;
+  }
+
+  function ensureInlineChip() {
+    var row = findCompactChecklistRow();
+    var chip = byId("pb-mobile-sync-started-inline-check-v2");
+    var tab;
+
+    if (chip && row && chip.parentNode !== row) {
+      chip.parentNode.removeChild(chip);
+      chip = null;
+    }
+
+    if (!chip) {
+      chip = document.createElement("span");
+      chip.id = "pb-mobile-sync-started-inline-check-v2";
+      chip.style.cssText = [
+        "display:inline-flex",
+        "align-items:center",
+        "gap:.25rem",
+        "white-space:nowrap",
+        "font-size:.74rem",
+        "color:var(--txt3)"
+      ].join(";");
+
+      if (row) {
+        row.appendChild(chip);
+      } else {
+        tab = byId("sec-mobilesync");
+
+        if (!tab) return null;
+
+        chip.style.cssText += ";margin:.35rem 0 .6rem;padding:.35rem .55rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04)";
+        tab.insertBefore(chip, tab.firstChild);
+      }
+    }
+
+    return chip;
+  }
+
+  function renderInline() {
+    var st = status();
+    var chip;
+
+    installHideStyle();
+    removeOldBigPanel();
+
+    chip = ensureInlineChip();
+
+    if (!chip) return false;
+
+    if (!st.hasSchedule) {
+      chip.innerHTML = "⚠️ Started";
+      chip.title = "No schedule generated yet.";
+      chip.style.color = "var(--txt3)";
+      return true;
+    }
+
+    if (st.currentRoundStarted) {
+      chip.innerHTML = "✅ Started";
+      chip.title = "Round " + st.currentRoundNumber + " has been started in Schedule. Mobile Sync is allowed.";
+      chip.style.color = "var(--lime)";
+    } else {
+      chip.innerHTML = "⚠️ Started";
+      chip.title = "Round " + st.currentRoundNumber + " has not been started. Open Schedule and click Start Round before pushing to Mobile Sync.";
+      chip.style.color = "var(--ball)";
+    }
+
+    return true;
+  }
+
+  function shouldGuardFunction(name) {
+    name = String(name || "");
+
+    return (
+      name === "msPushNow" ||
+      name === "msPushRound" ||
+      name === "msPushCurrentRound" ||
+      name === "msPushCurrent" ||
+      name === "msPushState" ||
+      name === "msPushToMobile" ||
+      name === "msPushSchedule" ||
+      name === "pbPostMobileRoundStartAnnouncement" ||
+      name === "msAnnounceRoundStarted"
+    );
+  }
+
+  function allowMobileAction(name, args) {
+    var st = status();
+    var requestedRound = null;
+
+    if (!st.hasSchedule) {
+      try {
+        if (typeof toast === "function") toast("Generate the schedule before using Mobile Sync.", "err");
+      } catch(e1) {}
+
+      renderInline();
+      return false;
+    }
+
+    if (args && args.length && typeof args[0] === "number") {
+      requestedRound = args[0];
+
+      if (requestedRound >= 0 && isStarted(requestedRound)) {
+        return true;
+      }
+    }
+
+    if (st.currentRoundStarted) return true;
+
+    try {
+      if (typeof toast === "function") {
+        toast("Start Round " + st.currentRoundNumber + " in Schedule before pushing to Mobile Sync.", "err");
+      }
+    } catch(e2) {}
+
+    try {
+      console.warn("PB_MOBILE_SYNC_STARTED_INLINE_CHECK_V2 blocked mobile action before round start", {
+        action: name,
+        currentRoundNumber: st.currentRoundNumber
+      });
+    } catch(e3) {}
+
+    renderInline();
+
+    return false;
+  }
+
+  function wrapFunction(name) {
+    var fn = window[name];
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbMobileSyncStartedInlineCheckV2) return true;
+    if (!shouldGuardFunction(name)) return false;
+
+    window[name] = function() {
+      if (!allowMobileAction(name, arguments)) return false;
+
+      return fn.apply(this, arguments);
+    };
+
+    window[name].__pbMobileSyncStartedInlineCheckV2 = true;
+
+    return true;
+  }
+
+  function isMobileSyncActionButton(control) {
+    var section;
+    var label;
+    var onclick;
+
+    if (!control) return false;
+
+    section = control.closest ? control.closest("#sec-mobilesync, #mobilesync, #mobile-sync, #sec-communications") : null;
+
+    if (!section) return false;
+
+    label = text(control.textContent || control.value).toLowerCase();
+    onclick = String(control.getAttribute && control.getAttribute("onclick") || "").toLowerCase();
+
+    return (
+      label.indexOf("push") >= 0 ||
+      label.indexOf("sync") >= 0 ||
+      label.indexOf("announce") >= 0 ||
+      label.indexOf("send to mobile") >= 0 ||
+      onclick.indexOf("mspush") >= 0 ||
+      onclick.indexOf("announce") >= 0
+    );
+  }
+
+  function wrapCompactStripRefresh() {
+    var oldRefresh = window.pbMobileSyncCompactStripRefreshV1;
+
+    if (typeof oldRefresh !== "function") return false;
+    if (oldRefresh.__pbMobileSyncStartedInlineCheckV2) return true;
+
+    window.pbMobileSyncCompactStripRefreshV1 = function() {
+      var result = oldRefresh.apply(this, arguments);
+
+      setTimeout(renderInline, 30);
+      setTimeout(renderInline, 180);
+
+      return result;
+    };
+
+    window.pbMobileSyncCompactStripRefreshV1.__pbMobileSyncStartedInlineCheckV2 = true;
+
+    return true;
+  }
+
+  function wrapRenderMobileSync() {
+    var oldRender = window.renderMobileSyncTab;
+
+    if (typeof oldRender !== "function") return false;
+    if (oldRender.__pbMobileSyncStartedInlineCheckV2) return true;
+
+    window.renderMobileSyncTab = function() {
+      var result = oldRender.apply(this, arguments);
+
+      setTimeout(renderInline, 60);
+      setTimeout(renderInline, 220);
+
+      return result;
+    };
+
+    window.renderMobileSyncTab.__pbMobileSyncStartedInlineCheckV2 = true;
+
+    return true;
+  }
+
+  function install() {
+    [
+      "msPushNow",
+      "msPushRound",
+      "msPushCurrentRound",
+      "msPushCurrent",
+      "msPushState",
+      "msPushToMobile",
+      "msPushSchedule",
+      "pbPostMobileRoundStartAnnouncement",
+      "msAnnounceRoundStarted"
+    ].forEach(wrapFunction);
+
+    wrapCompactStripRefresh();
+    wrapRenderMobileSync();
+
+    renderInline();
+  }
+
+  document.addEventListener("click", function(ev) {
+    var target = ev && ev.target;
+    var control = target && target.closest ? target.closest("button,input,a") : target;
+
+    if (!isMobileSyncActionButton(control)) return;
+
+    if (!allowMobileAction("click", [])) {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (ev.stopImmediatePropagation) {
+        ev.stopImmediatePropagation();
+      }
+
+      return false;
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  document.addEventListener("change", function() {
+    setTimeout(install, 50);
+    setTimeout(renderInline, 150);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(renderInline, 120);
+  }, true);
+
+  setTimeout(install, 250);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+  setInterval(install, 3000);
+
+  window.pbMobileSyncStartedInlineCheckStatusV2 = function() {
+    install();
+
+    var st = status();
+
+    st.inlineFound = !!byId("pb-mobile-sync-started-inline-check-v2");
+    st.oldBigPanelFound = !!byId("pb-mobile-sync-started-check-v1");
+    st.compactStripFound = !!byId("pb-mobile-sync-compact-strip-v1");
+    st.guardFunctions = [
+      "msPushNow",
+      "msPushRound",
+      "msPushCurrentRound",
+      "msPushCurrent",
+      "msPushState",
+      "msPushToMobile",
+      "msPushSchedule",
+      "pbPostMobileRoundStartAnnouncement",
+      "msAnnounceRoundStarted"
+    ].filter(function(name) {
+      return window[name] && window[name].__pbMobileSyncStartedInlineCheckV2;
+    });
+
+    return st;
+  };
+})();
+
 </script>
 
 </body>
