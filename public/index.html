@@ -36966,6 +36966,508 @@ function exportEndSessionSummary(){
   setTimeout(install, 300);
 })();
 
+
+/* PB_FIXED_PARTNER_DUPR_VALIDATION_V1 */
+(function(){
+  if (window.__pbFixedPartnerDuprValidationV1) {
+    return;
+  }
+
+  window.__pbFixedPartnerDuprValidationV1 = true;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function textOf(el) {
+    return String((el && (el.innerText || el.textContent || el.value)) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function norm(v) {
+    return String(v || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function num(v) {
+    var n = parseFloat(String(v || "").replace(/[^0-9.\-]/g, ""));
+    return isFinite(n) ? n : null;
+  }
+
+  function getMode() {
+    var sel = byId("team-mode");
+    return String((sel && sel.value) || "").toLowerCase();
+  }
+
+  function isDuprMode() {
+    var m = getMode();
+    return m === "dupr" || m.indexOf("dupr") >= 0;
+  }
+
+  function findDuprFormatSelect() {
+    var ids = [
+      "pb-dupr-format",
+      "pb-dupr-static-format",
+      "dupr-session-format",
+      "pb-dupr-visible-format",
+      "pb-dupr-format-master"
+    ];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+      if (el) return el;
+    }
+
+    var sec = byId("sec-schedule") || document;
+    var selects = sec.querySelectorAll("select");
+
+    for (var j = 0; j < selects.length; j++) {
+      var t = norm(selects[j]);
+
+      if (
+        t.indexOf("fixed partner dupr") >= 0 ||
+        t.indexOf("team aggregate") >= 0 ||
+        t.indexOf("open / all players") >= 0
+      ) {
+        return selects[j];
+      }
+    }
+
+    return null;
+  }
+
+  function selectedText(sel) {
+    if (!sel || !sel.options || sel.selectedIndex < 0 || !sel.options[sel.selectedIndex]) {
+      return "";
+    }
+
+    return textOf(sel.options[sel.selectedIndex]);
+  }
+
+  function isFixedPartnerDupr() {
+    var sel = findDuprFormatSelect();
+    var val = norm(sel && sel.value);
+    var txt = norm(selectedText(sel));
+
+    return isDuprMode() && (
+      val.indexOf("fixedpartner") >= 0 ||
+      val.indexOf("fixed-partner") >= 0 ||
+      val.indexOf("fixed_partner") >= 0 ||
+      txt.indexOf("fixed partner dupr") >= 0
+    );
+  }
+
+  function activePlayers() {
+    var out = [];
+
+    try {
+      var players = window.state && Array.isArray(state.players) ? state.players : [];
+
+      players.forEach(function(p, index) {
+        if (!p) return;
+
+        if (p.active === false || p.enabled === false || p.disabled === true || p.removed === true) {
+          return;
+        }
+
+        var name = String(p.name || p.playerName || p.fullName || "").trim();
+
+        if (!name) return;
+
+        out.push({
+          index: index,
+          id: p.id,
+          name: name,
+          key: norm(name),
+          dupr: num(p.dupr || p.DUPR || p.rating || p.skill || p.score)
+        });
+      });
+    } catch(e) {}
+
+    return out;
+  }
+
+  function playerLookup(players) {
+    var map = {};
+
+    players.forEach(function(p) {
+      map[norm(p.name)] = p;
+
+      if (p.id !== undefined && p.id !== null) {
+        map[String(p.id)] = p;
+      }
+
+      map[String(p.index)] = p;
+    });
+
+    return map;
+  }
+
+  function valueToPlayerName(v, lookup) {
+    if (v === null || v === undefined) return "";
+
+    if (typeof v === "object") {
+      if (v.name) return String(v.name).trim();
+      if (v.playerName) return String(v.playerName).trim();
+      if (v.fullName) return String(v.fullName).trim();
+      if (v.id !== undefined && lookup[String(v.id)]) return lookup[String(v.id)].name;
+    }
+
+    var raw = String(v).trim();
+
+    if (!raw) return "";
+
+    if (lookup[raw]) return lookup[raw].name;
+    if (lookup[norm(raw)]) return lookup[norm(raw)].name;
+
+    return raw;
+  }
+
+  function readStoredPairs(players) {
+    var lookup = playerLookup(players);
+    var pairs = [];
+
+    try {
+      var raw = localStorage.getItem("pb_fixed_partner_dupr_pairs_v1");
+
+      if (!raw) {
+        return pairs;
+      }
+
+      var parsed = JSON.parse(raw);
+
+      if (!Array.isArray(parsed)) {
+        return pairs;
+      }
+
+      parsed.forEach(function(item) {
+        var a = "";
+        var b = "";
+
+        if (Array.isArray(item)) {
+          a = valueToPlayerName(item[0], lookup);
+          b = valueToPlayerName(item[1], lookup);
+        } else if (item && typeof item === "object") {
+          a = valueToPlayerName(
+            item.a || item.p1 || item.player1 || item.left || item.partner1 || item.one || item.first,
+            lookup
+          );
+          b = valueToPlayerName(
+            item.b || item.p2 || item.player2 || item.right || item.partner2 || item.two || item.second,
+            lookup
+          );
+        }
+
+        a = String(a || "").trim();
+        b = String(b || "").trim();
+
+        if (a || b) {
+          pairs.push({ a: a, b: b });
+        }
+      });
+    } catch(e) {}
+
+    return pairs;
+  }
+
+  function findNumericSetting(labelText) {
+    var sec = byId("sec-schedule") || document;
+    var inputs = sec.querySelectorAll("input, select");
+    var label = norm(labelText);
+
+    for (var i = 0; i < inputs.length; i++) {
+      var el = inputs[i];
+      var node = el;
+      var hops = 0;
+
+      while (node && node !== document.body && hops < 5) {
+        var txt = norm(node);
+
+        if (txt.indexOf(label) >= 0) {
+          var n = num(el.value);
+
+          if (n !== null) {
+            return n;
+          }
+        }
+
+        node = node.parentNode;
+        hops++;
+      }
+
+      var attrs = norm(
+        (el.id || "") + " " +
+        (el.name || "") + " " +
+        (el.placeholder || "") + " " +
+        (el.getAttribute("aria-label") || "")
+      );
+
+      if (attrs.indexOf(label.replace(/\s+/g, "")) >= 0 || attrs.indexOf(label) >= 0) {
+        var n2 = num(el.value);
+
+        if (n2 !== null) {
+          return n2;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function validate() {
+    var result = {
+      active: isFixedPartnerDupr(),
+      ok: true,
+      errors: [],
+      warnings: [],
+      pairCount: 0,
+      unpaired: [],
+      duplicatePlayers: [],
+      cap: null,
+      maxIndividual: null
+    };
+
+    if (!result.active) {
+      return result;
+    }
+
+    var players = activePlayers();
+    var lookup = playerLookup(players);
+    var pairs = readStoredPairs(players);
+    var used = {};
+    var dupes = {};
+    var cap = findNumericSetting("Team Aggregate Cap");
+    var maxInd = findNumericSetting("Max Individual DUPR");
+
+    result.cap = cap;
+    result.maxIndividual = maxInd;
+    result.pairCount = pairs.length;
+
+    if (!players.length) {
+      result.ok = false;
+      result.errors.push("No active players found.");
+      return result;
+    }
+
+    if (!pairs.length) {
+      result.ok = false;
+      result.errors.push("No fixed partner pairs have been added.");
+    }
+
+    pairs.forEach(function(pair) {
+      var aName = String(pair.a || "").trim();
+      var bName = String(pair.b || "").trim();
+      var aKey = norm(aName);
+      var bKey = norm(bName);
+      var a = lookup[aKey];
+      var b = lookup[bKey];
+
+      if (!aName || !bName) {
+        result.ok = false;
+        result.errors.push("One pair is missing Partner 1 or Partner 2.");
+        return;
+      }
+
+      if (!a || !b) {
+        result.ok = false;
+        result.errors.push("Pair has an unknown player: " + aName + " / " + bName);
+        return;
+      }
+
+      if (aKey === bKey) {
+        result.ok = false;
+        result.errors.push(a.name + " cannot be paired with themselves.");
+      }
+
+      if (used[aKey]) dupes[a.name] = true;
+      if (used[bKey]) dupes[b.name] = true;
+
+      used[aKey] = true;
+      used[bKey] = true;
+
+      if (cap !== null && a.dupr !== null && b.dupr !== null && (a.dupr + b.dupr) > cap) {
+        result.ok = false;
+        result.errors.push(a.name + " / " + b.name + " exceeds Team Aggregate Cap " + cap + ".");
+      }
+
+      if (maxInd !== null) {
+        if (a.dupr !== null && a.dupr > maxInd) {
+          result.ok = false;
+          result.errors.push(a.name + " exceeds Max Individual DUPR " + maxInd + ".");
+        }
+
+        if (b.dupr !== null && b.dupr > maxInd) {
+          result.ok = false;
+          result.errors.push(b.name + " exceeds Max Individual DUPR " + maxInd + ".");
+        }
+      }
+    });
+
+    players.forEach(function(p) {
+      if (!used[p.key]) {
+        result.unpaired.push(p.name);
+      }
+    });
+
+    if (result.unpaired.length) {
+      result.ok = false;
+      result.errors.push("Unpaired players: " + result.unpaired.join(", "));
+    }
+
+    Object.keys(dupes).forEach(function(name) {
+      result.duplicatePlayers.push(name);
+    });
+
+    if (result.duplicatePlayers.length) {
+      result.ok = false;
+      result.errors.push("Player paired more than once: " + result.duplicatePlayers.join(", "));
+    }
+
+    if (cap === null) {
+      result.warnings.push("Team Aggregate Cap not found.");
+    }
+
+    if (maxInd === null) {
+      result.warnings.push("Max Individual DUPR not found.");
+    }
+
+    return result;
+  }
+
+  function renderValidation() {
+    var panel = byId("pb-fixed-partner-direct-panel-v28");
+
+    if (!panel) {
+      return validate();
+    }
+
+    var box = byId("pb-fixed-partner-validation-v1");
+
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "pb-fixed-partner-validation-v1";
+      box.style.cssText = "margin-top:.75rem;padding:.65rem .75rem;border-radius:12px;font-size:.82rem;line-height:1.35;border:1px solid rgba(255,255,255,.12);";
+      panel.appendChild(box);
+    }
+
+    var v = validate();
+
+    if (!v.active) {
+      box.style.display = "none";
+      return v;
+    }
+
+    box.style.display = "";
+
+    if (v.ok) {
+      box.style.background = "rgba(22,163,74,.10)";
+      box.style.borderColor = "rgba(22,163,74,.35)";
+      box.innerHTML = "✅ <b>Fixed Partner validation passed.</b><br>" +
+        v.pairCount + " fixed pair" + (v.pairCount === 1 ? "" : "s") + " ready.";
+    } else {
+      var html = "⚠️ <b>Fix before generating Fixed Partner DUPR.</b><ul style='margin:.35rem 0 0 1.1rem;padding:0;'>";
+
+      v.errors.forEach(function(msg) {
+        html += "<li>" + String(msg).replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</li>";
+      });
+
+      html += "</ul>";
+
+      box.style.background = "rgba(220,38,38,.10)";
+      box.style.borderColor = "rgba(220,38,38,.35)";
+      box.innerHTML = html;
+    }
+
+    return v;
+  }
+
+  function blockIfInvalid() {
+    var v = renderValidation();
+
+    if (!v.active || v.ok) {
+      return false;
+    }
+
+    try {
+      if (typeof toast === "function") {
+        toast("⚠️ Fix Fixed Partner DUPR setup before generating.", "warn");
+      }
+    } catch(e) {}
+
+    return true;
+  }
+
+  function wrapGenerator(name) {
+    var fn = window[name];
+
+    if (typeof fn !== "function") {
+      return false;
+    }
+
+    if (fn.__pbFixedPartnerDuprValidationV1) {
+      return true;
+    }
+
+    var wrapped = function() {
+      if (blockIfInvalid()) {
+        return false;
+      }
+
+      return fn.apply(this, arguments);
+    };
+
+    wrapped.__pbFixedPartnerDuprValidationV1 = true;
+    window[name] = wrapped;
+
+    return true;
+  }
+
+  function install() {
+    wrapGenerator("pbFixedPartnerDirectGenerateV28");
+    wrapGenerator("pbFixedPartnerDuprGenerateNextRoundV1");
+    renderValidation();
+  }
+
+  document.addEventListener("click", function(ev) {
+    var target = ev && ev.target;
+    var btn = target && target.closest ? target.closest("button, a.btn, .btn") : null;
+
+    if (!btn) return;
+
+    var txt = norm(btn);
+    var isGenerate =
+      btn.id === "btn-generate-schedule" ||
+      btn.id === "dash-primary-action" ||
+      txt.indexOf("generate fixed partner") >= 0 ||
+      txt.indexOf("fixed partner round") >= 0;
+
+    if (!isGenerate) return;
+
+    if (blockIfInvalid()) {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (ev.stopImmediatePropagation) {
+        ev.stopImmediatePropagation();
+      }
+
+      return false;
+    }
+  }, true);
+
+  document.addEventListener("change", function() {
+    setTimeout(renderValidation, 50);
+  }, true);
+
+  window.pbFixedPartnerDuprValidationStatusV1 = function() {
+    install();
+    return validate();
+  };
+
+  document.addEventListener("DOMContentLoaded", install);
+  setTimeout(install, 300);
+  setTimeout(install, 1000);
+  setInterval(install, 3000);
+})();
+
 </script>
 
 </body>
