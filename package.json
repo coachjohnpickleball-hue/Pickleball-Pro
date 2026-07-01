@@ -20,6 +20,7 @@
     "test:snapshots": "node tests/snapshots/roundSnapshots.test.mjs"
   },
   "devDependencies": {
-    "terser": "^5.31.0"
+    "terser": "^5.31.0",
+    "wrangler": "^4.106.0"
   }
 }
