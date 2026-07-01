@@ -36669,6 +36669,303 @@ function exportEndSessionSummary(){
   setInterval(cleanupGenerateButtons, 2500);
 })();
 
+
+/* PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3 */
+(function(){
+  if (window.__pbModeChangePreserveCompletedSurgicalV3) {
+    return;
+  }
+
+  window.__pbModeChangePreserveCompletedSurgicalV3 = true;
+
+  function clone(v) {
+    try {
+      return JSON.parse(JSON.stringify(v));
+    } catch(e) {
+      return v;
+    }
+  }
+
+  function hasValue(v) {
+    return v !== null && v !== undefined && String(v).trim() !== "";
+  }
+
+  function ensureArrays() {
+    if (!window.state) {
+      return false;
+    }
+
+    if (!Array.isArray(state.schedule)) state.schedule = [];
+    if (!Array.isArray(state.roundTeams)) state.roundTeams = [];
+    if (!Array.isArray(state.byeRounds)) state.byeRounds = [];
+    if (!Array.isArray(state.roundMeta)) state.roundMeta = [];
+    if (!Array.isArray(state.roundLocks)) state.roundLocks = [];
+
+    try {
+      if (!state.startedRounds || typeof state.startedRounds.has !== "function") {
+        state.startedRounds = new Set();
+      }
+    } catch(e) {
+      state.startedRounds = new Set();
+    }
+
+    return true;
+  }
+
+  function matchHasScore(m) {
+    var k;
+
+    if (!m) return false;
+
+    if (m.complete === true || m.completed === true || m.isComplete === true || m.done === true) {
+      return true;
+    }
+
+    if (hasValue(m.scoreA) || hasValue(m.scoreB)) return true;
+    if (hasValue(m.aScore) || hasValue(m.bScore)) return true;
+    if (hasValue(m.teamAScore) || hasValue(m.teamBScore)) return true;
+    if (hasValue(m.pointsA) || hasValue(m.pointsB)) return true;
+
+    for (k in m) {
+      if (!Object.prototype.hasOwnProperty.call(m, k)) continue;
+
+      var key = String(k).toLowerCase();
+
+      if (key.indexOf("score") >= 0 && hasValue(m[k])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function roundStarted(idx) {
+    try {
+      return !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function roundLocked(idx) {
+    try {
+      return !!(state.roundLocks && state.roundLocks[idx]);
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function roundProtected(idx) {
+    try {
+      var round = state.schedule[idx] || [];
+
+      if (roundStarted(idx) || roundLocked(idx)) {
+        return true;
+      }
+
+      for (var i = 0; i < round.length; i++) {
+        if (matchHasScore(round[i])) {
+          return true;
+        }
+      }
+    } catch(e) {}
+
+    return false;
+  }
+
+  function snapshotProtectedRounds() {
+    var snap = {
+      rounds: [],
+      startedRounds: []
+    };
+
+    if (!ensureArrays()) {
+      return snap;
+    }
+
+    try {
+      if (state.startedRounds && typeof state.startedRounds.forEach === "function") {
+        state.startedRounds.forEach(function(v) {
+          snap.startedRounds.push(Number(v));
+        });
+      }
+    } catch(e1) {}
+
+    for (var i = 0; i < state.schedule.length; i++) {
+      if (!roundProtected(i)) continue;
+
+      snap.rounds.push({
+        index: i,
+        schedule: clone(state.schedule[i] || []),
+        roundTeams: clone(state.roundTeams[i] || []),
+        byeRounds: clone(state.byeRounds[i] || []),
+        roundMeta: clone(state.roundMeta[i] || null),
+        roundLock: clone(state.roundLocks[i] || null),
+        started: roundStarted(i)
+      });
+    }
+
+    return snap;
+  }
+
+  function rebuildTeamsFlat() {
+    try {
+      state.teams = [];
+
+      (state.roundTeams || []).forEach(function(roundTeams) {
+        (roundTeams || []).forEach(function(team) {
+          state.teams.push(team);
+        });
+      });
+    } catch(e) {}
+  }
+
+  function restoreProtectedOnly(snap) {
+    if (!snap || !snap.rounds || !snap.rounds.length) {
+      return 0;
+    }
+
+    ensureArrays();
+
+    var maxIndex = -1;
+    var restored = 0;
+
+    snap.rounds.forEach(function(item) {
+      var idx = Number(item.index);
+
+      if (!isFinite(idx) || idx < 0) {
+        return;
+      }
+
+      if (idx > maxIndex) {
+        maxIndex = idx;
+      }
+
+      while (state.schedule.length <= idx) state.schedule.push([]);
+      while (state.roundTeams.length <= idx) state.roundTeams.push([]);
+      while (state.byeRounds.length <= idx) state.byeRounds.push([]);
+      while (state.roundMeta.length <= idx) state.roundMeta.push(null);
+      while (state.roundLocks.length <= idx) state.roundLocks.push(null);
+
+      state.schedule[idx] = clone(item.schedule || []);
+      state.roundTeams[idx] = clone(item.roundTeams || []);
+      state.byeRounds[idx] = clone(item.byeRounds || []);
+      state.roundMeta[idx] = clone(item.roundMeta || {
+        preservedBy: "PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3",
+        preservedAt: new Date().toISOString()
+      });
+      state.roundLocks[idx] = clone(item.roundLock || {
+        lockedAt: new Date().toISOString(),
+        reason: "completed/started round preserved during mode change",
+        preservedBy: "PB_MODE_CHANGE_PRESERVE_COMPLETED_SURGICAL_V3"
+      });
+
+      try {
+        if ((item.started || snap.startedRounds.indexOf(idx) >= 0) && state.startedRounds && typeof state.startedRounds.add === "function") {
+          state.startedRounds.add(idx);
+        }
+      } catch(e1) {}
+
+      restored++;
+    });
+
+    if (maxIndex >= 0) {
+      state.schedule = state.schedule.slice(0, maxIndex + 1);
+      state.roundTeams = state.roundTeams.slice(0, maxIndex + 1);
+      state.byeRounds = state.byeRounds.slice(0, maxIndex + 1);
+      state.roundMeta = state.roundMeta.slice(0, maxIndex + 1);
+      state.roundLocks = state.roundLocks.slice(0, maxIndex + 1);
+    }
+
+    rebuildTeamsFlat();
+
+    return restored;
+  }
+
+  function saveAndRenderOnce(restored) {
+    try {
+      if (typeof autoSave === "function") autoSave();
+      else if (typeof saveState === "function") saveState();
+      else if (typeof save === "function") save();
+    } catch(e) {}
+
+    if (!restored) {
+      return;
+    }
+
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e1) {}
+    try { if (typeof renderTeams === "function") renderTeams(); } catch(e2) {}
+    try { if (typeof renderCourtsGrid === "function") renderCourtsGrid(); } catch(e3) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e4) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e5) {}
+
+    try {
+      if (typeof toast === "function") {
+        toast("🔒 Completed rounds preserved. Future drafts cleared for the new mode.", "ok");
+      }
+    } catch(e6) {}
+  }
+
+  function install() {
+    if (typeof window.onModeChange !== "function") {
+      return false;
+    }
+
+    if (window.onModeChange.__pbModeChangePreserveCompletedSurgicalV3) {
+      return true;
+    }
+
+    var original = window.onModeChange;
+
+    var wrapped = function() {
+      var snap = snapshotProtectedRounds();
+      var result;
+
+      result = original.apply(this, arguments);
+
+      var restored = restoreProtectedOnly(snap);
+      saveAndRenderOnce(restored);
+
+      return result;
+    };
+
+    wrapped.__pbModeChangePreserveCompletedSurgicalV3 = true;
+    window.onModeChange = wrapped;
+
+    return true;
+  }
+
+  window.pbModeChangePreserveCompletedSurgicalStatusV3 = function() {
+    install();
+
+    var protectedIndexes = [];
+
+    try {
+      ensureArrays();
+
+      for (var i = 0; i < state.schedule.length; i++) {
+        if (roundProtected(i)) {
+          protectedIndexes.push(i);
+        }
+      }
+    } catch(e) {}
+
+    return {
+      installed: true,
+      onModeChangeWrapped: !!(window.onModeChange && window.onModeChange.__pbModeChangePreserveCompletedSurgicalV3),
+      protectedRoundIndexes: protectedIndexes,
+      protectedRoundNumbers: protectedIndexes.map(function(i) { return i + 1; }),
+      scheduleLength: window.state && Array.isArray(state.schedule) ? state.schedule.length : 0
+    };
+  };
+
+  install();
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  setTimeout(install, 300);
+})();
+
 </script>
 
 </body>
