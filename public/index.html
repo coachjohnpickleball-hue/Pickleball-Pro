@@ -36278,6 +36278,397 @@ function exportEndSessionSummary(){
   setTimeout(applyV28, 2000);
 })();
 
+
+/* PB_GENERATE_BUTTON_CLEANUP_V1 */
+(function(){
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function textOf(el) {
+    return String((el && (el.innerText || el.textContent || el.value)) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function lowerText(el) {
+    return textOf(el).toLowerCase();
+  }
+
+  function getMode() {
+    var sel = byId("team-mode");
+    return String((sel && sel.value) || "").toLowerCase();
+  }
+
+  function isDuprMode() {
+    var mode = getMode();
+    return mode === "dupr" || mode.indexOf("dupr") >= 0;
+  }
+
+  function findDuprFormatSelect() {
+    var ids = [
+      "pb-dupr-format",
+      "pb-dupr-static-format",
+      "dupr-session-format",
+      "pb-dupr-visible-format",
+      "pb-dupr-format-master"
+    ];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+      if (el) return el;
+    }
+
+    var sec = byId("sec-schedule") || document;
+    var selects = sec.querySelectorAll("select");
+
+    for (var j = 0; j < selects.length; j++) {
+      var txt = lowerText(selects[j]);
+
+      if (
+        txt.indexOf("fixed partner dupr") >= 0 ||
+        txt.indexOf("open / all players") >= 0 ||
+        txt.indexOf("team aggregate") >= 0
+      ) {
+        return selects[j];
+      }
+    }
+
+    return null;
+  }
+
+  function selectedText(sel) {
+    if (!sel || !sel.options || sel.selectedIndex < 0 || !sel.options[sel.selectedIndex]) {
+      return "";
+    }
+
+    return textOf(sel.options[sel.selectedIndex]);
+  }
+
+  function isFixedPartnerDupr() {
+    var sel = findDuprFormatSelect();
+    var val = String((sel && sel.value) || "").toLowerCase();
+    var txt = selectedText(sel).toLowerCase();
+
+    return isDuprMode() && (
+      val.indexOf("fixedpartner") >= 0 ||
+      val.indexOf("fixed-partner") >= 0 ||
+      val.indexOf("fixed_partner") >= 0 ||
+      txt.indexOf("fixed partner dupr") >= 0
+    );
+  }
+
+  function scheduleStats() {
+    var schedule = [];
+
+    try {
+      if (window.state && Array.isArray(state.schedule)) {
+        schedule = state.schedule;
+      }
+    } catch(e) {}
+
+    var rounds = schedule.length;
+    var matches = 0;
+    var scored = 0;
+    var started = 0;
+
+    for (var r = 0; r < schedule.length; r++) {
+      var round = schedule[r] || [];
+
+      try {
+        if (state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(r)) {
+          started++;
+        }
+      } catch(e2) {}
+
+      for (var m = 0; m < round.length; m++) {
+        var match = round[m];
+
+        if (!match) continue;
+
+        matches++;
+
+        if (
+          match.complete === true ||
+          match.completed === true ||
+          String(match.scoreA || "") !== "" ||
+          String(match.scoreB || "") !== "" ||
+          String(match.aScore || "") !== "" ||
+          String(match.bScore || "") !== ""
+        ) {
+          scored++;
+        }
+      }
+    }
+
+    return {
+      rounds: rounds,
+      matches: matches,
+      scored: scored,
+      started: started,
+      hasSchedule: rounds > 0,
+      hasLockedHistory: scored > 0 || started > 0
+    };
+  }
+
+  function setButton(btn, label, title, primary) {
+    if (!btn) return;
+
+    btn.textContent = label;
+
+    if (title) {
+      btn.title = title;
+    }
+
+    if (primary) {
+      btn.classList.remove("btn-secondary", "btn-orange", "btn-danger");
+      btn.classList.add("btn-primary");
+    } else {
+      btn.classList.remove("btn-primary", "btn-orange", "btn-danger");
+      btn.classList.add("btn-secondary");
+      btn.style.opacity = "0.82";
+    }
+
+    btn.setAttribute("data-pb-generate-cleanup-v1", "1");
+  }
+
+  function shouldTouchButton(btn) {
+    if (!btn) return false;
+
+    var txt = lowerText(btn);
+    var onclick = String((btn.getAttribute && btn.getAttribute("onclick")) || "").toLowerCase();
+
+    return txt.indexOf("generate") >= 0 ||
+      txt.indexOf("regenerate") >= 0 ||
+      txt.indexOf("rebuild") >= 0 ||
+      txt.indexOf("publish / start") >= 0 ||
+      onclick.indexOf("generateschedule") >= 0 ||
+      onclick.indexOf("promptgenerateschedule") >= 0 ||
+      onclick.indexOf("regenerateremaining") >= 0 ||
+      onclick.indexOf("rebuildnextround") >= 0;
+  }
+
+  function updateMainGenerateButton(btn) {
+    if (!btn) return;
+
+    var stats = scheduleStats();
+
+    if (isFixedPartnerDupr()) {
+      setButton(
+        btn,
+        "🤝 Generate Fixed Partner Round",
+        "Uses the Fixed Partner DUPR setup and keeps selected partners together.",
+        true
+      );
+      return;
+    }
+
+    if (!stats.hasSchedule) {
+      setButton(
+        btn,
+        "🚀 Generate First Draft Round",
+        "Creates the first draft round for review before publishing.",
+        true
+      );
+      return;
+    }
+
+    if (stats.hasLockedHistory) {
+      setButton(
+        btn,
+        "➕ Generate Future Draft Rounds",
+        "Completed/started rounds stay locked. New drafts are created for future rounds only.",
+        true
+      );
+      return;
+    }
+
+    setButton(
+      btn,
+      "🔄 Rebuild Draft Rounds",
+      "No scores are locked yet. This can rebuild the current draft schedule.",
+      true
+    );
+  }
+
+  function addNote(anchor) {
+    if (!anchor || !anchor.parentNode) return;
+
+    var note = byId("pb-generate-cleanup-note-v1");
+
+    if (!note) {
+      note = document.createElement("div");
+      note.id = "pb-generate-cleanup-note-v1";
+      note.style.cssText = "font-size:.78rem;color:var(--txt3);margin:.45rem 0 .2rem;line-height:1.35";
+      anchor.parentNode.insertBefore(note, anchor.nextSibling);
+    }
+
+    if (isFixedPartnerDupr()) {
+      note.textContent = "Fixed Partner DUPR is selected. Generate uses the fixed partner setup below.";
+    } else {
+      note.textContent = "Generate creates draft rounds. Publish/start happens from the preview or round controls.";
+    }
+  }
+
+  function cleanupGenerateButtons() {
+    var main = byId("btn-generate-schedule");
+    var dash = byId("dash-primary-action");
+
+    updateMainGenerateButton(main);
+
+    if (dash && lowerText(dash).indexOf("generate") >= 0) {
+      updateMainGenerateButton(dash);
+    }
+
+    if (main) {
+      addNote(main);
+    }
+
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("button, a.btn, .btn"));
+
+    buttons.forEach(function(btn) {
+      if (!shouldTouchButton(btn)) return;
+
+      var txt = lowerText(btn);
+      var onclick = String((btn.getAttribute && btn.getAttribute("onclick")) || "").toLowerCase();
+
+      if (btn.id === "btn-generate-schedule" || btn.id === "dash-primary-action") {
+        return;
+      }
+
+      if (txt.indexOf("regenerate remaining") >= 0 || onclick.indexOf("regenerateremaining") >= 0) {
+        setButton(
+          btn,
+          "🔁 Rebuild Future Rounds",
+          "Keeps completed/started rounds locked and rebuilds future draft rounds only.",
+          false
+        );
+      }
+
+      if (txt.indexOf("regenerate draft") >= 0 || txt.indexOf("try different draft") >= 0 || txt.indexOf("regenerate preview") >= 0) {
+        setButton(
+          btn,
+          "🔄 Try Different Draft",
+          "Creates another unpublished draft. Published/started rounds stay locked.",
+          false
+        );
+      }
+
+      if (txt.indexOf("publish / start") >= 0) {
+        setButton(
+          btn,
+          "✅ Publish Round",
+          "Publishes the draft round so it can be started and scored.",
+          true
+        );
+      }
+
+      if (txt.indexOf("rebuild next round") >= 0 || onclick.indexOf("rebuildnextround") >= 0) {
+        setButton(
+          btn,
+          "🔁 Rebuild Next Round",
+          "Rebuilds the next result-dependent round only.",
+          false
+        );
+      }
+    });
+  }
+
+  function interceptFixedPartnerGenerate(ev) {
+    var target = ev && ev.target;
+    var btn = target && target.closest ? target.closest("button, a.btn, .btn") : null;
+
+    if (!btn) return;
+
+    var isMain =
+      btn.id === "btn-generate-schedule" ||
+      btn.id === "dash-primary-action";
+
+    if (!isMain) return;
+
+    if (!isFixedPartnerDupr()) return;
+
+    if (typeof window.pbFixedPartnerDirectGenerateV28 === "function") {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (ev.stopImmediatePropagation) {
+        ev.stopImmediatePropagation();
+      }
+
+      window.pbFixedPartnerDirectGenerateV28();
+      return false;
+    }
+  }
+
+  window.pbGenerateButtonCleanupStatusV1 = function() {
+    cleanupGenerateButtons();
+
+    return {
+      installed: true,
+      mode: getMode(),
+      fixedPartnerDupr: isFixedPartnerDupr(),
+      stats: scheduleStats(),
+      mainButtonText: textOf(byId("btn-generate-schedule")),
+      dashboardButtonText: textOf(byId("dash-primary-action")),
+      fixedPartnerGeneratorFound: typeof window.pbFixedPartnerDirectGenerateV28 === "function"
+    };
+  };
+
+  document.addEventListener("click", interceptFixedPartnerGenerate, true);
+
+  document.addEventListener("change", function(ev) {
+    if (ev && ev.target && ev.target.tagName === "SELECT") {
+      setTimeout(cleanupGenerateButtons, 30);
+      setTimeout(cleanupGenerateButtons, 250);
+    }
+  }, true);
+
+  var oldRenderSchedule = window.renderSchedule;
+
+  if (typeof oldRenderSchedule === "function" && !oldRenderSchedule.__pbGenerateButtonCleanupV1) {
+    var wrappedRenderSchedule = function() {
+      var result = oldRenderSchedule.apply(this, arguments);
+
+      try {
+        cleanupGenerateButtons();
+      } catch(e) {}
+
+      setTimeout(cleanupGenerateButtons, 80);
+      setTimeout(cleanupGenerateButtons, 400);
+
+      return result;
+    };
+
+    wrappedRenderSchedule.__pbGenerateButtonCleanupV1 = true;
+    window.renderSchedule = wrappedRenderSchedule;
+  }
+
+  var oldRenderDashboard = window.renderDashboard;
+
+  if (typeof oldRenderDashboard === "function" && !oldRenderDashboard.__pbGenerateButtonCleanupV1) {
+    var wrappedRenderDashboard = function() {
+      var result = oldRenderDashboard.apply(this, arguments);
+
+      try {
+        cleanupGenerateButtons();
+      } catch(e) {}
+
+      setTimeout(cleanupGenerateButtons, 80);
+      setTimeout(cleanupGenerateButtons, 400);
+
+      return result;
+    };
+
+    wrappedRenderDashboard.__pbGenerateButtonCleanupV1 = true;
+    window.renderDashboard = wrappedRenderDashboard;
+  }
+
+  document.addEventListener("DOMContentLoaded", cleanupGenerateButtons);
+
+  setTimeout(cleanupGenerateButtons, 250);
+  setTimeout(cleanupGenerateButtons, 1000);
+  setInterval(cleanupGenerateButtons, 2500);
+})();
+
 </script>
 
 </body>
