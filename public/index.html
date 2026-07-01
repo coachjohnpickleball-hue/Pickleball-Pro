@@ -2416,26 +2416,36 @@ body.pb-non-admin a[href^="/admin/"]{
 }
 </style>
 
-
-<style id="pb-fixed-partner-dupr-schedule-mode-only-style-v22">
-/* PB_FIXED_PARTNER_DUPR_SCHEDULE_MODE_ONLY_V22 */
-
-#pb-fixed-partner-dupr-visible-setup-v4,
-#pb-fixed-partner-dupr-panel-v1,
-#pb-fixed-partner-dupr-menu-fallback-v2 {
-  display: none !important;
-}
-
-html[data-pb-schedule-mode-is-dupr-v22="1"] #pb-fixed-partner-dupr-visible-setup-v4 {
-  display: block !important;
-}
-</style>
-
-
 <style id="pb-corrected-scores-panel-cleanup-style-v1">
 /* PB_CORRECTED_SCORES_PANEL_CLEANUP_V1 */
 
 [data-pb-corrected-score-duplicate-v1="true"] {
+  display: none !important;
+}
+</style>
+
+
+<style id="pb-fixed-partner-direct-owner-style-v28">
+/* PB_FIXED_PARTNER_DIRECT_OWNER_V28 */
+
+#pb-fixed-partner-direct-panel-v28 {
+  display: none;
+  margin: .75rem 0 1rem;
+  padding: .95rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(198,255,0,.34);
+  background: rgba(198,255,0,.075);
+}
+
+html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
+  display: block !important;
+}
+
+/* Old duplicate panels stay hidden. V28 owns the visible setup. */
+#pb-fixed-partner-dupr-visible-setup-v4,
+#pb-fixed-partner-dupr-panel-v1,
+#pb-fixed-partner-dupr-menu-fallback-v2,
+#pb-fixed-partner-simple-dupr-panel-v25 {
   display: none !important;
 }
 </style>
@@ -21651,6 +21661,27 @@ function exportEndSessionSummary(){
 (function(){
   function byId(id){ return document.getElementById(id); }
 
+  function isScheduleModeDuprV4(){
+    var sel = byId("team-mode");
+    if (!sel) return false;
+
+    var value = String(sel.value || "").toLowerCase();
+
+    return value.indexOf("dupr") >= 0;
+  }
+
+  function applySetupVisibilityV4(){
+    var panel = byId("pb-fixed-partner-dupr-visible-setup-v4");
+    var active = isScheduleModeDuprV4();
+
+    if (panel) {
+      panel.style.setProperty("display", active ? "block" : "none", "important");
+    }
+
+    return active;
+  }
+
+
   function normGender(g){
     g = String(g || "").trim().toLowerCase();
     if (g === "male" || g === "m" || g === "man" || g === "men" || g === "boy") return "male";
@@ -34369,6 +34400,8 @@ function exportEndSessionSummary(){
     panel.style.cssText =
       "margin:.75rem 0 1rem;padding:.95rem 1rem;border-radius:14px;border:1px solid rgba(198,255,0,.32);background:rgba(198,255,0,.065)";
 
+    applySetupVisibilityV4();
+
     panel.innerHTML =
       '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.7rem">' +
         '<div>' +
@@ -34422,8 +34455,19 @@ function exportEndSessionSummary(){
         ? '<div style="margin-top:.65rem;color:var(--ball);font-size:.76rem">Unpaired players: ' + esc(unpaired.map(playerName).join(", ")) + '</div>'
         : '<div style="margin-top:.65rem;color:var(--lime);font-size:.76rem">All active players are paired.</div>');
 
+    applySetupVisibilityV4();
+
     return true;
   };
+
+  document.addEventListener("change", function(ev){
+    if (ev && ev.target && ev.target.id === "team-mode") {
+      setTimeout(function(){
+        try { window.pbFixedPartnerDuprVisibleSetupRenderV4(); } catch(e) {}
+        try { applySetupVisibilityV4(); } catch(e) {}
+      }, 50);
+    }
+  }, true);
 
   window.pbFixedPartnerDuprVisibleSetupStatusV4 = function(){
     var pairs = sanitizePairs(loadPairs());
@@ -34435,7 +34479,9 @@ function exportEndSessionSummary(){
       pairs: pairs.length,
       generatorFound: typeof window.pbFixedPartnerDuprGenerateNextRoundV1 === "function",
       oldMenuRepairRemoved: typeof window.pbFixedPartnerDuprMenuRepairStatusV2 === "undefined",
-      note: "Fixed Partner DUPR setup should always be visible in Schedule."
+      scheduleModeIsDupr: isScheduleModeDuprV4(),
+      setupVisible: applySetupVisibilityV4(),
+      note: "Fixed Partner DUPR setup is visible only when Schedule Mode is DUPR."
     };
   };
 
@@ -35144,174 +35190,6 @@ function exportEndSessionSummary(){
   };
 })();
 
-
-/* PB_FIXED_PARTNER_DUPR_SCHEDULE_MODE_ONLY_V22 */
-(function(){
-  function textOf(el) {
-    return String((el && el.textContent) || "").replace(/\s+/g, " ").trim();
-  }
-
-  function selectedText(sel) {
-    if (!sel || !sel.options || sel.selectedIndex < 0 || !sel.options[sel.selectedIndex]) {
-      return "";
-    }
-
-    return textOf(sel.options[sel.selectedIndex]);
-  }
-
-  function selectedValue(sel) {
-    return String((sel && sel.value) || "").replace(/\s+/g, " ").trim();
-  }
-
-  function hasScheduleModeWords(el) {
-    var txt = textOf(el);
-    return txt.indexOf("Schedule Mode") >= 0 && txt.indexOf("Courts Available") >= 0;
-  }
-
-  function findScheduleBuilderBox() {
-    var nodes = document.querySelectorAll("section,div,main");
-
-    var best = null;
-    var bestLen = 999999;
-
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-
-      if (!hasScheduleModeWords(el)) continue;
-
-      var selects = el.querySelectorAll("select");
-      if (!selects || !selects.length) continue;
-
-      var len = textOf(el).length;
-
-      if (len < bestLen) {
-        best = el;
-        bestLen = len;
-      }
-    }
-
-    return best;
-  }
-
-  function findScheduleModeSelect() {
-    var byId =
-      document.getElementById("mode") ||
-      document.getElementById("schedule-mode") ||
-      document.getElementById("scheduleMode") ||
-      document.getElementById("scheduleModeSelect");
-
-    if (byId && byId.tagName === "SELECT") {
-      return byId;
-    }
-
-    var box = findScheduleBuilderBox();
-
-    if (box) {
-      var selects = box.querySelectorAll("select");
-
-      if (selects && selects.length) {
-        return selects[0];
-      }
-    }
-
-    // Last fallback: choose the visible select that actually contains Mixed and DUPR Session options.
-    var all = document.querySelectorAll("select");
-
-    for (var i = 0; i < all.length; i++) {
-      var sel = all[i];
-      var txt = textOf(sel).toLowerCase();
-
-      if (txt.indexOf("mixed") >= 0 && txt.indexOf("dupr") >= 0) {
-        return sel;
-      }
-    }
-
-    return null;
-  }
-
-  function isMainScheduleModeDupr() {
-    var sel = findScheduleModeSelect();
-
-    if (!sel) return false;
-
-    var val = selectedValue(sel).toLowerCase();
-    var label = selectedText(sel).toLowerCase();
-    var combined = val + " " + label;
-
-    if (combined.indexOf("mixed") >= 0) return false;
-
-    return combined.indexOf("dupr") >= 0;
-  }
-
-  function forceVisibility() {
-    var active = isMainScheduleModeDupr();
-
-    document.documentElement.setAttribute(
-      "data-pb-schedule-mode-is-dupr-v22",
-      active ? "1" : "0"
-    );
-
-    var setup = document.getElementById("pb-fixed-partner-dupr-visible-setup-v4");
-
-    if (setup) {
-      setup.style.setProperty("display", active ? "block" : "none", "important");
-    }
-
-    var oldPanel = document.getElementById("pb-fixed-partner-dupr-panel-v1");
-    if (oldPanel) {
-      oldPanel.style.setProperty("display", "none", "important");
-    }
-
-    var oldFallback = document.getElementById("pb-fixed-partner-dupr-menu-fallback-v2");
-    if (oldFallback) {
-      oldFallback.style.setProperty("display", "none", "important");
-    }
-
-    return active;
-  }
-
-  window.pbFixedPartnerDuprScheduleModeOnlyStatusV22 = function() {
-    var sel = findScheduleModeSelect();
-    var active = forceVisibility();
-
-    return {
-      installed: true,
-      scheduleModeSelectFound: !!sel,
-      scheduleModeValue: selectedValue(sel),
-      scheduleModeText: selectedText(sel),
-      scheduleModeIsDupr: active,
-      setupFound: !!document.getElementById("pb-fixed-partner-dupr-visible-setup-v4"),
-      setupShouldBeVisible: active
-    };
-  };
-
-  document.addEventListener("change", function(ev) {
-    if (ev && ev.target && ev.target.tagName === "SELECT") {
-      setTimeout(forceVisibility, 10);
-      setTimeout(forceVisibility, 100);
-      setTimeout(forceVisibility, 300);
-    }
-  }, true);
-
-  var observer = new MutationObserver(function() {
-    clearTimeout(window.__pbFixedPartnerDuprScheduleModeOnlyTimerV22);
-    window.__pbFixedPartnerDuprScheduleModeOnlyTimerV22 = setTimeout(forceVisibility, 80);
-  });
-
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["style", "class"]
-  });
-
-  setTimeout(forceVisibility, 100);
-  setTimeout(forceVisibility, 500);
-  setTimeout(forceVisibility, 1200);
-  setInterval(forceVisibility, 1000);
-})();
-
-
 /* PB_RESTORE_START_ROUND_DASHBOARD_BUTTON_V1 */
 (function(){
   function textOf(el) {
@@ -35532,6 +35410,845 @@ function exportEndSessionSummary(){
   setTimeout(cleanCorrectedScoresPanel, 200);
   setTimeout(cleanCorrectedScoresPanel, 700);
   setTimeout(cleanCorrectedScoresPanel, 1500);
+})();
+
+
+/* PB_CLEAR_STALE_DRAFTS_ON_MODE_CHANGE_V1 */
+(function(){
+  var MODE_KEY = "pb_last_schedule_mode_v1";
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function currentMode() {
+    var sel = byId("team-mode");
+    return String((sel && sel.value) || "").trim();
+  }
+
+  function hasScore(m) {
+    if (!m) return false;
+
+    var a = m.scoreA;
+    var b = m.scoreB;
+
+    if (a === null || a === undefined || a === "" || a === "-") a = null;
+    if (b === null || b === undefined || b === "" || b === "-") b = null;
+
+    return a !== null || b !== null;
+  }
+
+  function matchIsStartedOrComplete(m) {
+    if (!m) return false;
+
+    var status = String(m.status || "").toLowerCase();
+
+    return !!(
+      m.completed ||
+      m.complete ||
+      m.done ||
+      m.locked ||
+      m.started ||
+      m.winner ||
+      hasScore(m) ||
+      status.indexOf("complete") >= 0 ||
+      status.indexOf("locked") >= 0 ||
+      status.indexOf("started") >= 0 ||
+      status.indexOf("live") >= 0
+    );
+  }
+
+  function metaIsStartedOrComplete(meta) {
+    if (!meta) return false;
+
+    var status = String(meta.status || "").toLowerCase();
+
+    return !!(
+      meta.completed ||
+      meta.complete ||
+      meta.done ||
+      meta.locked ||
+      meta.started ||
+      meta.live ||
+      status.indexOf("complete") >= 0 ||
+      status.indexOf("locked") >= 0 ||
+      status.indexOf("started") >= 0 ||
+      status.indexOf("live") >= 0
+    );
+  }
+
+  function roundIsStartedOrComplete(round, meta) {
+    if (metaIsStartedOrComplete(meta)) return true;
+
+    if (!Array.isArray(round)) return false;
+
+    for (var i = 0; i < round.length; i++) {
+      if (matchIsStartedOrComplete(round[i])) return true;
+    }
+
+    return false;
+  }
+
+  function saveAndRender() {
+    try {
+      if (typeof saveState === "function") saveState();
+      else if (typeof save === "function") save();
+      else if (typeof persistState === "function") persistState();
+    } catch(e) {}
+
+    try {
+      if (typeof renderSchedule === "function") renderSchedule();
+    } catch(e) {}
+
+    try {
+      if (typeof render === "function") render();
+    } catch(e) {}
+  }
+
+  function clearTransientDraftFields() {
+    if (!window.state) return;
+
+    [
+      "draftRound",
+      "draftRounds",
+      "draftSchedule",
+      "previewRound",
+      "previewRounds",
+      "previewSchedule",
+      "nextDraftRound",
+      "unpublishedDraft",
+      "pendingDraft",
+      "roundDraft"
+    ].forEach(function(k){
+      try {
+        if (Object.prototype.hasOwnProperty.call(state, k)) {
+          delete state[k];
+        }
+      } catch(e) {}
+    });
+  }
+
+  function clearUnstartedDraftRoundsBecauseModeChanged() {
+    if (!window.state || !Array.isArray(state.schedule)) {
+      return {
+        changed: false,
+        removedRounds: 0,
+        keptRounds: 0
+      };
+    }
+
+    var oldSchedule = state.schedule || [];
+    var oldMeta = Array.isArray(state.roundMeta) ? state.roundMeta : [];
+
+    var newSchedule = [];
+    var newMeta = [];
+    var removed = 0;
+
+    for (var i = 0; i < oldSchedule.length; i++) {
+      var round = oldSchedule[i];
+      var meta = oldMeta[i];
+
+      if (roundIsStartedOrComplete(round, meta)) {
+        newSchedule.push(round);
+        if (oldMeta.length) newMeta.push(meta || {});
+      } else {
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      state.schedule = newSchedule;
+
+      if (oldMeta.length) {
+        state.roundMeta = newMeta;
+      }
+
+      clearTransientDraftFields();
+      saveAndRender();
+    }
+
+    return {
+      changed: removed > 0,
+      removedRounds: removed,
+      keptRounds: newSchedule.length
+    };
+  }
+
+  function rememberMode(mode) {
+    try {
+      localStorage.setItem(MODE_KEY, String(mode || ""));
+    } catch(e) {}
+  }
+
+  function lastMode() {
+    try {
+      return String(localStorage.getItem(MODE_KEY) || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function handleModeChange() {
+    var mode = currentMode();
+    var old = lastMode();
+
+    if (!mode) return false;
+
+    if (!old) {
+      rememberMode(mode);
+      return false;
+    }
+
+    if (old === mode) {
+      return false;
+    }
+
+    var result = clearUnstartedDraftRoundsBecauseModeChanged();
+
+    rememberMode(mode);
+
+    try {
+      if (typeof toast === "function" && result.removedRounds > 0) {
+        toast("Schedule mode changed. Unpublished draft rounds were cleared so " + mode + " can regenerate cleanly.");
+      }
+    } catch(e) {}
+
+    return result.changed;
+  }
+
+  window.pbClearStaleDraftsOnModeChangeStatusV1 = function(){
+    return {
+      installed: true,
+      currentMode: currentMode(),
+      lastMode: lastMode(),
+      scheduleRounds: window.state && Array.isArray(state.schedule) ? state.schedule.length : 0,
+      roundMetaRows: window.state && Array.isArray(state.roundMeta) ? state.roundMeta.length : 0,
+      note: "When Schedule Mode changes, unstarted/uncompleted draft rounds are cleared. Completed/live rounds are preserved."
+    };
+  };
+
+  document.addEventListener("change", function(ev){
+    if (ev && ev.target && ev.target.id === "team-mode") {
+      setTimeout(handleModeChange, 20);
+      setTimeout(function(){
+        try {
+          if (typeof renderSchedule === "function") renderSchedule();
+        } catch(e) {}
+      }, 100);
+    }
+  }, true);
+
+  setTimeout(function(){
+    rememberMode(currentMode());
+  }, 500);
+})();
+
+
+/* PB_FIXED_PARTNER_DIRECT_OWNER_V28 */
+(function(){
+  var PAIRS_KEY = "pb_fixed_partner_dupr_pairs_v1";
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function textOf(el) {
+    return String((el && el.textContent) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function selectedText(sel) {
+    if (!sel || !sel.options || sel.selectedIndex < 0 || !sel.options[sel.selectedIndex]) {
+      return "";
+    }
+
+    return textOf(sel.options[sel.selectedIndex]);
+  }
+
+  function selectedValue(sel) {
+    return String((sel && sel.value) || "").trim();
+  }
+
+  function isTeamModeDupr() {
+    var sel = byId("team-mode");
+    var value = sel ? String(sel.value || "").toLowerCase() : "";
+
+    return value === "dupr" || value.indexOf("dupr") >= 0;
+  }
+
+  function isFixedPartnerValue(v) {
+    v = String(v || "").toLowerCase();
+
+    return v === "fixedpartnerdupr" ||
+      v === "fixed-partner-dupr" ||
+      v === "fixed_partner_dupr" ||
+      v === "fixed partner dupr" ||
+      v.indexOf("fixed partner dupr") >= 0;
+  }
+
+  function notify(msg, type) {
+    try {
+      if (typeof toast === "function") {
+        toast(msg, type || "");
+      } else {
+        alert(msg);
+      }
+    } catch(e) {
+      alert(msg);
+    }
+  }
+
+  function findDuprFormatSelect() {
+    var sec = byId("sec-schedule") || document;
+    var labels = sec.querySelectorAll("label");
+
+    for (var i = 0; i < labels.length; i++) {
+      var labelText = textOf(labels[i]).toLowerCase();
+
+      if (labelText.indexOf("dupr format") < 0) {
+        continue;
+      }
+
+      var parent = labels[i].parentNode;
+
+      if (parent) {
+        var sel = parent.querySelector("select");
+
+        if (sel) {
+          return sel;
+        }
+      }
+
+      var next = labels[i].nextElementSibling;
+
+      while (next) {
+        if (next.tagName === "SELECT") {
+          return next;
+        }
+
+        if (next.querySelector) {
+          var nested = next.querySelector("select");
+
+          if (nested) {
+            return nested;
+          }
+        }
+
+        next = next.nextElementSibling;
+      }
+    }
+
+    var selects = sec.querySelectorAll("select");
+
+    for (var j = 0; j < selects.length; j++) {
+      var txt = textOf(selects[j]).toLowerCase();
+
+      if (txt.indexOf("open / all players") >= 0) {
+        return selects[j];
+      }
+
+      if (txt.indexOf("team aggregate") >= 0) {
+        return selects[j];
+      }
+
+      if (txt.indexOf("fixed partner dupr") >= 0) {
+        return selects[j];
+      }
+    }
+
+    return null;
+  }
+
+  function ensureFixedOption() {
+    var sel = findDuprFormatSelect();
+
+    if (!sel) {
+      return null;
+    }
+
+    var found = false;
+
+    for (var i = 0; i < sel.options.length; i++) {
+      if (isFixedPartnerValue(sel.options[i].value) || isFixedPartnerValue(sel.options[i].textContent)) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      var opt = document.createElement("option");
+      opt.value = "fixedPartnerDupr";
+      opt.textContent = "Fixed Partner DUPR";
+      sel.appendChild(opt);
+    }
+
+    return sel;
+  }
+
+  function isFixedFormatSelected() {
+    var sel = ensureFixedOption();
+
+    if (!sel) {
+      return false;
+    }
+
+    return isFixedPartnerValue(selectedValue(sel)) || isFixedPartnerValue(selectedText(sel));
+  }
+
+  function players() {
+    try {
+      if (window.state && state.players && state.players.length) {
+        return state.players;
+      }
+    } catch(e) {}
+
+    return [];
+  }
+
+  function activeRefs() {
+    var list = players();
+    var out = [];
+
+    for (var i = 0; i < list.length; i++) {
+      if (!list[i]) continue;
+      if (list[i].active === false) continue;
+      if (list[i].enabled === false) continue;
+
+      out.push(i);
+    }
+
+    return out;
+  }
+
+  function playerName(ref) {
+    var p = players()[Number(ref)];
+
+    if (p && p.name) {
+      return p.name;
+    }
+
+    return "Player " + (Number(ref) + 1);
+  }
+
+  function ratingOf(ref) {
+    var p = players()[Number(ref)] || {};
+    var vals = [p.dupr, p.DUPR, p.duprRating, p.dupr_rating, p.rating, p.clubRating, p.cr, p.CR];
+
+    for (var i = 0; i < vals.length; i++) {
+      var n = Number(vals[i]);
+
+      if (isFinite(n) && n > 0) {
+        return n;
+      }
+    }
+
+    return 0;
+  }
+
+  function sanitizePairs(pairs) {
+    var refs = activeRefs();
+    var active = {};
+    var used = {};
+    var out = [];
+
+    for (var i = 0; i < refs.length; i++) {
+      active[String(refs[i])] = true;
+    }
+
+    pairs = pairs || [];
+
+    for (var j = 0; j < pairs.length; j++) {
+      var pair = pairs[j];
+
+      if (!pair || pair.length < 2) continue;
+
+      var a = String(pair[0]);
+      var b = String(pair[1]);
+
+      if (a === b) continue;
+      if (!active[a] || !active[b]) continue;
+      if (used[a] || used[b]) continue;
+
+      used[a] = true;
+      used[b] = true;
+
+      out.push([Number(a), Number(b)]);
+    }
+
+    return out;
+  }
+
+  function loadPairs() {
+    try {
+      if (window.state && Array.isArray(state.fixedPartnerDuprPairs)) {
+        return sanitizePairs(state.fixedPartnerDuprPairs);
+      }
+    } catch(e) {}
+
+    try {
+      return sanitizePairs(JSON.parse(localStorage.getItem(PAIRS_KEY) || "[]") || []);
+    } catch(e2) {
+      return [];
+    }
+  }
+
+  function savePairs(pairs) {
+    pairs = sanitizePairs(pairs);
+
+    try {
+      if (window.state) {
+        state.fixedPartnerDuprPairs = pairs;
+      }
+    } catch(e) {}
+
+    try {
+      localStorage.setItem(PAIRS_KEY, JSON.stringify(pairs));
+    } catch(e2) {}
+
+    try {
+      if (typeof saveState === "function") saveState();
+      else if (typeof save === "function") save();
+      else if (typeof persistState === "function") persistState();
+    } catch(e3) {}
+
+    return pairs;
+  }
+
+  function pairRating(pair) {
+    return ratingOf(pair[0]) + ratingOf(pair[1]);
+  }
+
+  function usedMap(pairs) {
+    var used = {};
+
+    pairs = pairs || [];
+
+    for (var i = 0; i < pairs.length; i++) {
+      used[String(pairs[i][0])] = true;
+      used[String(pairs[i][1])] = true;
+    }
+
+    return used;
+  }
+
+  function optionsHtml(used) {
+    var refs = activeRefs();
+    var html = "";
+
+    used = used || {};
+
+    for (var i = 0; i < refs.length; i++) {
+      var ref = refs[i];
+      var disabled = used[String(ref)] ? " disabled" : "";
+      var r = ratingOf(ref);
+
+      html += '<option value="' + ref + '"' + disabled + '>' +
+        esc(playerName(ref)) +
+        (r ? " · DUPR " + r.toFixed(2) : " · no DUPR") +
+        '</option>';
+    }
+
+    return html;
+  }
+
+  function hostForPanel() {
+    var sel = findDuprFormatSelect();
+
+    if (sel && sel.parentNode) {
+      return sel.parentNode;
+    }
+
+    var sec = byId("sec-schedule");
+
+    if (sec) {
+      return sec.querySelector(".card") || sec;
+    }
+
+    return document.body;
+  }
+
+  function ensurePanel() {
+    var panel = byId("pb-fixed-partner-direct-panel-v28");
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-fixed-partner-direct-panel-v28";
+    }
+
+    var host = hostForPanel();
+
+    if (host && panel.parentNode !== host) {
+      host.appendChild(panel);
+    }
+
+    return panel;
+  }
+
+  function renderPanel() {
+    var panel = ensurePanel();
+    var pairs = loadPairs();
+    var used = usedMap(pairs);
+    var refs = activeRefs();
+    var unpaired = [];
+
+    for (var i = 0; i < refs.length; i++) {
+      if (!used[String(refs[i])]) {
+        unpaired.push(refs[i]);
+      }
+    }
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.7rem">' +
+        '<div>' +
+          '<div style="font-family:Bebas Neue,sans-serif;font-size:1.25rem;color:var(--lime);letter-spacing:.4px">🤝 Fixed Partner DUPR Setup</div>' +
+          '<div style="color:var(--txt2);font-size:.8rem;line-height:1.35">Visible only when DUPR Format is Fixed Partner DUPR. Partners stay together and courts are balanced by combined DUPR.</div>' +
+        '</div>' +
+        '<button class="btn btn-primary btn-sm" onclick="pbFixedPartnerDirectGenerateV28()">🚀 Generate Fixed Partner DUPR Round</button>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:minmax(190px,1fr) minmax(190px,1fr) auto;gap:.5rem;align-items:end;margin-bottom:.65rem">' +
+        '<label style="display:block">' +
+          '<span style="display:block;color:var(--txt3);font-size:.74rem;margin-bottom:.2rem">Partner 1</span>' +
+          '<select id="pb-fp-direct-a-v28" style="width:100%">' +
+            '<option value="">Choose player...</option>' +
+            optionsHtml(used) +
+          '</select>' +
+        '</label>' +
+        '<label style="display:block">' +
+          '<span style="display:block;color:var(--txt3);font-size:.74rem;margin-bottom:.2rem">Partner 2</span>' +
+          '<select id="pb-fp-direct-b-v28" style="width:100%">' +
+            '<option value="">Choose player...</option>' +
+            optionsHtml(used) +
+          '</select>' +
+        '</label>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDirectAddPairV28()">Add Pair</button>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDirectAutoPairV28()">Auto-pair balanced by DUPR</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDirectClearPairsV28()">Clear pairs</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="pbFixedPartnerDirectRenderV28()">Refresh</button>' +
+      '</div>' +
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:.45rem">' +
+        (
+          pairs.length
+            ? pairs.map(function(pair, idx){
+                var r = pairRating(pair);
+
+                return '<div style="border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.12);border-radius:10px;padding:.55rem .6rem">' +
+                  '<div style="font-weight:900;color:var(--txt);font-size:.8rem">' + esc(playerName(pair[0])) + ' / ' + esc(playerName(pair[1])) + '</div>' +
+                  '<div style="color:var(--txt3);font-size:.74rem;margin-top:.12rem">Combined DUPR: ' + (r ? esc(r.toFixed(2)) : 'No DUPR') + '</div>' +
+                  '<button class="btn btn-secondary btn-sm" style="margin-top:.45rem" onclick="pbFixedPartnerDirectRemovePairV28(' + idx + ')">Remove</button>' +
+                '</div>';
+              }).join("")
+            : '<div style="color:var(--txt3);font-size:.8rem">No fixed partner pairs yet. Choose two players above and click Add Pair.</div>'
+        ) +
+      '</div>' +
+
+      (
+        unpaired.length
+          ? '<div style="margin-top:.65rem;color:var(--ball);font-size:.76rem">Unpaired players: ' + esc(unpaired.map(playerName).join(", ")) + '</div>'
+          : '<div style="margin-top:.65rem;color:var(--lime);font-size:.76rem">All active players are paired.</div>'
+      );
+
+    return panel;
+  }
+
+  function hideOldPanels() {
+    var ids = [
+      "pb-fixed-partner-dupr-visible-setup-v4",
+      "pb-fixed-partner-dupr-panel-v1",
+      "pb-fixed-partner-dupr-menu-fallback-v2",
+      "pb-fixed-partner-simple-dupr-panel-v25"
+    ];
+
+    for (var i = 0; i < ids.length; i++) {
+      var el = byId(ids[i]);
+
+      if (el) {
+        el.style.setProperty("display", "none", "important");
+      }
+    }
+  }
+
+  function applyV28() {
+    ensureFixedOption();
+
+    var active = isTeamModeDupr() && isFixedFormatSelected();
+
+    document.documentElement.setAttribute("data-pb-fixed-partner-direct-v28", active ? "1" : "0");
+
+    hideOldPanels();
+
+    if (active) {
+      renderPanel();
+    }
+
+    var panel = byId("pb-fixed-partner-direct-panel-v28");
+
+    if (panel) {
+      panel.style.setProperty("display", active ? "block" : "none", "important");
+    }
+
+    return active;
+  }
+
+  window.pbFixedPartnerDirectRenderV28 = function() {
+    renderPanel();
+    return applyV28();
+  };
+
+  window.pbFixedPartnerDirectAddPairV28 = function() {
+    var a = byId("pb-fp-direct-a-v28");
+    var b = byId("pb-fp-direct-b-v28");
+
+    if (!a || !b || !a.value || !b.value) {
+      notify("Choose both partners first", "err");
+      return false;
+    }
+
+    if (a.value === b.value) {
+      notify("Choose two different players", "err");
+      return false;
+    }
+
+    var pairs = loadPairs();
+    var used = usedMap(pairs);
+
+    if (used[String(a.value)] || used[String(b.value)]) {
+      notify("One of those players is already paired", "err");
+      return false;
+    }
+
+    pairs.push([Number(a.value), Number(b.value)]);
+    savePairs(pairs);
+    notify("Fixed partner pair added");
+    renderPanel();
+    applyV28();
+
+    return true;
+  };
+
+  window.pbFixedPartnerDirectRemovePairV28 = function(idx) {
+    var pairs = loadPairs();
+
+    pairs.splice(Number(idx), 1);
+    savePairs(pairs);
+    renderPanel();
+    applyV28();
+
+    return true;
+  };
+
+  window.pbFixedPartnerDirectAutoPairV28 = function() {
+    var refs = activeRefs().slice();
+
+    refs.sort(function(a, b) {
+      return ratingOf(b) - ratingOf(a);
+    });
+
+    var pairs = [];
+
+    while (refs.length >= 2) {
+      pairs.push([refs.shift(), refs.pop()]);
+    }
+
+    savePairs(pairs);
+    notify("Auto-created fixed partner pairs. Review before generating.");
+    renderPanel();
+    applyV28();
+
+    return true;
+  };
+
+  window.pbFixedPartnerDirectClearPairsV28 = function() {
+    if (!confirm("Clear all fixed partner pairs?")) {
+      return false;
+    }
+
+    savePairs([]);
+    renderPanel();
+    applyV28();
+
+    return true;
+  };
+
+  window.pbFixedPartnerDirectGenerateV28 = function() {
+    if (typeof window.pbFixedPartnerDuprGenerateNextRoundV1 === "function") {
+      return window.pbFixedPartnerDuprGenerateNextRoundV1();
+    }
+
+    notify("Fixed Partner DUPR generator was not found", "err");
+
+    return false;
+  };
+
+  window.pbFixedPartnerDirectOwnerStatusV28 = function() {
+    var formatSel = ensureFixedOption();
+    var active = applyV28();
+    var panel = byId("pb-fixed-partner-direct-panel-v28");
+
+    return {
+      installed: true,
+      teamModeIsDupr: isTeamModeDupr(),
+      duprFormatSelectFound: !!formatSel,
+      duprFormatValue: selectedValue(formatSel),
+      duprFormatText: selectedText(formatSel),
+      fixedPartnerFormatSelected: isFixedFormatSelected(),
+      setupShouldShow: active,
+      directPanelFound: !!panel,
+      directPanelVisible: !!panel && panel.style.display !== "none",
+      generatorFound: typeof window.pbFixedPartnerDuprGenerateNextRoundV1 === "function",
+      pairCount: loadPairs().length,
+      activePlayers: activeRefs().length
+    };
+  };
+
+  document.addEventListener("change", function(ev) {
+    if (!ev || !ev.target || ev.target.tagName !== "SELECT") {
+      return;
+    }
+
+    var target = ev.target;
+    var isTeamMode = target.id === "team-mode";
+    var isDuprFormat = target === findDuprFormatSelect();
+
+    // Important: do not re-render when Partner 1 / Partner 2 changes.
+    // Re-rendering here wipes the selected player before the pair can be added.
+    if (isTeamMode || isDuprFormat) {
+      setTimeout(applyV28, 20);
+      setTimeout(applyV28, 150);
+      setTimeout(applyV28, 500);
+    }
+  }, true);
+
+  var oldRenderSchedule = window.renderSchedule;
+
+  if (typeof oldRenderSchedule === "function" && !oldRenderSchedule.__pbFixedPartnerDirectOwnerV28) {
+    var wrappedRenderScheduleV28 = function() {
+      var result = oldRenderSchedule.apply(this, arguments);
+
+      setTimeout(applyV28, 100);
+      setTimeout(applyV28, 500);
+
+      return result;
+    };
+
+    wrappedRenderScheduleV28.__pbFixedPartnerDirectOwnerV28 = true;
+    window.renderSchedule = wrappedRenderScheduleV28;
+  }
+
+  setTimeout(applyV28, 300);
+  setTimeout(applyV28, 1000);
+  setTimeout(applyV28, 2000);
 })();
 
 </script>
