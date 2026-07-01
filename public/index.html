@@ -35959,19 +35959,46 @@ function exportEndSessionSummary(){
   }
 
   function hostForPanel() {
-    var sel = findDuprFormatSelect();
-
-    if (sel && sel.parentNode) {
-      return sel.parentNode;
-    }
-
     var sec = byId("sec-schedule");
 
-    if (sec) {
-      return sec.querySelector(".card") || sec;
+    if (!sec) {
+      return document.body;
     }
 
-    return document.body;
+    var sel = findDuprFormatSelect();
+
+    // Put the Fixed Partner setup at the bottom of the whole DUPR settings card,
+    // not directly under the DUPR Format select. This keeps Match Range,
+    // Same Bracket, Aggregate Cap, Max Individual, and NR Provisional above it.
+    if (sel) {
+      var node = sel;
+
+      while (node && node !== sec && node !== document.body) {
+        var txt = textOf(node);
+
+        if (
+          txt.indexOf("DUPR Format") >= 0 &&
+          (
+            txt.indexOf("Match within range") >= 0 ||
+            txt.indexOf("Team Aggregate Cap") >= 0 ||
+            txt.indexOf("Max Individual DUPR") >= 0 ||
+            txt.indexOf("NR Provisional DUPR") >= 0
+          )
+        ) {
+          return node;
+        }
+
+        node = node.parentNode;
+      }
+
+      var card = sel.closest ? sel.closest(".card") : null;
+
+      if (card) {
+        return card;
+      }
+    }
+
+    return sec.querySelector(".card") || sec;
   }
 
   function ensurePanel() {
