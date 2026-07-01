@@ -37916,6 +37916,327 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_DUPR_REGEN_SAFETY_BANNER_V1 */
+(function(){
+  if (window.__pbDuprRegenSafetyBannerV1) return;
+  window.__pbDuprRegenSafetyBannerV1 = true;
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function text(v) {
+    return String(v === null || v === undefined ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function hasValue(v) {
+    return v !== null && v !== undefined && String(v).trim() !== "";
+  }
+
+  function getMode() {
+    var mode = el("team-mode");
+    return mode ? String(mode.value || "").toLowerCase() : "";
+  }
+
+  function getFormatSelect() {
+    var ids = [
+      "pb-dupr-format",
+      "pb-dupr-static-format",
+      "dupr-session-format",
+      "pb-dupr-visible-format",
+      "pb-dupr-format-master"
+    ];
+
+    var i;
+    var node;
+
+    for (i = 0; i < ids.length; i++) {
+      node = el(ids[i]);
+
+      if (node) return node;
+    }
+
+    return null;
+  }
+
+  function getFormat() {
+    var select = getFormatSelect();
+    var raw = select ? String(select.value || "").toLowerCase() : "open";
+
+    if (raw === "male" || raw === "men" || raw === "men only") return "male";
+    if (raw === "female" || raw === "women" || raw === "women only") return "female";
+    if (raw === "separate" || raw === "separate men/women" || raw === "separate men women") return "separate";
+    if (raw === "mixed" || raw === "standard mixed") return "mixed";
+
+    return raw || "open";
+  }
+
+  function formatLabel(fmt) {
+    if (fmt === "male") return "Men Only";
+    if (fmt === "female") return "Women Only";
+    if (fmt === "separate") return "Separate Men/Women";
+    if (fmt === "mixed") return "Mixed";
+    return fmt || "Open";
+  }
+
+  function isTarget() {
+    var mode = getMode();
+    var fmt = getFormat();
+
+    return (
+      (mode === "dupr" || mode.indexOf("dupr") >= 0 || mode.indexOf("competitive") >= 0) &&
+      (fmt === "male" || fmt === "female" || fmt === "separate")
+    );
+  }
+
+  function matchCompleted(m) {
+    if (!m) return false;
+
+    return (
+      m.complete === true ||
+      m.completed === true ||
+      m.isComplete === true ||
+      m.done === true ||
+      hasValue(m.scoreA) ||
+      hasValue(m.scoreB) ||
+      hasValue(m.aScore) ||
+      hasValue(m.bScore) ||
+      hasValue(m.teamAScore) ||
+      hasValue(m.teamBScore) ||
+      hasValue(m.pointsA) ||
+      hasValue(m.pointsB) ||
+      hasValue(m.winner) ||
+      hasValue(m.winnerTeam) ||
+      hasValue(m.result)
+    );
+  }
+
+  function roundCompleted(round) {
+    var i;
+
+    if (!Array.isArray(round)) return false;
+
+    for (i = 0; i < round.length; i++) {
+      if (matchCompleted(round[i])) return true;
+    }
+
+    return false;
+  }
+
+  function scheduleStats() {
+    var schedule = window.state && Array.isArray(state.schedule) ? state.schedule : [];
+    var completedRounds = [];
+    var lastCompleted = -1;
+    var startedOnly = [];
+    var i;
+    var started;
+
+    for (i = 0; i < schedule.length; i++) {
+      if (roundCompleted(schedule[i])) {
+        completedRounds.push(i + 1);
+        lastCompleted = i;
+      } else {
+        started = false;
+
+        try {
+          started = !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(i));
+        } catch(e) {}
+
+        if (started) startedOnly.push(i + 1);
+      }
+    }
+
+    return {
+      totalRounds: schedule.length,
+      completedRounds: completedRounds,
+      completedCount: completedRounds.length,
+      preservedThrough: lastCompleted + 1,
+      startedOnly: startedOnly
+    };
+  }
+
+  function findHost() {
+    var duprConfig = el("dupr-config");
+
+    if (duprConfig && duprConfig.parentNode) {
+      return duprConfig;
+    }
+
+    var select = getFormatSelect();
+
+    if (select) {
+      var node = select;
+
+      while (node && node !== document.body) {
+        if (node.className && String(node.className).indexOf("card") >= 0) {
+          return node;
+        }
+
+        node = node.parentNode;
+      }
+
+      if (select.parentNode) return select.parentNode;
+    }
+
+    return el("sec-schedule") || el("schedule") || document.body;
+  }
+
+  function ensureBanner() {
+    var banner = el("pb-dupr-regen-safety-banner-v1");
+    var host;
+
+    if (banner) return banner;
+
+    host = findHost();
+
+    if (!host || !host.parentNode) return null;
+
+    banner = document.createElement("div");
+    banner.id = "pb-dupr-regen-safety-banner-v1";
+    banner.style.cssText = [
+      "display:none",
+      "margin:.75rem 0",
+      "padding:.75rem .9rem",
+      "border-radius:14px",
+      "border:1px solid rgba(198,255,0,.30)",
+      "background:rgba(198,255,0,.075)",
+      "color:var(--txt)",
+      "font-size:.86rem",
+      "line-height:1.45"
+    ].join(";");
+
+    if (host.nextSibling) {
+      host.parentNode.insertBefore(banner, host.nextSibling);
+    } else {
+      host.parentNode.appendChild(banner);
+    }
+
+    return banner;
+  }
+
+  function renderBanner() {
+    var banner = ensureBanner();
+    var stats;
+    var html;
+    var startedOnlyNote = "";
+
+    if (!banner) return false;
+
+    if (!isTarget()) {
+      banner.style.display = "none";
+      return false;
+    }
+
+    stats = scheduleStats();
+
+    if (!stats.totalRounds) {
+      banner.style.display = "none";
+      return false;
+    }
+
+    if (stats.startedOnly.length) {
+      startedOnlyNote = "<div style='margin-top:.25rem;color:var(--txt3)'>Started but unscored round" +
+        (stats.startedOnly.length === 1 ? "" : "s") +
+        " may rebuild: Round " +
+        stats.startedOnly.join(", ") +
+        ".</div>";
+    }
+
+    html = "";
+    html += "<div style='display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;flex-wrap:wrap'>";
+    html += "<div>";
+    html += "<div style='font-weight:900;color:var(--lime);font-size:.94rem'>🔒 DUPR regeneration safety</div>";
+
+    if (stats.completedCount > 0) {
+      html += "<div style='margin-top:.2rem'>Format: <strong>" + formatLabel(getFormat()) + "</strong>. Completed/scored rounds are protected. Future unscored rounds may rebuild.</div>";
+      html += "<div style='margin-top:.25rem;color:var(--txt2)'>Protected through Round <strong>" + stats.preservedThrough + "</strong> · completed/scored rounds: " + stats.completedRounds.join(", ") + ".</div>";
+    } else {
+      html += "<div style='margin-top:.2rem'>Format: <strong>" + formatLabel(getFormat()) + "</strong>. No completed/scored rounds yet, so the schedule can rebuild normally.</div>";
+    }
+
+    html += startedOnlyNote;
+    html += "</div>";
+    html += "<div style='font-size:.78rem;color:var(--txt3);font-weight:800;text-transform:uppercase;letter-spacing:.04em'>Completed-only rule</div>";
+    html += "</div>";
+
+    banner.innerHTML = html;
+    banner.style.display = "";
+
+    return true;
+  }
+
+  function install() {
+    renderBanner();
+  }
+
+  function wrap(name) {
+    var fn = window[name];
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbDuprRegenSafetyBannerV1) return true;
+
+    window[name] = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(renderBanner, 50);
+      setTimeout(renderBanner, 250);
+
+      return result;
+    };
+
+    window[name].__pbDuprRegenSafetyBannerV1 = true;
+
+    return true;
+  }
+
+  function wrapAll() {
+    wrap("renderSchedule");
+    wrap("renderDashboard");
+    wrap("onModeChange");
+    wrap("generateSchedule");
+    wrap("promptGenerateSchedule");
+    wrap("generateBestOfN");
+    wrap("pbDuprGenerateSelectedModeV19");
+    wrap("pbDuprGenerateSelectedModeV21");
+    wrap("pbDuprGenerateSelectedModeV22");
+
+    renderBanner();
+  }
+
+  document.addEventListener("DOMContentLoaded", wrapAll);
+
+  document.addEventListener("change", function() {
+    setTimeout(wrapAll, 50);
+    setTimeout(renderBanner, 100);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(renderBanner, 120);
+  }, true);
+
+  setTimeout(wrapAll, 250);
+  setTimeout(wrapAll, 1000);
+  setTimeout(wrapAll, 2500);
+  setInterval(renderBanner, 3000);
+
+  window.pbDuprRegenSafetyBannerStatusV1 = function() {
+    wrapAll();
+
+    return {
+      installed: true,
+      marker: "PB_DUPR_REGEN_SAFETY_BANNER_V1",
+      target: isTarget(),
+      mode: getMode(),
+      format: getFormat(),
+      stats: scheduleStats(),
+      bannerFound: !!el("pb-dupr-regen-safety-banner-v1"),
+      bannerVisible: !!(el("pb-dupr-regen-safety-banner-v1") && el("pb-dupr-regen-safety-banner-v1").style.display !== "none")
+    };
+  };
+})();
+
 </script>
 
 </body>
