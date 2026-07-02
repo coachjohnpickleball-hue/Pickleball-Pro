@@ -16947,34 +16947,537 @@ function ldShowRoundComplete(roundNum) {
   }, 3000);
 }
 
-function openLiveDisplay() {
-  if(!state.schedule.length) { toast('Generate a schedule first', 'err'); return; }
-  const el = document.getElementById('live-display');
-  if(el) el.style.display = 'flex';
-  ldApplyTheme();
-  ldApplyMuteIcon();
-  ldUpdateFullscreenControls();
-  _ldRoundCompleteShown = -1;
-  _ldRoundStartTime = Date.now();
-  renderLiveDisplay();
-  // Clock + timer sync every second
-  _ldClockTimer = setInterval(() => {
-    const cl = document.getElementById('ld-clock');
-    if(cl) cl.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    const ldT = document.getElementById('ld-timer-display');
-    if(ldT) {
-      const secs = _timerGetRemaining();
-      const abs = Math.abs(secs), m = Math.floor(abs/60), s = Math.floor(abs%60);
-      ldT.textContent = `${secs<0?'+':''}${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      ldT.style.color = secs<=0?'#EF5350':secs<=120?'#FF8F00':'rgba(255,255,255,0.45)';
-    }
-    const timerBtn = document.getElementById('ld-timer-btn');
-    if(timerBtn) timerBtn.textContent = _timerRunning ? '⏸ PAUSE' : '▶ START';
-    // Refresh court cards every minute to update match duration
-    if(new Date().getSeconds() === 0) renderLiveDisplay();
-  }, 1000);
-  document.body.style.overflow = 'hidden';
+/* PB_SAFE_LIVE_DISPLAY_FIT_LEADERS_V5 */
+var _pbSafeLiveDisplayWindowV5 = null;
+var _pbSafeLiveDisplayTimerV5 = null;
+
+function pbSafeLiveDisplayHtmlV5(v) {
+  return String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
+
+function pbSafeLiveDisplayPlayerNameV5(playerIdx) {
+  var player = state.players && state.players[playerIdx];
+  return player && player.name ? player.name : "Player";
+}
+
+function pbSafeLiveDisplayFirstNameV5(name) {
+  var parts = String(name || "").trim().split(/\s+/);
+  return parts[0] || name || "Player";
+}
+
+function pbSafeLiveDisplayTeamNameV5(team) {
+  if (!Array.isArray(team)) return "TBD";
+
+  return team.map(function(playerIdx) {
+    return pbSafeLiveDisplayFirstNameV5(pbSafeLiveDisplayPlayerNameV5(playerIdx));
+  }).join(" / ");
+}
+
+function pbSafeLiveDisplayMatchHasScoreV5(m) {
+  if (!m) return false;
+
+  return (
+    (m.scoreA !== null && m.scoreA !== undefined && String(m.scoreA).trim() !== "") ||
+    (m.scoreB !== null && m.scoreB !== undefined && String(m.scoreB).trim() !== "")
+  );
+}
+
+function pbSafeLiveDisplayRoundCompleteV5(round) {
+  var matches = Array.isArray(round) ? round : [];
+  var i;
+
+  if (!matches.length) return false;
+
+  for (i = 0; i < matches.length; i++) {
+    if (!matches[i] || matches[i].complete !== true) return false;
+  }
+
+  return true;
+}
+
+function pbSafeLiveDisplayCurrentRoundIndexV5() {
+  var rounds = state.schedule || [];
+  var i;
+
+  if (!rounds.length) return -1;
+
+  try {
+    if (typeof dashboardGetProgress === "function") {
+      var p = dashboardGetProgress();
+
+      if (p && typeof p.currentIdx === "number" && p.currentIdx >= 0) {
+        return Math.max(0, Math.min(p.currentIdx, rounds.length - 1));
+      }
+    }
+  } catch(e) {}
+
+  for (i = 0; i < rounds.length; i++) {
+    if (!pbSafeLiveDisplayRoundCompleteV5(rounds[i])) return i;
+  }
+
+  return rounds.length - 1;
+}
+
+function pbSafeLiveDisplayStandingsV5() {
+  var players = state.players || [];
+  var rounds = state.schedule || [];
+  var rows = [];
+
+  players.forEach(function(p, idx) {
+    rows[idx] = {
+      name: p && p.name ? p.name : "Player",
+      played: 0,
+      wins: 0,
+      losses: 0,
+      pf: 0,
+      pa: 0,
+      diff: 0,
+      winPct: 0
+    };
+  });
+
+  rounds.forEach(function(round) {
+    (round || []).forEach(function(m) {
+      var scoreA;
+      var scoreB;
+      var aWon;
+
+      if (!m || !m.complete || !Array.isArray(m.teamA) || !Array.isArray(m.teamB)) return;
+
+      scoreA = parseInt(m.scoreA, 10);
+      scoreB = parseInt(m.scoreB, 10);
+
+      if (isNaN(scoreA)) scoreA = 0;
+      if (isNaN(scoreB)) scoreB = 0;
+
+      aWon = scoreA > scoreB;
+
+      m.teamA.forEach(function(idx) {
+        if (!rows[idx]) return;
+
+        rows[idx].played++;
+        rows[idx].pf += scoreA;
+        rows[idx].pa += scoreB;
+        rows[idx].wins += aWon ? 1 : 0;
+        rows[idx].losses += aWon ? 0 : 1;
+      });
+
+      m.teamB.forEach(function(idx) {
+        if (!rows[idx]) return;
+
+        rows[idx].played++;
+        rows[idx].pf += scoreB;
+        rows[idx].pa += scoreA;
+        rows[idx].wins += aWon ? 0 : 1;
+        rows[idx].losses += aWon ? 1 : 0;
+      });
+    });
+  });
+
+  rows.forEach(function(r) {
+    r.diff = r.pf - r.pa;
+    r.winPct = r.played ? Math.round((r.wins / r.played) * 100) : 0;
+  });
+
+  rows.sort(function(a, b) {
+    return b.wins - a.wins || b.diff - a.diff || b.pf - a.pf || a.name.localeCompare(b.name);
+  });
+
+  return rows;
+}
+
+function pbSafeLiveDisplayGridShapeV5(count) {
+  if (count <= 1) return { cols: 1, rows: 1 };
+  if (count <= 2) return { cols: 2, rows: 1 };
+  if (count <= 4) return { cols: 2, rows: 2 };
+  if (count <= 6) return { cols: 3, rows: 2 };
+  if (count <= 8) return { cols: 4, rows: 2 };
+  if (count <= 9) return { cols: 3, rows: 3 };
+  if (count <= 12) return { cols: 4, rows: 3 };
+  if (count <= 16) return { cols: 4, rows: 4 };
+
+  return { cols: 5, rows: Math.ceil(count / 5) };
+}
+
+function pbSafeLiveDisplayBuildV5() {
+  var rounds = state.schedule || [];
+  var idx = pbSafeLiveDisplayCurrentRoundIndexV5();
+  var round = idx >= 0 ? rounds[idx] || [] : [];
+  var titleEl = document.getElementById("tournament-name");
+  var title = titleEl && titleEl.value ? titleEl.value : "Pickleball Live Display";
+  var completeCount = 0;
+  var scoredCount = 0;
+  var started = false;
+  var matches;
+
+  try {
+    started = idx >= 0 && !!(state.startedRounds && typeof state.startedRounds.has === "function" && state.startedRounds.has(idx));
+  } catch(e) {}
+
+  matches = round.map(function(m, i) {
+    var complete = !!(m && m.complete);
+    var hasScore = pbSafeLiveDisplayMatchHasScoreV5(m);
+
+    if (complete) completeCount++;
+    if (hasScore) scoredCount++;
+
+    return {
+      court: m && m.court ? m.court : i + 1,
+      teamA: pbSafeLiveDisplayTeamNameV5(m && m.teamA),
+      teamB: pbSafeLiveDisplayTeamNameV5(m && m.teamB),
+      scoreA: m && m.scoreA !== null && m.scoreA !== undefined ? String(m.scoreA) : "",
+      scoreB: m && m.scoreB !== null && m.scoreB !== undefined ? String(m.scoreB) : "",
+      complete: complete,
+      hasScore: hasScore
+    };
+  });
+
+  return {
+    title: title,
+    roundIndex: idx,
+    roundNumber: idx >= 0 ? idx + 1 : null,
+    totalRounds: rounds.length,
+    started: started,
+    completeCount: completeCount,
+    scoredCount: scoredCount,
+    matchCount: matches.length,
+    roundComplete: matches.length > 0 && completeCount === matches.length,
+    updatedAt: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }),
+    matches: matches,
+    standings: pbSafeLiveDisplayStandingsV5()
+  };
+}
+
+function pbSafeLiveDisplayWriteV5(win) {
+  var doc = win.document;
+
+  doc.open();
+  doc.write("<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Live Display</title></head><body></body></html>");
+  doc.close();
+
+  var style = doc.createElement("style");
+  style.textContent = ""
+    + "html,body{margin:0;width:100%;height:100%;background:#020617;color:#f8fafc;font-family:Arial,Helvetica,sans-serif;overflow:hidden}"
+    + "body{height:100vh;display:flex;flex-direction:column;overflow:hidden}"
+    + ".top{height:58px;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.14);background:#020617;flex-shrink:0}"
+    + ".title{font-size:24px;font-weight:1000;color:#C6FF00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw}"
+    + ".meta{font-size:12px;color:#94a3b8;margin-top:2px}"
+    + ".actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end}"
+    + "button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}"
+    + "button.active{background:#C6FF00;color:#07110a;border-color:#C6FF00}"
+    + ".board{flex:1;min-height:0;overflow:hidden;padding:10px;display:flex;flex-direction:column;box-sizing:border-box}"
+    + ".subbar{height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:nowrap;margin-bottom:8px;flex-shrink:0}"
+    + ".status{font-size:14px;color:#facc15;font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+    + ".roundpill{font-size:14px;font-weight:1000;color:#020617;background:#C6FF00;border-radius:999px;padding:6px 10px;white-space:nowrap}"
+    + ".completeBanner{font-size:22px;font-weight:1000;color:#020617;background:#C6FF00;border-radius:14px;padding:8px 12px;margin-bottom:8px;text-align:center;box-shadow:0 12px 35px rgba(198,255,0,.2);flex-shrink:0}"
+    + ".courtGrid{flex:1;min-height:0;display:grid;gap:8px}"
+    + ".match{min-height:0;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.055);border-radius:14px;padding:9px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;overflow:hidden}"
+    + ".match.done{border-color:rgba(198,255,0,.55);background:rgba(198,255,0,.10)}"
+    + ".court{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:#C6FF00;font-weight:1000;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;flex-shrink:0}"
+    + ".tag{font-size:10px;border-radius:999px;padding:3px 7px;border:1px solid rgba(255,255,255,.18);color:#94a3b8;letter-spacing:0;text-transform:none;white-space:nowrap}"
+    + ".tag.done{background:#C6FF00;color:#07110a;border-color:#C6FF00}"
+    + ".tag.live{color:#facc15;border-color:rgba(250,204,21,.35)}"
+    + ".teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;min-height:0}"
+    + ".team{font-size:clamp(15px,1.7vw,24px);font-weight:1000;line-height:1.08;overflow:hidden}"
+    + ".vs{font-size:11px;color:#94a3b8;font-weight:1000}"
+    + ".scoreBox{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}"
+    + ".scoreNum{min-width:42px;text-align:center;font-size:clamp(24px,3vw,46px);font-weight:1000;color:#fff;background:rgba(255,255,255,.08);border-radius:12px;padding:3px 8px}"
+    + ".scoreDash{font-size:24px;font-weight:1000;color:#94a3b8}"
+    + ".waiting{margin-top:8px;color:#94a3b8;font-size:12px;font-weight:800;flex-shrink:0}"
+    + ".leaderWrap{height:112px;margin-top:8px;border:1px solid rgba(198,255,0,.25);background:rgba(198,255,0,.055);border-radius:16px;padding:9px;box-sizing:border-box;flex-shrink:0;overflow:hidden}"
+    + ".leaderTitle{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;color:#C6FF00;font-size:16px;font-weight:1000}"
+    + ".leaderGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:70px}"
+    + ".leaderCard{min-width:0;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);border-radius:13px;padding:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;box-sizing:border-box;overflow:hidden}"
+    + ".leaderName{font-size:clamp(14px,1.4vw,20px);font-weight:1000;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}"
+    + ".leaderMeta{font-size:11px;color:#94a3b8;margin-top:3px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+    + ".leaderMedal{font-size:30px;line-height:1;flex-shrink:0}"
+    + ".leaderStat{font-size:18px;font-weight:1000;color:#fff;text-align:right;flex-shrink:0}"
+    + ".leaderStat span{display:block;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-top:1px}"
+    + ".standingsTable{width:100%;border-collapse:collapse;font-size:17px}"
+    + ".standingsTable th,.standingsTable td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}"
+    + ".standingsTable th{color:#C6FF00;text-transform:uppercase;font-size:11px;letter-spacing:.08em}"
+    + ".rank{color:#C6FF00;font-weight:1000;width:55px}"
+    + ".empty{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:#94a3b8;font-size:24px;font-weight:900}"
+    + ":fullscreen .top{height:44px;opacity:.05;transition:opacity .18s ease}"
+    + ":fullscreen .top:hover{opacity:1}";
+
+  doc.head.appendChild(style);
+
+  doc.body.innerHTML = ""
+    + "<div class='top'>"
+    + "<div style='min-width:0'><div class='title' id='pb-tv-title'>📺 Live Display</div><div class='meta' id='pb-tv-meta'>Waiting for data…</div></div>"
+    + "<div class='actions'>"
+    + "<button id='pb-tv-now'>Now Playing</button>"
+    + "<button id='pb-tv-standings'>Player Standings</button>"
+    + "<button id='pb-tv-refresh'>Refresh</button>"
+    + "<button id='pb-tv-fullscreen'>Fullscreen TV</button>"
+    + "<button id='pb-tv-close'>Close</button>"
+    + "</div>"
+    + "</div><div class='board' id='pb-tv-board'><div class='empty'>Waiting for tournament data…</div></div>";
+
+  win.__pbLiveDisplayModeV5 = win.__pbLiveDisplayModeV5 || "now";
+
+  doc.getElementById("pb-tv-now").onclick = function() {
+    win.__pbLiveDisplayModeV5 = "now";
+    pbSafeLiveDisplayRenderV5();
+  };
+
+  doc.getElementById("pb-tv-standings").onclick = function() {
+    win.__pbLiveDisplayModeV5 = "standings";
+    pbSafeLiveDisplayRenderV5();
+  };
+
+  doc.getElementById("pb-tv-refresh").onclick = function() {
+    pbSafeLiveDisplayRenderV5();
+  };
+
+  doc.getElementById("pb-tv-fullscreen").onclick = function() {
+    try {
+      if (doc.documentElement.requestFullscreen) doc.documentElement.requestFullscreen();
+    } catch(e) {}
+  };
+
+  doc.getElementById("pb-tv-close").onclick = function() {
+    win.close();
+  };
+}
+
+function pbSafeLiveDisplayTopThreeHtmlV5(data) {
+  var rows = data && data.standings ? data.standings.slice(0, 3) : [];
+  var medals = ["🥇", "🥈", "🥉"];
+  var html = "";
+
+  if (!rows.length) return "";
+
+  while (rows.length < 3) {
+    rows.push({ name: "—", wins: 0, losses: 0, played: 0, diff: 0, winPct: 0 });
+  }
+
+  html += "<div class='leaderWrap'>";
+  html += "<div class='leaderTitle'><span>🏆 Top 3 Leaders</span><span style='font-size:11px;color:#94a3b8'>Live standings</span></div>";
+  html += "<div class='leaderGrid'>";
+
+  rows.forEach(function(r, i) {
+    html += "<div class='leaderCard'>";
+    html += "<div style='display:flex;align-items:center;gap:8px;min-width:0'>";
+    html += "<div class='leaderMedal'>" + medals[i] + "</div>";
+    html += "<div style='min-width:0'>";
+    html += "<div class='leaderName'>" + pbSafeLiveDisplayHtmlV5(r.name) + "</div>";
+    html += "<div class='leaderMeta'>" + r.wins + "W-" + r.losses + "L · " + r.played + " played · " + r.winPct + "%</div>";
+    html += "</div>";
+    html += "</div>";
+    html += "<div class='leaderStat'>" + (r.diff >= 0 ? "+" : "") + r.diff + "<span>+/-</span></div>";
+    html += "</div>";
+  });
+
+  html += "</div>";
+  html += "</div>";
+
+  return html;
+}
+
+function pbSafeLiveDisplayRenderV5() {
+  var win = _pbSafeLiveDisplayWindowV5;
+
+  if (!win || win.closed) return false;
+
+  var doc = win.document;
+  var data = pbSafeLiveDisplayBuildV5();
+  var title = doc.getElementById("pb-tv-title");
+  var meta = doc.getElementById("pb-tv-meta");
+  var board = doc.getElementById("pb-tv-board");
+  var nowBtn = doc.getElementById("pb-tv-now");
+  var standingsBtn = doc.getElementById("pb-tv-standings");
+  var mode = win.__pbLiveDisplayModeV5 || "now";
+
+  if (!board) return false;
+
+  if (title) title.textContent = "📺 " + data.title;
+  if (meta) meta.textContent = data.roundNumber ? "Round " + data.roundNumber + " / " + data.totalRounds + " · Updated " + data.updatedAt : "No schedule";
+
+  if (nowBtn) nowBtn.className = mode === "now" ? "active" : "";
+  if (standingsBtn) standingsBtn.className = mode === "standings" ? "active" : "";
+
+  if (mode === "standings") {
+    return pbSafeLiveDisplayRenderStandingsV5(board, data);
+  }
+
+  return pbSafeLiveDisplayRenderNowPlayingV5(board, data);
+}
+
+function pbSafeLiveDisplayRenderNowPlayingV5(board, data) {
+  var html = "";
+  var shape = pbSafeLiveDisplayGridShapeV5(data.matches.length);
+
+  if (!data.matches.length) {
+    board.innerHTML = "<div class='empty'>No live round yet. Generate a schedule on the manager screen.</div>";
+    return true;
+  }
+
+  if (data.roundComplete) {
+    html += "<div class='completeBanner'>✅ Round " + pbSafeLiveDisplayHtmlV5(data.roundNumber) + " Complete</div>";
+  }
+
+  html += "<div class='subbar'>";
+  html += "<div class='roundpill'>Now Playing: Round " + pbSafeLiveDisplayHtmlV5(data.roundNumber) + "</div>";
+  html += "<div class='status'>" + (data.started ? "✅ Session started" : "⚠️ Session not started yet") + " · " + data.completeCount + " / " + data.matchCount + " courts final";
+  if (data.scoredCount) html += " · " + data.scoredCount + " scoring";
+  html += "</div>";
+  html += "</div>";
+
+  html += "<div class='courtGrid' style='grid-template-columns:repeat(" + shape.cols + ",minmax(0,1fr));grid-template-rows:repeat(" + shape.rows + ",minmax(0,1fr));'>";
+
+  data.matches.forEach(function(m) {
+    var tag = "Waiting";
+    var tagClass = "";
+
+    if (m.complete) {
+      tag = "Final";
+      tagClass = "done";
+    } else if (m.hasScore) {
+      tag = "In Progress";
+      tagClass = "live";
+    }
+
+    html += "<div class='match " + (m.complete ? "done" : "") + "'>";
+    html += "<div class='court'><span>Court " + pbSafeLiveDisplayHtmlV5(m.court) + "</span><span class='tag " + tagClass + "'>" + tag + "</span></div>";
+    html += "<div class='teams'>";
+    html += "<div class='team'>" + pbSafeLiveDisplayHtmlV5(m.teamA) + "</div>";
+    html += "<div class='vs'>VS</div>";
+    html += "<div class='team' style='text-align:right'>" + pbSafeLiveDisplayHtmlV5(m.teamB) + "</div>";
+    html += "</div>";
+
+    if (m.hasScore || m.complete) {
+      html += "<div class='scoreBox'>";
+      html += "<div class='scoreNum'>" + pbSafeLiveDisplayHtmlV5(m.scoreA || "0") + "</div>";
+      html += "<div class='scoreDash'>–</div>";
+      html += "<div class='scoreNum'>" + pbSafeLiveDisplayHtmlV5(m.scoreB || "0") + "</div>";
+      html += "</div>";
+    } else {
+      html += "<div class='waiting'>Score will appear when entered.</div>";
+    }
+
+    html += "</div>";
+  });
+
+  html += "</div>";
+  html += pbSafeLiveDisplayTopThreeHtmlV5(data);
+
+  board.innerHTML = html;
+
+  return true;
+}
+
+function pbSafeLiveDisplayRenderStandingsV5(board, data) {
+  var html = "";
+  var rows = data.standings || [];
+  var visible = rows.slice(0, 12);
+
+  if (!rows.length) {
+    board.innerHTML = "<div class='empty'>No players found for standings.</div>";
+    return true;
+  }
+
+  html += "<div class='subbar'>";
+  html += "<div class='roundpill'>Player Standings</div>";
+  html += "<div class='status'>Top 12 · Through completed scores · Round " + pbSafeLiveDisplayHtmlV5(data.roundNumber || "—") + "</div>";
+  html += "</div>";
+
+  html += "<table class='standingsTable'>";
+  html += "<thead><tr><th>#</th><th>Player</th><th>Played</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>+/-</th><th>Win %</th></tr></thead>";
+  html += "<tbody>";
+
+  visible.forEach(function(r, i) {
+    html += "<tr>";
+    html += "<td class='rank'>" + (i + 1) + "</td>";
+    html += "<td>" + pbSafeLiveDisplayHtmlV5(r.name) + "</td>";
+    html += "<td>" + r.played + "</td>";
+    html += "<td>" + r.wins + "</td>";
+    html += "<td>" + r.losses + "</td>";
+    html += "<td>" + r.pf + "</td>";
+    html += "<td>" + r.pa + "</td>";
+    html += "<td>" + r.diff + "</td>";
+    html += "<td>" + r.winPct + "%</td>";
+    html += "</tr>";
+  });
+
+  html += "</tbody></table>";
+
+  board.innerHTML = html;
+
+  return true;
+}
+
+function openLiveDisplay() {
+  var win;
+
+  if (!state.schedule.length) {
+    toast("Generate a schedule first", "err");
+    return false;
+  }
+
+  try {
+    win = window.open("", "pb_live_display_safe_v5", "width=1600,height=950,menubar=no,toolbar=no,location=no,status=no");
+  } catch(e) {
+    win = null;
+  }
+
+  if (!win) {
+    toast("Popup blocked. Allow popups for this site, then try again.", "err");
+    return false;
+  }
+
+  _pbSafeLiveDisplayWindowV5 = win;
+  pbSafeLiveDisplayWriteV5(win);
+  pbSafeLiveDisplayRenderV5();
+
+  try { win.focus(); } catch(e2) {}
+
+  if (_pbSafeLiveDisplayTimerV5) clearInterval(_pbSafeLiveDisplayTimerV5);
+
+  _pbSafeLiveDisplayTimerV5 = setInterval(function() {
+    if (!_pbSafeLiveDisplayWindowV5 || _pbSafeLiveDisplayWindowV5.closed) {
+      clearInterval(_pbSafeLiveDisplayTimerV5);
+      _pbSafeLiveDisplayTimerV5 = null;
+      return;
+    }
+
+    pbSafeLiveDisplayRenderV5();
+  }, 1000);
+
+  toast("Live Display opened in a separate TV window.", "ok");
+  return true;
+}
+
+window.pbSafeLiveDisplayFitLeadersStatusV5 = function() {
+  var data = pbSafeLiveDisplayBuildV5();
+
+  return {
+    installed: true,
+    marker: "PB_SAFE_LIVE_DISPLAY_FIT_LEADERS_V5",
+    popupOpen: !!(_pbSafeLiveDisplayWindowV5 && !_pbSafeLiveDisplayWindowV5.closed),
+    currentRoundNumber: data.roundNumber,
+    matchesInCurrentRound: data.matchCount,
+    scoredMatches: data.scoredCount,
+    completeMatches: data.completeCount,
+    roundComplete: data.roundComplete,
+    topThree: data.standings.slice(0, 3).map(function(r) {
+      return {
+        name: r.name,
+        wins: r.wins,
+        losses: r.losses,
+        played: r.played,
+        diff: r.diff,
+        winPct: r.winPct
+      };
+    })
+  };
+};
 
 function closeLiveDisplay() {
   const el = document.getElementById('live-display');
