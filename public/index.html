@@ -39412,6 +39412,1262 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+/* PB_LIVE_TV_CLEANUP_WINDOW_V1 */
+(function(){
+  if (window.__pbLiveTvCleanupWindowV1) return;
+  window.__pbLiveTvCleanupWindowV1 = true;
+
+  var liveTvTimerV1 = null;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function cleanText(v) {
+    return String(v === null || v === undefined ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function esc(v) {
+    if (typeof escHtml === "function") return escHtml(v);
+
+    return String(v === null || v === undefined ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function toastSafe(msg, kind) {
+    try {
+      if (typeof toast === "function") {
+        toast(msg, kind || "ok");
+      }
+    } catch(e) {}
+  }
+
+  function isLiveTvUrl() {
+    var qs;
+
+    try {
+      qs = new URLSearchParams(window.location.search || "");
+
+      return qs.get("view") === "livetv" || qs.get("tv") === "1" || qs.get("livetv") === "1";
+    } catch(e) {
+      return String(window.location.search || "").indexOf("view=livetv") >= 0;
+    }
+  }
+
+  function normalAppUrl() {
+    return window.location.origin + window.location.pathname;
+  }
+
+  function liveTvUrl() {
+    var base = window.location.origin + window.location.pathname;
+    var mode = "courts";
+
+    try {
+      if (typeof getTvViewMode === "function") mode = getTvViewMode();
+    } catch(e) {}
+
+    return base + "?view=livetv&mode=" + encodeURIComponent(mode) + "&tv=" + Date.now();
+  }
+
+  function getTvMode() {
+    try {
+      if (typeof getTvViewMode === "function") return getTvViewMode();
+    } catch(e) {}
+
+    try {
+      var saved = localStorage.getItem("pb_tv_live_view_mode");
+
+      if (saved === "courts" || saved === "standings") return saved;
+    } catch(e2) {}
+
+    return "courts";
+  }
+
+  function setTvMode(mode) {
+    if (mode !== "courts" && mode !== "standings") mode = "courts";
+
+    try {
+      if (typeof setTvViewMode === "function") {
+        setTvViewMode(mode);
+      } else {
+        localStorage.setItem("pb_tv_live_view_mode", mode);
+      }
+    } catch(e) {
+      try {
+        localStorage.setItem("pb_tv_live_view_mode", mode);
+      } catch(e2) {}
+    }
+
+    renderLiveTvBoard();
+    updateToolbarModeButtons();
+  }
+
+  function currentRoundLabel() {
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var p = dashboardGetProgress();
+
+        if (p && p.rounds && p.rounds.length) {
+          return String(Math.min(p.currentIdx + 1, p.rounds.length)) + " / " + String(p.rounds.length);
+        }
+      }
+    } catch(e) {}
+
+    try {
+      if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+        return "1 / " + state.schedule.length;
+      }
+    } catch(e2) {}
+
+    return "—";
+  }
+
+  function renderLiveTvBoard() {
+    var target = byId("pb-live-tv-board-v1");
+
+    if (!target) return false;
+
+    try {
+      if (typeof renderTvBoard === "function") {
+        renderTvBoard("pb-live-tv-board-v1", { limit: 60 });
+      } else {
+        target.innerHTML = "<div class='empty-state'><div class='big'>📺</div>Live TV renderer is not ready yet.</div>";
+      }
+    } catch(e) {
+      target.innerHTML = "<div class='empty-state'><div class='big'>⚠️</div>Could not render Live TV board.</div>";
+
+      try {
+        console.warn("PB_LIVE_TV_CLEANUP_WINDOW_V1 render failed", e);
+      } catch(e2) {}
+    }
+
+    updateLiveTvMeta();
+
+    return true;
+  }
+
+  function updateLiveTvMeta() {
+    var meta = byId("pb-live-tv-meta-v1");
+
+    if (!meta) return;
+
+    meta.textContent = "Round " + currentRoundLabel() + " · " + new Date().toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function updateToolbarModeButtons() {
+    var mode = getTvMode();
+    var courts = byId("pb-live-tv-mode-courts-v1");
+    var standings = byId("pb-live-tv-mode-standings-v1");
+    var ncourts = byId("pb-live-tv-normal-mode-courts-v1");
+    var nstandings = byId("pb-live-tv-normal-mode-standings-v1");
+
+    if (courts) courts.className = mode === "courts" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+    if (standings) standings.className = mode === "standings" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+    if (ncourts) ncourts.className = mode === "courts" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+    if (nstandings) nstandings.className = mode === "standings" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+  }
+
+  function requestLiveTvFullscreen() {
+    var root = byId("pb-live-tv-window-v1") || byId("tv-board");
+
+    if (!root) return;
+
+    try {
+      if (root.requestFullscreen) {
+        root.requestFullscreen();
+      } else if (root.webkitRequestFullscreen) {
+        root.webkitRequestFullscreen();
+      }
+    } catch(e) {}
+  }
+
+  function exitFullscreenOnly() {
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    } catch(e) {}
+
+    var tv = byId("tv-board");
+
+    if (tv) tv.classList.remove("tv-fullscreen");
+
+    removeFloatingExit();
+  }
+
+  function backToNormalApp() {
+    exitFullscreenOnly();
+
+    if (isLiveTvUrl()) {
+      window.location.href = normalAppUrl();
+
+      return;
+    }
+
+    try {
+      if (typeof showTab === "function") showTab("dashboard");
+    } catch(e) {}
+
+    toastSafe("Returned to normal app screen.", "ok");
+  }
+
+  function closeTvWindow() {
+    try {
+      if (window.opener) {
+        window.close();
+
+        return;
+      }
+    } catch(e) {}
+
+    backToNormalApp();
+  }
+
+  function openLiveTvScreen() {
+    var url = liveTvUrl();
+    var w = null;
+
+    try {
+      w = window.open(url, "pb_live_tv_screen", "popup=yes,width=1600,height=950,menubar=no,toolbar=no,location=no,status=no");
+    } catch(e) {
+      w = null;
+    }
+
+    if (w) {
+      try {
+        w.focus();
+      } catch(e2) {}
+
+      toastSafe("Live TV screen opened. Share that window to the TV.", "ok");
+
+      return true;
+    }
+
+    toastSafe("Popup blocked. Open this Live TV link manually.", "err");
+
+    try {
+      prompt("Copy/open this Live TV screen link:", url);
+    } catch(e3) {}
+
+    return false;
+  }
+
+  function ensureLiveTvWindow() {
+    var root = byId("pb-live-tv-window-v1");
+
+    if (root) return root;
+
+    root = document.createElement("div");
+    root.id = "pb-live-tv-window-v1";
+    root.innerHTML = ""
+      + "<div id='pb-live-tv-topbar-v1'>"
+      + "  <div>"
+      + "    <div id='pb-live-tv-label-v1'>📺 Live TV Screen</div>"
+      + "    <div id='pb-live-tv-meta-v1'>Round —</div>"
+      + "  </div>"
+      + "  <div id='pb-live-tv-actions-v1'>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-mode-courts-v1'>Courts</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-mode-standings-v1'>Standings</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-fullscreen-v1'>Fullscreen</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-normal-v1'>Back to App</button>"
+      + "    <button type='button' class='btn btn-danger btn-sm' id='pb-live-tv-close-v1'>Close TV</button>"
+      + "  </div>"
+      + "</div>"
+      + "<div id='pb-live-tv-board-v1'></div>";
+
+    document.body.appendChild(root);
+
+    wireLiveTvWindowButtons();
+
+    return root;
+  }
+
+  function wireLiveTvWindowButtons() {
+    var courts = byId("pb-live-tv-mode-courts-v1");
+    var standings = byId("pb-live-tv-mode-standings-v1");
+    var full = byId("pb-live-tv-fullscreen-v1");
+    var normal = byId("pb-live-tv-normal-v1");
+    var close = byId("pb-live-tv-close-v1");
+
+    if (courts && !courts.__pbLiveTvCleanupWindowV1) {
+      courts.__pbLiveTvCleanupWindowV1 = true;
+      courts.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("courts");
+      });
+    }
+
+    if (standings && !standings.__pbLiveTvCleanupWindowV1) {
+      standings.__pbLiveTvCleanupWindowV1 = true;
+      standings.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("standings");
+      });
+    }
+
+    if (full && !full.__pbLiveTvCleanupWindowV1) {
+      full.__pbLiveTvCleanupWindowV1 = true;
+      full.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        requestLiveTvFullscreen();
+      });
+    }
+
+    if (normal && !normal.__pbLiveTvCleanupWindowV1) {
+      normal.__pbLiveTvCleanupWindowV1 = true;
+      normal.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        backToNormalApp();
+      });
+    }
+
+    if (close && !close.__pbLiveTvCleanupWindowV1) {
+      close.__pbLiveTvCleanupWindowV1 = true;
+      close.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        closeTvWindow();
+      });
+    }
+  }
+
+  function enterLiveTvMode() {
+    if (!isLiveTvUrl()) return false;
+
+    document.body.classList.add("pb-live-tv-mode-v1");
+
+    ensureLiveTvWindow();
+    renderLiveTvBoard();
+    updateToolbarModeButtons();
+
+    if (!liveTvTimerV1) {
+      liveTvTimerV1 = setInterval(renderLiveTvBoard, 10000);
+    }
+
+    setTimeout(renderLiveTvBoard, 300);
+    setTimeout(renderLiveTvBoard, 1200);
+
+    return true;
+  }
+
+  function ensureNormalControls() {
+    var sec = byId("sec-display") || byId("display");
+    var board = byId("tv-board");
+    var panel = byId("pb-live-tv-control-panel-v1");
+
+    if (!sec) return null;
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-live-tv-control-panel-v1";
+      panel.style.cssText = [
+        "margin:.75rem 0",
+        "padding:.75rem .9rem",
+        "border-radius:14px",
+        "border:1px solid rgba(198,255,0,.24)",
+        "background:rgba(198,255,0,.06)",
+        "display:flex",
+        "align-items:center",
+        "justify-content:space-between",
+        "gap:.75rem",
+        "flex-wrap:wrap"
+      ].join(";");
+
+      panel.innerHTML = ""
+        + "<div>"
+        + "  <div style='font-weight:900;color:var(--lime);font-size:.94rem'>📺 Live TV</div>"
+        + "  <div id='pb-live-tv-control-note-v1' style='font-size:.8rem;color:var(--txt2);margin-top:.1rem'>Open a separate TV-safe screen or preview here.</div>"
+        + "</div>"
+        + "<div style='display:flex;gap:.45rem;flex-wrap:wrap;align-items:center'>"
+        + "  <button type='button' class='btn btn-primary btn-sm' id='pb-live-tv-open-window-v1'>Open TV Screen</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-fullscreen-here-v1'>Fullscreen Here</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-back-normal-v1'>Normal Screen</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-normal-mode-courts-v1'>Courts</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-normal-mode-standings-v1'>Standings</button>"
+        + "</div>";
+
+      if (board && board.parentNode) {
+        board.parentNode.insertBefore(panel, board);
+      } else {
+        sec.insertBefore(panel, sec.firstChild);
+      }
+    }
+
+    wireNormalControls();
+
+    return panel;
+  }
+
+  function wireNormalControls() {
+    var open = byId("pb-live-tv-open-window-v1");
+    var full = byId("pb-live-tv-fullscreen-here-v1");
+    var normal = byId("pb-live-tv-back-normal-v1");
+    var courts = byId("pb-live-tv-normal-mode-courts-v1");
+    var standings = byId("pb-live-tv-normal-mode-standings-v1");
+
+    if (open && !open.__pbLiveTvCleanupWindowV1) {
+      open.__pbLiveTvCleanupWindowV1 = true;
+      open.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        openLiveTvScreen();
+      });
+    }
+
+    if (full && !full.__pbLiveTvCleanupWindowV1) {
+      full.__pbLiveTvCleanupWindowV1 = true;
+      full.addEventListener("click", function(ev) {
+        ev.preventDefault();
+
+        var tv = byId("tv-board");
+
+        if (tv) {
+          tv.classList.add("tv-fullscreen");
+
+          try {
+            if (typeof renderTvBoard === "function") renderTvBoard("tv-board", { limit: 60 });
+          } catch(e) {}
+
+          ensureFloatingExit();
+        }
+      });
+    }
+
+    if (normal && !normal.__pbLiveTvCleanupWindowV1) {
+      normal.__pbLiveTvCleanupWindowV1 = true;
+      normal.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        backToNormalApp();
+      });
+    }
+
+    if (courts && !courts.__pbLiveTvCleanupWindowV1) {
+      courts.__pbLiveTvCleanupWindowV1 = true;
+      courts.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("courts");
+      });
+    }
+
+    if (standings && !standings.__pbLiveTvCleanupWindowV1) {
+      standings.__pbLiveTvCleanupWindowV1 = true;
+      standings.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("standings");
+      });
+    }
+
+    updateToolbarModeButtons();
+  }
+
+  function ensureFloatingExit() {
+    var btn = byId("pb-live-tv-floating-exit-v1");
+
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "pb-live-tv-floating-exit-v1";
+      btn.type = "button";
+      btn.className = "btn btn-danger btn-sm";
+      btn.textContent = "Back to Normal";
+      btn.style.cssText = [
+        "position:fixed",
+        "top:14px",
+        "right:14px",
+        "z-index:2147483647",
+        "box-shadow:0 10px 30px rgba(0,0,0,.35)"
+      ].join(";");
+
+      document.body.appendChild(btn);
+    }
+
+    if (!btn.__pbLiveTvCleanupWindowV1) {
+      btn.__pbLiveTvCleanupWindowV1 = true;
+      btn.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        exitFullscreenOnly();
+
+        try {
+          if (typeof renderTvBoard === "function") renderTvBoard("tv-board", { limit: 24 });
+        } catch(e) {}
+      });
+    }
+
+    btn.style.display = "";
+  }
+
+  function removeFloatingExit() {
+    var btn = byId("pb-live-tv-floating-exit-v1");
+
+    if (btn) btn.style.display = "none";
+  }
+
+  function cleanupDuplicateDisplayControls() {
+    var sec = byId("sec-display") || byId("display");
+    var controls;
+    var i;
+    var node;
+    var onclick;
+    var label;
+
+    if (!sec) return;
+
+    controls = sec.querySelectorAll("button,a");
+
+    for (i = 0; i < controls.length; i++) {
+      node = controls[i];
+
+      if (!node) continue;
+      if (node.closest && node.closest("#pb-live-tv-control-panel-v1")) continue;
+      if (node.closest && node.closest("#pb-live-tv-window-v1")) continue;
+
+      onclick = String(node.getAttribute && node.getAttribute("onclick") || "");
+      label = cleanText(node.textContent || node.value || "");
+
+      if (
+        node.id === "tv-mode-courts" ||
+        node.id === "tv-mode-standings" ||
+        onclick.indexOf("openLiveDisplay") >= 0 ||
+        onclick.indexOf("tvToggleFullscreen") >= 0 ||
+        onclick.indexOf("setTvViewMode") >= 0 ||
+        label === "📺 Live Display" ||
+        label === "Live Display" ||
+        label === "TV Display" ||
+        label === "Fullscreen" ||
+        label === "Full Screen"
+      ) {
+        node.setAttribute("data-pb-live-tv-hidden-duplicate-v1", "1");
+        node.style.display = "none";
+      }
+    }
+  }
+
+  function installStyle() {
+    if (byId("pb-live-tv-cleanup-style-v1")) return;
+
+    var style = document.createElement("style");
+    style.id = "pb-live-tv-cleanup-style-v1";
+    style.textContent = ""
+      + "body.pb-live-tv-mode-v1{margin:0!important;overflow:hidden!important;background:#020617!important;}"
+      + "body.pb-live-tv-mode-v1 > *:not(#pb-live-tv-window-v1){display:none!important;}"
+      + "#pb-live-tv-window-v1{position:fixed;inset:0;z-index:2147483600;background:#020617;color:var(--txt,#fff);display:flex;flex-direction:column;overflow:hidden;}"
+      + "#pb-live-tv-topbar-v1{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.14);background:rgba(2,6,23,.94);}"
+      + "#pb-live-tv-label-v1{font-weight:1000;color:var(--lime,#C6FF00);font-size:1rem;}"
+      + "#pb-live-tv-meta-v1{font-size:.78rem;color:var(--txt3,#94a3b8);margin-top:.1rem;}"
+      + "#pb-live-tv-actions-v1{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;}"
+      + "#pb-live-tv-board-v1{flex:1;overflow:auto;padding:1rem;}"
+      + "#pb-live-tv-window-v1:fullscreen #pb-live-tv-topbar-v1{opacity:.08;transition:opacity .18s ease;}"
+      + "#pb-live-tv-window-v1:fullscreen #pb-live-tv-topbar-v1:hover{opacity:1;}"
+      + "#tv-board.tv-fullscreen{position:fixed!important;inset:0!important;z-index:2147483500!important;background:#020617!important;overflow:auto!important;padding:1rem!important;}"
+      + "#pb-live-tv-control-panel-v1 [disabled]{opacity:.55;cursor:not-allowed;}";
+
+    document.head.appendChild(style);
+  }
+
+  function wrapRenderDisplayTools() {
+    var fn = window.renderDisplayTools;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbLiveTvCleanupWindowV1) return true;
+
+    window.renderDisplayTools = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(function() {
+        ensureNormalControls();
+        cleanupDuplicateDisplayControls();
+        updateToolbarModeButtons();
+      }, 30);
+
+      setTimeout(function() {
+        ensureNormalControls();
+        cleanupDuplicateDisplayControls();
+        updateToolbarModeButtons();
+      }, 180);
+
+      return result;
+    };
+
+    window.renderDisplayTools.__pbLiveTvCleanupWindowV1 = true;
+
+    return true;
+  }
+
+  function wrapTvToggleFullscreen() {
+    var fn = window.tvToggleFullscreen;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbLiveTvCleanupWindowV1) return true;
+
+    window.tvToggleFullscreen = function() {
+      var result = fn.apply(this, arguments);
+      var tv = byId("tv-board");
+
+      if (tv && tv.classList && tv.classList.contains("tv-fullscreen")) {
+        ensureFloatingExit();
+      } else {
+        removeFloatingExit();
+      }
+
+      return result;
+    };
+
+    window.tvToggleFullscreen.__pbLiveTvCleanupWindowV1 = true;
+
+    return true;
+  }
+
+  function wrapOpenLiveDisplay() {
+    var fn = window.openLiveDisplay;
+
+    if (typeof fn !== "function") {
+      window.openLiveDisplay = openLiveTvScreen;
+
+      return true;
+    }
+
+    if (fn.__pbLiveTvCleanupWindowV1) return true;
+
+    window.openLiveDisplay = function() {
+      return openLiveTvScreen();
+    };
+
+    window.openLiveDisplay.__pbLiveTvCleanupWindowV1 = true;
+
+    return true;
+  }
+
+  function install() {
+    installStyle();
+    wrapRenderDisplayTools();
+    wrapTvToggleFullscreen();
+    wrapOpenLiveDisplay();
+
+    if (enterLiveTvMode()) return;
+
+    ensureNormalControls();
+    cleanupDuplicateDisplayControls();
+    updateToolbarModeButtons();
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  document.addEventListener("change", function() {
+    setTimeout(install, 60);
+    setTimeout(renderLiveTvBoard, 120);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(install, 140);
+    setTimeout(renderLiveTvBoard, 220);
+  }, true);
+
+  window.addEventListener("storage", function(ev) {
+    if (!ev || !ev.key || ev.key.indexOf("pb_") === 0 || ev.key.indexOf("pickle") >= 0) {
+      setTimeout(renderLiveTvBoard, 120);
+    }
+  });
+
+  setTimeout(install, 250);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  window.pbLiveTvCleanupWindowStatusV1 = function() {
+    install();
+
+    return {
+      installed: true,
+      marker: "PB_LIVE_TV_CLEANUP_WINDOW_V1",
+      liveTvUrl: liveTvUrl(),
+      isLiveTvUrl: isLiveTvUrl(),
+      normalControlsFound: !!byId("pb-live-tv-control-panel-v1"),
+      liveTvWindowFound: !!byId("pb-live-tv-window-v1"),
+      tvBoardFound: !!byId("tv-board"),
+      hiddenDuplicateControls: document.querySelectorAll("[data-pb-live-tv-hidden-duplicate-v1='1']").length,
+      mode: getTvMode()
+    };
+  };
+})();
+
+
+
+/* PB_LIVE_TV_DEDICATED_PAGE_V2 */
+(function(){
+  if (window.__pbLiveTvDedicatedPageV2) return;
+  window.__pbLiveTvDedicatedPageV2 = true;
+
+  var refreshTimerV2 = null;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function esc(v) {
+    if (typeof escHtml === "function") return escHtml(v);
+
+    return String(v === null || v === undefined ? "" : v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function isLiveTvPage() {
+    try {
+      var qs = new URLSearchParams(window.location.search || "");
+      return qs.get("view") === "livetv";
+    } catch(e) {
+      return String(window.location.search || "").indexOf("view=livetv") >= 0;
+    }
+  }
+
+  function managerUrl() {
+    return window.location.origin + window.location.pathname;
+  }
+
+  function tvUrl() {
+    return window.location.origin + window.location.pathname + "?view=livetv&screen=tv&v=" + Date.now();
+  }
+
+  function getTvMode() {
+    try {
+      var qs = new URLSearchParams(window.location.search || "");
+      var mode = qs.get("mode");
+
+      if (mode === "standings" || mode === "courts") return mode;
+    } catch(e) {}
+
+    try {
+      var saved = localStorage.getItem("pb_tv_live_view_mode");
+
+      if (saved === "standings" || saved === "courts") return saved;
+    } catch(e2) {}
+
+    return "courts";
+  }
+
+  function setTvMode(mode) {
+    if (mode !== "standings" && mode !== "courts") mode = "courts";
+
+    try {
+      localStorage.setItem("pb_tv_live_view_mode", mode);
+    } catch(e) {}
+
+    try {
+      if (typeof setTvViewMode === "function") {
+        setTvViewMode(mode);
+      }
+    } catch(e2) {}
+
+    renderTvPage();
+    updateButtons();
+  }
+
+  function currentRoundLabel() {
+    try {
+      if (typeof dashboardGetProgress === "function") {
+        var p = dashboardGetProgress();
+
+        if (p && p.rounds && p.rounds.length) {
+          return Math.min(p.currentIdx + 1, p.rounds.length) + " / " + p.rounds.length;
+        }
+      }
+    } catch(e) {}
+
+    try {
+      if (window.state && Array.isArray(state.schedule) && state.schedule.length) {
+        return "1 / " + state.schedule.length;
+      }
+    } catch(e2) {}
+
+    return "—";
+  }
+
+  function refreshStateFromStorage() {
+    try {
+      if (typeof loadState === "function") {
+        loadState();
+        return true;
+      }
+    } catch(e1) {}
+
+    try {
+      if (typeof loadAutosave === "function") {
+        loadAutosave();
+        return true;
+      }
+    } catch(e2) {}
+
+    try {
+      if (typeof loadFromStorage === "function") {
+        loadFromStorage();
+        return true;
+      }
+    } catch(e3) {}
+
+    return false;
+  }
+
+  function ensureTvPage() {
+    var page = byId("pb-live-tv-dedicated-page-v2");
+
+    if (page) return page;
+
+    page = document.createElement("div");
+    page.id = "pb-live-tv-dedicated-page-v2";
+    page.innerHTML = ""
+      + "<div id='pb-live-tv-dedicated-topbar-v2'>"
+      + "  <div>"
+      + "    <div id='pb-live-tv-dedicated-title-v2'>📺 Live TV Display</div>"
+      + "    <div id='pb-live-tv-dedicated-meta-v2'>Round —</div>"
+      + "  </div>"
+      + "  <div id='pb-live-tv-dedicated-actions-v2'>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-v2-courts'>Courts</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-v2-standings'>Standings</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-v2-refresh'>Refresh</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-v2-fullscreen'>Fullscreen TV</button>"
+      + "    <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-v2-manager'>Open Manager</button>"
+      + "  </div>"
+      + "</div>"
+      + "<div id='pb-live-tv-dedicated-board-v2'></div>";
+
+    document.body.appendChild(page);
+
+    wireTvPageButtons();
+
+    return page;
+  }
+
+  function wireTvPageButtons() {
+    var courts = byId("pb-live-tv-v2-courts");
+    var standings = byId("pb-live-tv-v2-standings");
+    var refresh = byId("pb-live-tv-v2-refresh");
+    var fullscreen = byId("pb-live-tv-v2-fullscreen");
+    var manager = byId("pb-live-tv-v2-manager");
+
+    if (courts && !courts.__pbLiveTvDedicatedPageV2) {
+      courts.__pbLiveTvDedicatedPageV2 = true;
+      courts.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("courts");
+      });
+    }
+
+    if (standings && !standings.__pbLiveTvDedicatedPageV2) {
+      standings.__pbLiveTvDedicatedPageV2 = true;
+      standings.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("standings");
+      });
+    }
+
+    if (refresh && !refresh.__pbLiveTvDedicatedPageV2) {
+      refresh.__pbLiveTvDedicatedPageV2 = true;
+      refresh.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        refreshStateFromStorage();
+        renderTvPage();
+      });
+    }
+
+    if (fullscreen && !fullscreen.__pbLiveTvDedicatedPageV2) {
+      fullscreen.__pbLiveTvDedicatedPageV2 = true;
+      fullscreen.addEventListener("click", function(ev) {
+        ev.preventDefault();
+
+        var root = byId("pb-live-tv-dedicated-page-v2");
+
+        try {
+          if (root && root.requestFullscreen) root.requestFullscreen();
+          else if (root && root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+        } catch(e) {}
+      });
+    }
+
+    if (manager && !manager.__pbLiveTvDedicatedPageV2) {
+      manager.__pbLiveTvDedicatedPageV2 = true;
+      manager.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        window.open(managerUrl(), "_blank");
+      });
+    }
+  }
+
+  function updateButtons() {
+    var mode = getTvMode();
+    var courts = byId("pb-live-tv-v2-courts");
+    var standings = byId("pb-live-tv-v2-standings");
+    var openBtn = byId("pb-live-tv-open-dedicated-page-v2");
+
+    if (courts) courts.className = mode === "courts" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+    if (standings) standings.className = mode === "standings" ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+
+    if (openBtn) openBtn.title = tvUrl();
+  }
+
+  function renderTvPage() {
+    var board = byId("pb-live-tv-dedicated-board-v2");
+    var meta = byId("pb-live-tv-dedicated-meta-v2");
+
+    if (!board) return false;
+
+    try {
+      if (typeof renderTvBoard === "function") {
+        renderTvBoard("pb-live-tv-dedicated-board-v2", { limit: 80 });
+      } else {
+        board.innerHTML = "<div class='empty-state'><div class='big'>📺</div>Live TV board is not ready yet.</div>";
+      }
+    } catch(e) {
+      board.innerHTML = "<div class='empty-state'><div class='big'>⚠️</div>Could not render Live TV board.</div>";
+
+      try {
+        console.warn("PB_LIVE_TV_DEDICATED_PAGE_V2 render error", e);
+      } catch(e2) {}
+    }
+
+    if (meta) {
+      meta.textContent = "Round " + currentRoundLabel() + " · Updated " + new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    updateButtons();
+
+    return true;
+  }
+
+  function enterDedicatedTvPage() {
+    if (!isLiveTvPage()) return false;
+
+    installStyle();
+
+    document.body.classList.add("pb-live-tv-dedicated-mode-v2");
+
+    ensureTvPage();
+
+    refreshStateFromStorage();
+    renderTvPage();
+
+    if (!refreshTimerV2) {
+      refreshTimerV2 = setInterval(function() {
+        refreshStateFromStorage();
+        renderTvPage();
+      }, 5000);
+    }
+
+    setTimeout(function() {
+      refreshStateFromStorage();
+      renderTvPage();
+    }, 500);
+
+    setTimeout(function() {
+      refreshStateFromStorage();
+      renderTvPage();
+    }, 1500);
+
+    return true;
+  }
+
+  function openDedicatedTvPage() {
+    var url = tvUrl();
+    var win = null;
+
+    try {
+      win = window.open(url, "_blank", "popup=yes,width=1600,height=950,menubar=no,toolbar=no,location=no,status=no");
+    } catch(e) {
+      win = null;
+    }
+
+    if (win) {
+      try {
+        win.focus();
+      } catch(e2) {}
+
+      try {
+        if (typeof toast === "function") toast("Live TV page opened. Share that page to the TV.", "ok");
+      } catch(e3) {}
+
+      return true;
+    }
+
+    try {
+      prompt("Copy/open this Live TV page:", url);
+    } catch(e4) {}
+
+    return false;
+  }
+
+  function findDisplaySection() {
+    return byId("sec-display") || byId("display") || byId("display-tools");
+  }
+
+  function ensureManagerToolbar() {
+    var sec = findDisplaySection();
+    var board = byId("tv-board");
+    var toolbar = byId("pb-live-tv-manager-toolbar-v2");
+
+    if (!sec) return null;
+
+    if (!toolbar) {
+      toolbar = document.createElement("div");
+      toolbar.id = "pb-live-tv-manager-toolbar-v2";
+      toolbar.style.cssText = [
+        "margin:.75rem 0",
+        "padding:.8rem .95rem",
+        "border-radius:14px",
+        "border:1px solid rgba(198,255,0,.24)",
+        "background:rgba(198,255,0,.065)",
+        "display:flex",
+        "align-items:center",
+        "justify-content:space-between",
+        "gap:.75rem",
+        "flex-wrap:wrap"
+      ].join(";");
+
+      toolbar.innerHTML = ""
+        + "<div>"
+        + "  <div style='font-weight:900;color:var(--lime);font-size:.95rem'>📺 Live TV Page</div>"
+        + "  <div style='font-size:.8rem;color:var(--txt2);margin-top:.12rem'>Open a separate page for the TV while you manage the tournament here.</div>"
+        + "</div>"
+        + "<div style='display:flex;gap:.45rem;flex-wrap:wrap;align-items:center'>"
+        + "  <button type='button' class='btn btn-primary btn-sm' id='pb-live-tv-open-dedicated-page-v2'>Open Live TV Page</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-copy-link-v2'>Copy TV Link</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-preview-courts-v2'>Courts</button>"
+        + "  <button type='button' class='btn btn-secondary btn-sm' id='pb-live-tv-preview-standings-v2'>Standings</button>"
+        + "</div>";
+
+      if (board && board.parentNode) {
+        board.parentNode.insertBefore(toolbar, board);
+      } else {
+        sec.insertBefore(toolbar, sec.firstChild);
+      }
+    }
+
+    wireManagerToolbar();
+
+    return toolbar;
+  }
+
+  function wireManagerToolbar() {
+    var open = byId("pb-live-tv-open-dedicated-page-v2");
+    var copy = byId("pb-live-tv-copy-link-v2");
+    var courts = byId("pb-live-tv-preview-courts-v2");
+    var standings = byId("pb-live-tv-preview-standings-v2");
+
+    if (open && !open.__pbLiveTvDedicatedPageV2) {
+      open.__pbLiveTvDedicatedPageV2 = true;
+      open.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        openDedicatedTvPage();
+      });
+    }
+
+    if (copy && !copy.__pbLiveTvDedicatedPageV2) {
+      copy.__pbLiveTvDedicatedPageV2 = true;
+      copy.addEventListener("click", function(ev) {
+        ev.preventDefault();
+
+        var url = tvUrl();
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function() {
+            try {
+              if (typeof toast === "function") toast("Live TV link copied.", "ok");
+            } catch(e) {}
+          });
+        } else {
+          try {
+            prompt("Copy Live TV link:", url);
+          } catch(e2) {}
+        }
+      });
+    }
+
+    if (courts && !courts.__pbLiveTvDedicatedPageV2) {
+      courts.__pbLiveTvDedicatedPageV2 = true;
+      courts.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("courts");
+
+        try {
+          if (typeof renderTvBoard === "function") renderTvBoard("tv-board", { limit: 30 });
+        } catch(e) {}
+      });
+    }
+
+    if (standings && !standings.__pbLiveTvDedicatedPageV2) {
+      standings.__pbLiveTvDedicatedPageV2 = true;
+      standings.addEventListener("click", function(ev) {
+        ev.preventDefault();
+        setTvMode("standings");
+
+        try {
+          if (typeof renderTvBoard === "function") renderTvBoard("tv-board", { limit: 30 });
+        } catch(e) {}
+      });
+    }
+  }
+
+  function hideDuplicateButtons() {
+    var sec = findDisplaySection();
+    var controls;
+    var i;
+    var node;
+    var label;
+    var onclick;
+
+    if (!sec) return;
+
+    controls = sec.querySelectorAll("button,a");
+
+    for (i = 0; i < controls.length; i++) {
+      node = controls[i];
+
+      if (!node) continue;
+      if (node.closest && node.closest("#pb-live-tv-manager-toolbar-v2")) continue;
+
+      label = cleanText(node.textContent || node.value || "").toLowerCase();
+      onclick = String(node.getAttribute && node.getAttribute("onclick") || "").toLowerCase();
+
+      if (
+        onclick.indexOf("openlivedisplay") >= 0 ||
+        onclick.indexOf("tvtogglefullscreen") >= 0 ||
+        label === "live display" ||
+        label === "📺 live display" ||
+        label === "tv display" ||
+        label === "open tv screen" ||
+        label === "fullscreen here" ||
+        label === "normal screen" ||
+        label === "back to app"
+      ) {
+        node.style.display = "none";
+        node.setAttribute("data-pb-live-tv-dedicated-hidden-v2", "1");
+      }
+    }
+  }
+
+  function installStyle() {
+    if (byId("pb-live-tv-dedicated-style-v2")) return;
+
+    var style = document.createElement("style");
+    style.id = "pb-live-tv-dedicated-style-v2";
+    style.textContent = ""
+      + "body.pb-live-tv-dedicated-mode-v2{margin:0!important;overflow:hidden!important;background:#020617!important;}"
+      + "body.pb-live-tv-dedicated-mode-v2 > *:not(#pb-live-tv-dedicated-page-v2){display:none!important;}"
+      + "#pb-live-tv-dedicated-page-v2{position:fixed;inset:0;z-index:2147483600;background:#020617;color:var(--txt,#fff);display:flex;flex-direction:column;overflow:hidden;}"
+      + "#pb-live-tv-dedicated-topbar-v2{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.14);background:rgba(2,6,23,.96);}"
+      + "#pb-live-tv-dedicated-title-v2{font-weight:1000;color:var(--lime,#C6FF00);font-size:1rem;}"
+      + "#pb-live-tv-dedicated-meta-v2{font-size:.78rem;color:var(--txt3,#94a3b8);margin-top:.1rem;}"
+      + "#pb-live-tv-dedicated-actions-v2{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;}"
+      + "#pb-live-tv-dedicated-board-v2{flex:1;overflow:auto;padding:1rem;}"
+      + "#pb-live-tv-dedicated-page-v2:fullscreen #pb-live-tv-dedicated-topbar-v2{opacity:.08;transition:opacity .18s ease;}"
+      + "#pb-live-tv-dedicated-page-v2:fullscreen #pb-live-tv-dedicated-topbar-v2:hover{opacity:1;}";
+
+    document.head.appendChild(style);
+  }
+
+  function wrapRenderDisplayTools() {
+    var fn = window.renderDisplayTools;
+
+    if (typeof fn !== "function") return false;
+    if (fn.__pbLiveTvDedicatedPageV2) return true;
+
+    window.renderDisplayTools = function() {
+      var result = fn.apply(this, arguments);
+
+      setTimeout(function() {
+        ensureManagerToolbar();
+        hideDuplicateButtons();
+      }, 60);
+
+      setTimeout(function() {
+        ensureManagerToolbar();
+        hideDuplicateButtons();
+      }, 220);
+
+      return result;
+    };
+
+    window.renderDisplayTools.__pbLiveTvDedicatedPageV2 = true;
+
+    return true;
+  }
+
+  function overrideOldOpenLiveDisplay() {
+    window.openLiveDisplay = openDedicatedTvPage;
+
+    try {
+      window.openLiveDisplay.__pbLiveTvDedicatedPageV2 = true;
+    } catch(e) {}
+
+    return true;
+  }
+
+  function install() {
+    installStyle();
+
+    if (enterDedicatedTvPage()) return;
+
+    wrapRenderDisplayTools();
+    overrideOldOpenLiveDisplay();
+
+    ensureManagerToolbar();
+    hideDuplicateButtons();
+  }
+
+  document.addEventListener("DOMContentLoaded", install);
+
+  document.addEventListener("change", function() {
+    setTimeout(install, 80);
+    setTimeout(renderTvPage, 150);
+  }, true);
+
+  document.addEventListener("click", function() {
+    setTimeout(install, 140);
+  }, true);
+
+  window.addEventListener("storage", function() {
+    if (isLiveTvPage()) {
+      setTimeout(function() {
+        refreshStateFromStorage();
+        renderTvPage();
+      }, 100);
+    }
+  });
+
+  setTimeout(install, 250);
+  setTimeout(install, 1000);
+  setTimeout(install, 2500);
+
+  window.pbLiveTvDedicatedPageStatusV2 = function() {
+    install();
+
+    return {
+      installed: true,
+      marker: "PB_LIVE_TV_DEDICATED_PAGE_V2",
+      isLiveTvPage: isLiveTvPage(),
+      tvUrl: tvUrl(),
+      managerUrl: managerUrl(),
+      managerToolbarFound: !!byId("pb-live-tv-manager-toolbar-v2"),
+      dedicatedPageFound: !!byId("pb-live-tv-dedicated-page-v2"),
+      dedicatedBoardFound: !!byId("pb-live-tv-dedicated-board-v2"),
+      hiddenDuplicateButtons: document.querySelectorAll("[data-pb-live-tv-dedicated-hidden-v2='1']").length,
+      mode: getTvMode()
+    };
+  };
+})();
+
 </script>
 
 </body>
