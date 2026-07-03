@@ -11629,6 +11629,414 @@ function pbRemoveFloatingTimeV1() {
 
 
 /* PB_CLEANUP_PASS_1_APPLIED */
+
+/* PB_SCORE_AUDIT_LOG_V1 */
+window.PB_SCORE_AUDIT_LOG_KEY_V1 = 'pbScoreAuditLogV1';
+
+function pbScoreAuditTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbScoreAuditEscV1(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function pbScoreAuditTournamentNameV1() {
+  try {
+    if(typeof pbHomeStableTournamentNameV1 === 'function') {
+      const v = pbScoreAuditTextV1(pbHomeStableTournamentNameV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof getTournamentName === 'function') {
+      const v = pbScoreAuditTextV1(getTournamentName());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  return 'Pickleball Tournament';
+}
+
+function pbScoreAuditScoreV1(m) {
+  if(!m) return '';
+
+  const a =
+    m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+
+  const b =
+    m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbScoreAuditTeamNameV1(team) {
+  if(!team) return '';
+
+  try {
+    if(Array.isArray(team) && typeof matchTeamName === 'function') {
+      return pbScoreAuditTextV1(matchTeamName(team));
+    }
+  } catch(e) {}
+
+  try {
+    if(Array.isArray(team)) {
+      return team.map(idx => {
+        const p = state.players && state.players[idx];
+        return p ? (p.name || p.fullName || `Player ${idx + 1}`) : `Player ${idx + 1}`;
+      }).join(' / ');
+    }
+  } catch(e) {}
+
+  if(typeof team === 'string') return team;
+  return '';
+}
+
+function pbScoreAuditTeamsV1(m) {
+  if(!m) return '';
+
+  const a = m.teamA || m.team1 || m.a || m.left || m.home || m.playersA || m.pairA || m.sideA;
+  const b = m.teamB || m.team2 || m.b || m.right || m.away || m.playersB || m.pairB || m.sideB;
+
+  const ta = pbScoreAuditTeamNameV1(a);
+  const tb = pbScoreAuditTeamNameV1(b);
+
+  if(ta && tb) return `${ta} vs ${tb}`;
+  if(ta) return ta;
+  if(tb) return tb;
+  return '';
+}
+
+function pbScoreAuditSnapshotV1() {
+  const rounds = state.schedule || [];
+
+  const rows = [];
+
+  rounds.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (mIdx + 1);
+      const score = pbScoreAuditScoreV1(m);
+      const complete = !!(m && m.complete);
+
+      rows.push({
+        key: `r${rIdx + 1}:m${mIdx + 1}:c${court}`,
+        round: rIdx + 1,
+        court,
+        matchIndex: mIdx + 1,
+        score,
+        complete,
+        teams: pbScoreAuditTeamsV1(m),
+        acceptedByA: m?.acceptedByA || '',
+        acceptedByB: m?.acceptedByB || '',
+        acceptedAt: m?.acceptedAt || null
+      });
+    });
+  });
+
+  return rows;
+}
+
+function pbScoreAuditLoadV1() {
+  try {
+    if(state && Array.isArray(state.scoreAuditLogV1)) {
+      return state.scoreAuditLogV1;
+    }
+  } catch(e) {}
+
+  try {
+    const raw = localStorage.getItem(window.PB_SCORE_AUDIT_LOG_KEY_V1);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function pbScoreAuditSaveV1(entries) {
+  const clean = Array.isArray(entries) ? entries.slice(-500) : [];
+
+  try {
+    if(state) state.scoreAuditLogV1 = clean;
+  } catch(e) {}
+
+  try {
+    localStorage.setItem(window.PB_SCORE_AUDIT_LOG_KEY_V1, JSON.stringify(clean));
+  } catch(e) {}
+
+  return clean;
+}
+
+function pbScoreAuditAddV1(entry) {
+  const entries = pbScoreAuditLoadV1();
+
+  const full = {
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    tournament: pbScoreAuditTournamentNameV1(),
+    ...entry
+  };
+
+  entries.push(full);
+  pbScoreAuditSaveV1(entries);
+
+  return full;
+}
+
+function pbScoreAuditDiffV1(before, after, source) {
+  const beforeMap = new Map((before || []).map(row => [row.key, row]));
+  const afterMap = new Map((after || []).map(row => [row.key, row]));
+
+  afterMap.forEach((newRow, key) => {
+    const oldRow = beforeMap.get(key);
+
+    if(!oldRow) return;
+
+    const scoreChanged = oldRow.score !== newRow.score;
+    const completeChanged = oldRow.complete !== newRow.complete;
+    const acceptChanged =
+      oldRow.acceptedByA !== newRow.acceptedByA ||
+      oldRow.acceptedByB !== newRow.acceptedByB ||
+      oldRow.acceptedAt !== newRow.acceptedAt;
+
+    if(!scoreChanged && !completeChanged && !acceptChanged) return;
+
+    pbScoreAuditAddV1({
+      action: completeChanged && newRow.complete ? 'Score completed' : scoreChanged ? 'Score changed' : 'Score acceptance changed',
+      source: source || 'App',
+      round: newRow.round,
+      court: newRow.court,
+      matchIndex: newRow.matchIndex,
+      teams: newRow.teams,
+      beforeScore: oldRow.score || '—',
+      afterScore: newRow.score || '—',
+      beforeComplete: oldRow.complete,
+      afterComplete: newRow.complete,
+      acceptedByA: newRow.acceptedByA || '',
+      acceptedByB: newRow.acceptedByB || '',
+      acceptedAt: newRow.acceptedAt || null
+    });
+  });
+}
+
+function pbScoreAuditWrapFunctionV1(name, source) {
+  const fn = window[name];
+
+  if(typeof fn !== 'function') return;
+  if(fn.__pbScoreAuditWrappedV1) return;
+
+  const wrapped = function(...args) {
+    const before = pbScoreAuditSnapshotV1();
+
+    let result;
+
+    try {
+      result = fn.apply(this, args);
+    } catch(err) {
+      throw err;
+    }
+
+    const finish = () => {
+      try {
+        const after = pbScoreAuditSnapshotV1();
+        pbScoreAuditDiffV1(before, after, source);
+      } catch(e) {
+        console.error('Score audit diff failed', e);
+      }
+    };
+
+    if(result && typeof result.then === 'function') {
+      result.finally(() => setTimeout(finish, 0));
+    } else {
+      setTimeout(finish, 0);
+    }
+
+    return result;
+  };
+
+  wrapped.__pbScoreAuditWrappedV1 = true;
+  window[name] = wrapped;
+}
+
+function pbScoreAuditFormatDateV1(iso) {
+  try {
+    const dt = new Date(iso);
+    if(isNaN(dt.getTime())) return iso || '';
+    return dt.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch(e) {
+    return iso || '';
+  }
+}
+
+function pbScoreAuditOpenModalV1() {
+  let modal = document.getElementById('pb-score-audit-modal-v1');
+
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pb-score-audit-modal-v1';
+    modal.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:99998;
+      background:rgba(0,0,0,0.62);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const entries = pbScoreAuditLoadV1().slice().reverse();
+
+  const rows = entries.length ? entries.map(e => `
+    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(255,255,255,0.035);padding:0.75rem;margin-bottom:0.55rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:1000;color:var(--lime)">${pbScoreAuditEscV1(e.action || 'Score update')}</div>
+          <div style="color:var(--txt3);font-size:0.8rem;margin-top:0.1rem">
+            ${pbScoreAuditEscV1(pbScoreAuditFormatDateV1(e.at))} · ${pbScoreAuditEscV1(e.source || 'App')}
+          </div>
+        </div>
+        <div style="border-radius:999px;background:rgba(198,255,0,0.12);color:var(--ball);font-weight:1000;font-size:0.76rem;padding:0.25rem 0.55rem">
+          R${pbScoreAuditEscV1(e.round)} · Court ${pbScoreAuditEscV1(e.court)}
+        </div>
+      </div>
+
+      <div style="color:var(--txt2);font-size:0.86rem;margin-top:0.45rem">${pbScoreAuditEscV1(e.teams || 'Match')}</div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.5rem;margin-top:0.55rem">
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:0.5rem;background:rgba(0,0,0,0.1)">
+          <div style="font-size:0.7rem;color:var(--txt3);font-weight:900;text-transform:uppercase">Before</div>
+          <div style="font-size:1rem;font-weight:1000;color:var(--txt)">${pbScoreAuditEscV1(e.beforeScore || '—')}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:0.5rem;background:rgba(0,0,0,0.1)">
+          <div style="font-size:0.7rem;color:var(--txt3);font-weight:900;text-transform:uppercase">After</div>
+          <div style="font-size:1rem;font-weight:1000;color:var(--lime)">${pbScoreAuditEscV1(e.afterScore || '—')}</div>
+        </div>
+      </div>
+
+      ${
+        e.acceptedByA || e.acceptedByB
+          ? `<div style="color:var(--txt3);font-size:0.78rem;margin-top:0.5rem">
+              Accepted: ${pbScoreAuditEscV1([e.acceptedByA, e.acceptedByB].filter(Boolean).join(' / '))}
+            </div>`
+          : ''
+      }
+    </div>
+  `).join('') : `
+    <div style="border:1px dashed rgba(255,255,255,0.18);border-radius:14px;padding:1rem;color:var(--txt3);text-align:center">
+      No score audit entries yet. Save or pull a score to create the first entry.
+    </div>
+  `;
+
+  modal.innerHTML = `
+    <div style="width:min(760px,96vw);max-height:86vh;overflow:auto;border:1px solid rgba(198,255,0,0.28);border-radius:20px;background:var(--panel,#111);box-shadow:0 24px 80px rgba(0,0,0,0.45);padding:1rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem">
+        <div>
+          <div style="font-family:'Anton','Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;color:var(--txt)">Score Audit Log</div>
+          <div style="color:var(--txt3);font-size:0.85rem;margin-top:0.25rem">${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} · ${pbScoreAuditEscV1(pbScoreAuditTournamentNameV1())}</div>
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="pbScoreAuditExportV1()">Export JSON</button>
+          <button class="btn btn-secondary btn-sm" onclick="pbScoreAuditClearV1()">Clear</button>
+          <button class="btn btn-primary btn-sm" onclick="pbScoreAuditCloseModalV1()">Close</button>
+        </div>
+      </div>
+
+      ${rows}
+    </div>
+  `;
+}
+
+function pbScoreAuditCloseModalV1() {
+  document.getElementById('pb-score-audit-modal-v1')?.remove();
+}
+
+function pbScoreAuditExportV1() {
+  const entries = pbScoreAuditLoadV1();
+
+  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `score-audit-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function pbScoreAuditClearV1() {
+  if(!confirm('Clear the score audit log for this browser?')) return;
+
+  pbScoreAuditSaveV1([]);
+  pbScoreAuditOpenModalV1();
+}
+
+function pbScoreAuditEnsureHomeButtonV1() {
+  const panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) return;
+
+  if(document.getElementById('pb-score-audit-home-btn-v1')) return;
+
+  const buttonRows = Array.from(panel.querySelectorAll('div')).filter(div => {
+    const txt = pbScoreAuditTextV1(div.textContent || '');
+    return txt.includes('Players') && txt.includes('Schedule') && txt.includes('Mobile Sync');
+  });
+
+  const row = buttonRows[buttonRows.length - 1];
+  if(!row) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'pb-score-audit-home-btn-v1';
+  btn.className = 'btn btn-secondary btn-sm';
+  btn.textContent = '🧾 Score Audit';
+  btn.onclick = pbScoreAuditOpenModalV1;
+
+  row.appendChild(btn);
+}
+
+(function pbInstallScoreAuditLogV1(){
+  if(window.__PB_SCORE_AUDIT_LOG_V1_INSTALLED__) return;
+  window.__PB_SCORE_AUDIT_LOG_V1_INSTALLED__ = true;
+
+  const install = () => {
+    pbScoreAuditWrapFunctionV1('saveScore', 'Manual score save');
+    pbScoreAuditWrapFunctionV1('saveScoreInline', 'Inline score save');
+    pbScoreAuditWrapFunctionV1('msPullNow', 'Mobile score pull');
+    pbScoreAuditEnsureHomeButtonV1();
+  };
+
+  install();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    install();
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
