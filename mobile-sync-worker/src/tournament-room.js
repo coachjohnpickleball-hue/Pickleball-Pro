@@ -18,7 +18,7 @@
  *                                     — token is a random secret handed back to the phone
  *                                       on a successful claim; required on every /score call
  *                                       for that court so only the claiming phone can submit.
- *   pending: [ { court, matchId, scoreA, scoreB, submittedBy, submittedAt, consumed } ]
+ *   pending: [ { court, matchId, scoreA, scoreB, submittedBy, acceptedByA, acceptedByB, acceptedAt, submittedAt, consumed } ]
  *   announcements: [ { id, text, postedAt } ]  — organizer's one-way messages to all phones,
  *                                                 newest first. Read-only on the phone side.
  */
@@ -254,8 +254,11 @@ export class TournamentRoom {
             scoreA: c.scoreA ?? '',
             scoreB: c.scoreB ?? '',
             complete: !!c.complete,
-            submittedBy: c.submittedBy || (sameMatch ? prev?.submittedBy : '') || '',
-            submittedAt: c.submittedAt || (sameMatch ? prev?.submittedAt : null) || null,
+            submittedBy: c.submittedBy || (sameMatch && prev ? prev.submittedBy : '') || '',
+            acceptedByA: c.acceptedByA || (sameMatch && prev ? prev.acceptedByA : '') || '',
+            acceptedByB: c.acceptedByB || (sameMatch && prev ? prev.acceptedByB : '') || '',
+            acceptedAt: c.acceptedAt || (sameMatch && prev ? prev.acceptedAt : null) || null,
+            submittedAt: c.submittedAt || (sameMatch && prev ? prev.submittedAt : null) || null,
           };
         });
 
@@ -399,6 +402,8 @@ export class TournamentRoom {
         const scoreA = Number(body.scoreA);
         const scoreB = Number(body.scoreB);
         const submittedBy = (body.submittedBy || '').trim();
+        const acceptedByA = (body.acceptedByA || '').trim();
+        const acceptedByB = (body.acceptedByB || '').trim();
         const token = (body.token || '').trim();
         if (!court || Number.isNaN(scoreA) || Number.isNaN(scoreB)) {
           return this.json({ ok: false, error: 'court, scoreA, scoreB required' }, 400);
@@ -407,7 +412,12 @@ export class TournamentRoom {
         // The claiming phone must present the token it was issued on /claim.
         // This stops anyone who didn't successfully claim (i.e. didn't have
         // the right PIN) from submitting a score for this court.
-        const claim = data.claims[court];
+                // PB_MOBILE_ACCEPTED_BY_STORAGE_V1
+        if (!acceptedByA || !acceptedByB) {
+          return this.json({ ok: false, error: 'Score must be accepted by one player from each team before submitting.' }, 400);
+        }
+
+const claim = data.claims[court];
         if (!claim || claim.token !== token) {
           return this.json({ ok: false, error: 'This court was not claimed by you — claim it again' }, 403);
         }
@@ -435,6 +445,9 @@ export class TournamentRoom {
         courtEntry.scoreB = scoreB;
         courtEntry.complete = true;
         courtEntry.submittedBy = submittedBy;
+        courtEntry.acceptedByA = acceptedByA;
+        courtEntry.acceptedByB = acceptedByB;
+        courtEntry.acceptedAt = Date.now();
         courtEntry.submittedAt = Date.now();
 
         data.pending.push({
@@ -443,6 +456,9 @@ export class TournamentRoom {
           scoreA,
           scoreB,
           submittedBy,
+          acceptedByA,
+          acceptedByB,
+          acceptedAt: Date.now(),
           submittedAt: Date.now(),
           consumed: false,
         });

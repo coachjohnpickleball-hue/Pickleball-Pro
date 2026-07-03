@@ -215,6 +215,169 @@
   .error-text { font-size: 0.82rem; color: var(--red); min-height: 1.1em; }
 
   .swap-row { display: flex; justify-content: center; margin-top: 0.3rem; }
+
+/* PB_MOBILE_SCOREKEEPER_POLISH_V1 */
+html.pb-ms-polish-v1,
+html.pb-ms-polish-v1 body {
+  overscroll-behavior: none;
+}
+
+html.pb-ms-polish-v1 .screen {
+  gap: .75rem;
+}
+
+html.pb-ms-polish-v1 .match-card {
+  border-radius: 26px;
+  padding: 1rem;
+  box-shadow: 0 18px 55px rgba(0,0,0,.28);
+}
+
+html.pb-ms-polish-v1 .match-card .court-pill,
+html.pb-ms-polish-v1 #score-court-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: .45rem 1rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 1000;
+  letter-spacing: .04em;
+  background: rgba(198,255,0,.16);
+  border: 1px solid rgba(198,255,0,.45);
+  color: var(--lime);
+}
+
+html.pb-ms-polish-v1 .match-card .round-tag,
+html.pb-ms-polish-v1 #score-round-tag {
+  margin-top: .45rem;
+  margin-bottom: .7rem;
+  font-size: .9rem;
+  font-weight: 800;
+  color: var(--txt2);
+}
+
+html.pb-ms-polish-v1 .team,
+html.pb-ms-polish-v1 .team-name,
+html.pb-ms-polish-v1 #teamA-name,
+html.pb-ms-polish-v1 #teamB-name {
+  font-size: clamp(1.35rem, 7vw, 2.25rem);
+  line-height: 1.08;
+  font-weight: 1000;
+}
+
+html.pb-ms-polish-v1 .score-control {
+  display: grid;
+  grid-template-columns: 76px minmax(80px, 1fr) 76px;
+  gap: .55rem;
+  align-items: center;
+  margin: .55rem 0 .8rem;
+}
+
+html.pb-ms-polish-v1 .score-btn {
+  min-height: 78px;
+  border-radius: 22px;
+  font-size: 2.6rem;
+  font-weight: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+html.pb-ms-polish-v1 .score-value {
+  min-height: 88px;
+  border-radius: 24px;
+  font-size: clamp(3.2rem, 18vw, 5.8rem);
+  font-weight: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+html.pb-ms-polish-v1 #submit-score-btn {
+  min-height: 66px;
+  border-radius: 22px;
+  font-size: 1.08rem;
+  font-weight: 1000;
+  letter-spacing: .02em;
+  box-shadow: 0 16px 42px rgba(198,255,0,.18);
+}
+
+html.pb-ms-polish-v1 #score-error {
+  text-align: center;
+  font-size: .9rem;
+  min-height: 1.1rem;
+}
+
+html.pb-ms-polish-v1 .pb-scorekeeper-polish-hint-v1 {
+  margin-top: -.25rem;
+  text-align: center;
+  font-size: .78rem;
+  line-height: 1.35;
+  color: var(--txt3);
+}
+
+html.pb-ms-polish-v1 .waiting-card {
+  border-radius: 26px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+html.pb-ms-polish-v1 .waiting-card .ball {
+  font-size: 3.1rem;
+}
+
+html.pb-ms-polish-v1 #waiting-court-label {
+  font-size: 1.45rem !important;
+  font-weight: 1000 !important;
+  color: var(--lime) !important;
+}
+
+html.pb-ms-polish-v1 #waiting-round-label {
+  font-size: .92rem !important;
+  font-weight: 800;
+}
+
+html.pb-ms-polish-v1 #waiting-msg {
+  margin-top: .6rem;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--txt2);
+}
+
+html.pb-ms-polish-v1 .court-tile {
+  border-radius: 20px;
+  min-height: 86px;
+}
+
+html.pb-ms-polish-v1 .court-tile .claimed-by {
+  font-size: .68rem;
+}
+
+@media (max-width: 430px) {
+  html.pb-ms-polish-v1 .match-card {
+    padding: .85rem;
+  }
+
+  html.pb-ms-polish-v1 .score-control {
+    grid-template-columns: 70px minmax(78px, 1fr) 70px;
+    gap: .45rem;
+  }
+
+  html.pb-ms-polish-v1 .score-btn {
+    min-height: 72px;
+    font-size: 2.35rem;
+  }
+
+  html.pb-ms-polish-v1 .score-value {
+    min-height: 78px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -925,6 +1088,371 @@
     showScreen('code');
   }
 })();
+
+/* PB_MOBILE_SCOREKEEPER_POLISH_V1 */
+(function() {
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function addHint() {
+    var screen = byId("screen-score");
+    var submit = byId("submit-score-btn");
+
+    if (submit) {
+      submit.textContent = "✅ Submit Final Score";
+    }
+
+    if (screen && submit && !byId("pb-scorekeeper-polish-hint-v1")) {
+      var hint = document.createElement("div");
+
+      hint.id = "pb-scorekeeper-polish-hint-v1";
+      hint.className = "pb-scorekeeper-polish-hint-v1";
+      hint.textContent = "Double-check both scores before submitting. The organizer will receive this as the official court result.";
+
+      submit.insertAdjacentElement("afterend", hint);
+    }
+
+    var claim = byId("claim-continue");
+    if (claim && /take ownership/i.test(claim.textContent || "")) {
+      claim.textContent = "Start Scoring";
+    }
+  }
+
+  function apply() {
+    document.documentElement.classList.add("pb-ms-polish-v1");
+    addHint();
+  }
+
+  window.pbMobileScorekeeperPolishStatusV1 = function() {
+    return {
+      installed: true,
+      marker: "PB_MOBILE_SCOREKEEPER_POLISH_V1",
+      htmlClass: document.documentElement.classList.contains("pb-ms-polish-v1"),
+      scoreScreenFound: !!byId("screen-score"),
+      submitButtonFound: !!byId("submit-score-btn"),
+      hintFound: !!byId("pb-scorekeeper-polish-hint-v1"),
+      waitingScreenFound: !!byId("screen-waiting"),
+      courtClaimButtonFound: !!byId("claim-continue")
+    };
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", apply);
+  } else {
+    apply();
+  }
+
+  setInterval(apply, 1000);
+})();
+
 </script>
+
+
+
+
+
+
+
+
+
+
+<style>
+/* PB_MOBILE_SCORE_ACCEPTANCE_CLEAN_V1K */
+#pb-score-acceptance-clean-v1k {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 2px solid rgba(198,255,0,.45);
+  background: rgba(198,255,0,.08);
+  border-radius: 22px;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-title {
+  font-weight: 1000;
+  color: var(--lime);
+  font-size: 1.05rem;
+  margin-bottom: .25rem;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-help {
+  color: var(--txt3);
+  font-size: .8rem;
+  margin-bottom: .8rem;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-team {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.045);
+  border-radius: 16px;
+  padding: .75rem;
+  margin-top: .65rem;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-label {
+  font-weight: 900;
+  color: var(--txt2);
+  margin-bottom: .45rem;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-btn {
+  margin: .2rem;
+  border-radius: 999px;
+  padding: .6rem .8rem;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.2);
+  background: var(--surface);
+  color: var(--txt);
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-btn.accepted {
+  background: var(--lime);
+  color: #061406;
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-status {
+  margin-top: .8rem;
+  text-align: center;
+  font-weight: 1000;
+  color: var(--ball);
+}
+
+#pb-score-acceptance-clean-v1k .pbsa-status.ready {
+  color: var(--lime);
+}
+
+#submit-score-btn.pb-acceptance-blocked-v1k {
+  opacity: .45;
+}
+</style>
+
+<script>
+/* PB_MOBILE_SCORE_ACCEPTANCE_CLEAN_V1K */
+(function(){
+  var acceptedA = "";
+  var acceptedB = "";
+  var lastSignature = "";
+  var originalFetch = window.fetch;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function clean(value) {
+    return String(value === null || value === undefined ? "" : value).trim();
+  }
+
+  function getText(id) {
+    var node = byId(id);
+    return node ? clean(node.textContent || node.innerText || "") : "";
+  }
+
+  function splitPlayers(value) {
+    var s = clean(value);
+    var parts;
+    var out = [];
+
+    if (!s || s === "—") return out;
+
+    parts = s.split(" & ");
+    if (parts.length < 2) parts = s.split(",");
+    if (parts.length < 2) parts = s.split("/");
+    if (parts.length < 2) parts = s.split("+");
+    if (parts.length < 2) parts = s.split(" and ");
+
+    parts.forEach(function(part) {
+      part = clean(part);
+      if (part) out.push(part);
+    });
+
+    return out;
+  }
+
+  function signature() {
+    return [
+      getText("teamA-names"),
+      getText("teamB-names"),
+      getText("scoreA-val"),
+      getText("scoreB-val")
+    ].join("|");
+  }
+
+  function makeDiv(className, textValue) {
+    var node = document.createElement("div");
+
+    if (className) node.className = className;
+    if (textValue !== undefined) node.textContent = textValue;
+
+    return node;
+  }
+
+  function makeButton(team, name, acceptedName) {
+    var node = document.createElement("button");
+
+    node.type = "button";
+    node.className = "pbsa-btn";
+    node.setAttribute("data-pbsa-team", team);
+    node.setAttribute("data-pbsa-name", name);
+
+    if (clean(name) === clean(acceptedName)) {
+      node.className += " accepted";
+      node.textContent = "✅ " + name;
+    } else {
+      node.textContent = name;
+    }
+
+    return node;
+  }
+
+  function renderAcceptance() {
+    var submit = byId("submit-score-btn");
+    var host;
+    var currentSignature;
+    var teamA;
+    var teamB;
+    var ready;
+    var teamABox;
+    var teamBBox;
+    var status;
+
+    if (!submit) return false;
+
+    currentSignature = signature();
+
+    if (currentSignature !== lastSignature) {
+      acceptedA = "";
+      acceptedB = "";
+      lastSignature = currentSignature;
+    }
+
+    host = byId("pb-score-acceptance-clean-v1k");
+
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "pb-score-acceptance-clean-v1k";
+      submit.parentNode.insertBefore(host, submit);
+    }
+
+    while (host.firstChild) {
+      host.removeChild(host.firstChild);
+    }
+
+    host.appendChild(makeDiv("pbsa-title", "✅ Score acceptance"));
+    host.appendChild(makeDiv("pbsa-help", "One player from each team must confirm the score before it can be submitted."));
+
+    teamA = splitPlayers(getText("teamA-names"));
+    teamB = splitPlayers(getText("teamB-names"));
+
+    if (!teamA.length) teamA = ["Team A player"];
+    if (!teamB.length) teamB = ["Team B player"];
+
+    teamABox = makeDiv("pbsa-team");
+    teamABox.appendChild(makeDiv("pbsa-label", "Team A accepts"));
+    teamA.forEach(function(name) {
+      teamABox.appendChild(makeButton("A", name, acceptedA));
+    });
+    host.appendChild(teamABox);
+
+    teamBBox = makeDiv("pbsa-team");
+    teamBBox.appendChild(makeDiv("pbsa-label", "Team B accepts"));
+    teamB.forEach(function(name) {
+      teamBBox.appendChild(makeButton("B", name, acceptedB));
+    });
+    host.appendChild(teamBBox);
+
+    ready = !!(acceptedA && acceptedB);
+
+    status = makeDiv("pbsa-status" + (ready ? " ready" : ""));
+    status.textContent = ready ? "✅ Accepted by " + acceptedA + " and " + acceptedB : "Waiting for one player from each team.";
+    host.appendChild(status);
+
+    submit.textContent = "✅ Submit Final Score";
+    submit.disabled = !ready;
+
+    if (ready) {
+      submit.classList.remove("pb-acceptance-blocked-v1k");
+    } else {
+      submit.classList.add("pb-acceptance-blocked-v1k");
+    }
+
+    return true;
+  }
+
+  document.addEventListener("click", function(event) {
+    var btn = event.target && event.target.closest ? event.target.closest("[data-pbsa-team]") : null;
+    var submit;
+
+    if (btn) {
+      if (btn.getAttribute("data-pbsa-team") === "A") acceptedA = clean(btn.getAttribute("data-pbsa-name"));
+      if (btn.getAttribute("data-pbsa-team") === "B") acceptedB = clean(btn.getAttribute("data-pbsa-name"));
+
+      renderAcceptance();
+      return;
+    }
+
+    submit = event.target && event.target.closest ? event.target.closest("#submit-score-btn") : null;
+
+    if (!submit) return;
+
+    renderAcceptance();
+
+    if (!acceptedA || !acceptedB) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      if (typeof toast === "function") {
+        toast("One player from each team must accept the score.", "err");
+      } else {
+        alert("One player from each team must accept the score.");
+      }
+
+      return false;
+    }
+  }, true);
+
+  window.fetch = function(input, init) {
+    var url = "";
+    var body;
+
+    try {
+      url = typeof input === "string" ? input : (input && input.url ? input.url : "");
+
+      if (url.indexOf("/score") !== -1 && init && init.body && typeof init.body === "string") {
+        body = JSON.parse(init.body);
+        body.acceptedByA = body.acceptedByA || acceptedA;
+        body.acceptedByB = body.acceptedByB || acceptedB;
+        init.body = JSON.stringify(body);
+      }
+    } catch (err) {}
+
+    return originalFetch.apply(this, arguments);
+  };
+
+  window.pbMobileScoreAcceptanceCleanStatusV1K = function() {
+    return {
+      installed: true,
+      marker: "PB_MOBILE_SCORE_ACCEPTANCE_CLEAN_V1K",
+      markerInHtml: document.documentElement.innerHTML.indexOf("PB_MOBILE_SCORE_ACCEPTANCE_CLEAN_V1K") >= 0,
+      uiFound: !!byId("pb-score-acceptance-clean-v1k"),
+      submitButtonFound: !!byId("submit-score-btn"),
+      teamAFound: !!byId("teamA-names"),
+      teamBFound: !!byId("teamB-names"),
+      teamAText: getText("teamA-names"),
+      teamBText: getText("teamB-names"),
+      acceptedByA: acceptedA,
+      acceptedByB: acceptedB,
+      ready: !!(acceptedA && acceptedB)
+    };
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", renderAcceptance);
+  } else {
+    renderAcceptance();
+  }
+
+  setInterval(renderAcceptance, 500);
+})();
+</script>
+
 </body>
 </html>
