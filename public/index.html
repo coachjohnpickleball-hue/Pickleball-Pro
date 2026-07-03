@@ -3963,6 +3963,7 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
       <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.85rem">
         <button class="btn btn-primary btn-sm" onclick="msPushNow()">📤 Push current round now</button>
         <button class="btn btn-secondary btn-sm" onclick="msPullNow()">📥 Pull scores now</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbOpenMobileScoreReviewModalV4()">✅ Score Review</button>
         <button class="btn btn-secondary btn-sm" onclick="msToggleAutoSync()" id="ms-autosync-btn">▶️ Start live sync</button>
         <span id="ms-status" style="font-size:0.82rem;color:var(--txt3)"></span>
       </div>
@@ -5055,7 +5056,7 @@ function showTab(tab, evt) {
   if(tab==='playoffs') renderPlayoffs();
   if(tab==='playerstats') { renderPlayerStats(); populateH2HDropdowns(); renderH2H(); }
   if(tab==='sms') renderSmsTab();
-  if(tab==='mobilesync') renderMobileSyncTab();
+  if(tab==='mobilesync') { renderMobileSyncTab(); setTimeout(() => { if(typeof pbRenderMobileScoreReviewPanelV1 === 'function') pbRenderMobileScoreReviewPanelV1(); }, 0); }
   if(tab==='report') renderReport();
   if(tab==='playerlookup') renderPlayerLookup();
   if(tab==='sessionhealth') renderSessionHealthDashboard();
@@ -9900,6 +9901,346 @@ function pbAcceptedScoreDisplayHtmlV1(m) {
     <div style="font-weight:800">✓ Accepted</div>${lines.join('')}
   </div>`;
 }
+
+
+/* PB_DUPLICATE_MOBILE_SCORE_REVIEW_V1_DISABLED */
+function pbRenderMobileScoreReviewPanelV1() {
+  const oldPanel = document.getElementById('pb-mobile-score-review-panel-v1');
+  if(oldPanel) oldPanel.remove();
+}
+
+/* PB_MOBILE_SCORE_REVIEW_PANEL_FORCE_V2 */
+function pbEnsureMobileScoreReviewPanelV2() {
+  const sec = document.getElementById('sec-mobilesync');
+  if(!sec) return;
+
+  let panel = document.getElementById('pb-mobile-score-review-panel-v2');
+  if(!panel) {
+    panel = document.createElement('div');
+    panel.id = 'pb-mobile-score-review-panel-v2';
+    panel.setAttribute('data-pb-mobile-score-review-panel-v2', 'true');
+
+    const firstCard = sec.querySelector('.card');
+    if(firstCard && firstCard.parentNode) {
+      firstCard.parentNode.insertBefore(panel, firstCard.nextSibling);
+    } else {
+      sec.insertBefore(panel, sec.firstChild);
+    }
+  }
+
+  const esc = (v) => {
+    if(typeof escHtml === 'function') return escHtml(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  };
+
+  const fmtTime = (raw) => {
+    if(!raw) return '';
+    const n = Number(raw);
+    const dt = new Date(Number.isFinite(n) ? n : raw);
+    if(isNaN(dt.getTime())) return '';
+    return dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const allMatches = (state.schedule || [])
+    .flat()
+    .filter(m => m && m.teamA && m.teamB);
+
+  const scored = allMatches
+    .filter(m => {
+      const hasScore = m.complete || String(m.scoreA ?? '').trim() !== '' || String(m.scoreB ?? '').trim() !== '';
+      const hasAccepted = !!((m.acceptedByA || '').toString().trim() || (m.acceptedByB || '').toString().trim() || m.acceptedAt);
+      return hasScore || hasAccepted;
+    })
+    .sort((a,b) => ((a.round || 0) - (b.round || 0)) || ((a.court || 0) - (b.court || 0)) || ((a.id || 0) - (b.id || 0)));
+
+  const acceptedCount = scored.filter(m => (m.acceptedByA || '').toString().trim() && (m.acceptedByB || '').toString().trim()).length;
+  const partialCount = scored.filter(m => {
+    const a = (m.acceptedByA || '').toString().trim();
+    const b = (m.acceptedByB || '').toString().trim();
+    return (a || b) && !(a && b);
+  }).length;
+
+  let body = '';
+  if(!scored.length) {
+    body = `
+      <div style="border:1px dashed rgba(255,255,255,0.18);border-radius:12px;padding:0.8rem;color:var(--txt3);font-size:0.84rem">
+        No mobile scores pulled yet. After scorekeepers submit and accept scores, click <strong style="color:var(--txt)">Pull scores now</strong> or start live sync.
+      </div>`;
+  } else {
+    body = scored.slice(-20).reverse().map(m => {
+      const ta = typeof matchTeamName === 'function' ? matchTeamName(m.teamA) : 'Team A';
+      const tb = typeof matchTeamName === 'function' ? matchTeamName(m.teamB) : 'Team B';
+      const a = (m.acceptedByA || '').toString().trim();
+      const b = (m.acceptedByB || '').toString().trim();
+      const when = fmtTime(m.acceptedAt);
+      const score = `${m.scoreA !== '' && m.scoreA != null ? esc(m.scoreA) : '—'}–${m.scoreB !== '' && m.scoreB != null ? esc(m.scoreB) : '—'}`;
+
+      let label = 'Score recorded';
+      let color = 'var(--txt2)';
+      if(a && b) {
+        label = 'Both accepted';
+        color = 'var(--lime)';
+      } else if(a || b) {
+        label = 'Partially accepted';
+        color = 'var(--ball)';
+      }
+
+      return `
+        <div style="border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:0.7rem;margin-top:0.55rem;background:rgba(0,0,0,0.16)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.7rem;flex-wrap:wrap">
+            <div style="font-weight:900;color:var(--txt)">Round ${esc(m.round)} · Court ${esc(m.court)} · ${score}</div>
+            <div style="font-size:0.76rem;font-weight:900;color:${color}">${esc(label)}</div>
+          </div>
+          <div style="margin-top:0.35rem;color:var(--txt2);font-size:0.8rem">${ta} vs ${tb}</div>
+          <div style="margin-top:0.35rem;display:flex;gap:0.7rem;flex-wrap:wrap;font-size:0.75rem">
+            <span style="color:var(--txt3)">A accepted: <strong style="color:var(--lime)">${a ? esc(a) : '—'}</strong></span>
+            <span style="color:var(--txt3)">B accepted: <strong style="color:var(--lime)">${b ? esc(b) : '—'}</strong></span>
+            ${when ? `<span style="color:var(--txt3)">Time: <strong style="color:var(--txt2)">${esc(when)}</strong></span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  panel.innerHTML = `
+    <div style="margin:0.85rem 0 1rem;border:2px solid rgba(198,255,0,0.35);border-radius:16px;background:rgba(198,255,0,0.055);padding:0.95rem;box-shadow:0 0 0 1px rgba(0,0,0,0.12)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.8rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:1000;color:var(--lime);font-size:1rem">✅ Mobile Score Review</div>
+          <div style="color:var(--txt3);font-size:0.8rem;margin-top:0.18rem">Organizer view of pulled mobile scores and team acceptance.</div>
+        </div>
+        <div style="display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center">
+          <span style="font-size:0.72rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:0.25rem 0.55rem;color:var(--txt2)">${scored.length} scored</span>
+          <span style="font-size:0.72rem;background:rgba(198,255,0,0.12);border:1px solid rgba(198,255,0,0.25);border-radius:999px;padding:0.25rem 0.55rem;color:var(--lime)">${acceptedCount} accepted</span>
+          <span style="font-size:0.72rem;background:rgba(249,168,37,0.12);border:1px solid rgba(249,168,37,0.25);border-radius:999px;padding:0.25rem 0.55rem;color:var(--ball)">${partialCount} partial</span>
+          <button class="btn btn-secondary btn-sm" onclick="pbEnsureMobileScoreReviewPanelV2()">Refresh Review</button>
+        </div>
+      </div>
+      <!-- PB_MOBILE_SCORE_REVIEW_COMPACT_V1 -->
+      <details style="margin-top:0.75rem">
+        <summary style="cursor:pointer;color:var(--lime);font-weight:900;font-size:0.82rem;list-style:none;display:inline-flex;align-items:center;gap:0.35rem">
+          ▸ View score details
+        </summary>
+        <div style="margin-top:0.65rem">${body}</div>
+      </details>
+    </div>`;
+}
+
+(function pbInstallMobileScoreReviewPanelV2(){
+  if(window.__PB_MOBILE_SCORE_REVIEW_PANEL_FORCE_V2_INSTALLED__) return;
+  window.__PB_MOBILE_SCORE_REVIEW_PANEL_FORCE_V2_INSTALLED__ = true;
+
+  const originalShowTab = window.showTab;
+  if(typeof originalShowTab === 'function') {
+    window.showTab = function(tab) {
+      const result = originalShowTab.apply(this, arguments);
+      if(tab === 'mobilesync') setTimeout(pbEnsureMobileScoreReviewPanelV2, 0);
+      return result;
+    };
+  }
+
+  const originalRenderMobileSyncTab = window.renderMobileSyncTab;
+  if(typeof originalRenderMobileSyncTab === 'function') {
+    window.renderMobileSyncTab = function() {
+      const result = originalRenderMobileSyncTab.apply(this, arguments);
+      setTimeout(pbEnsureMobileScoreReviewPanelV2, 0);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      if(document.getElementById('sec-mobilesync')?.classList.contains('active')) {
+        pbEnsureMobileScoreReviewPanelV2();
+      }
+    }, 0);
+  });
+}
+
+)();
+
+
+/* PB_MOBILE_SCORE_REVIEW_PANEL_HOOK_V3 */
+function pbMobileScoreReviewHookV3() {
+  try {
+    if(typeof pbEnsureMobileScoreReviewPanelV2 === 'function') {
+      pbEnsureMobileScoreReviewPanelV2();
+      return true;
+    }
+  } catch(e) {
+    console.error('PB mobile review hook failed', e);
+  }
+  return false;
+}
+
+document.addEventListener('click', function(e) {
+  try {
+    const btn = e.target && e.target.closest ? e.target.closest('button, .tab-btn, .user-dropdown-item') : null;
+    const raw = btn ? (btn.getAttribute('onclick') || btn.textContent || '') : '';
+    if(raw.indexOf('mobilesync') >= 0 || raw.indexOf('Mobile Sync') >= 0) {
+      setTimeout(pbMobileScoreReviewHookV3, 0);
+      setTimeout(pbMobileScoreReviewHookV3, 250);
+      setTimeout(pbMobileScoreReviewHookV3, 900);
+    }
+  } catch(err) {}
+}, true);
+
+setInterval(function() {
+  try {
+    const sec = document.getElementById('sec-mobilesync');
+    if(sec && sec.classList.contains('active')) pbMobileScoreReviewHookV3();
+  } catch(err) {}
+}, 1500);
+
+
+
+/* PB_MOBILE_SCORE_REVIEW_MODAL_V4 */
+function pbDisableInlineMobileScoreReviewV4() {
+  const old1 = document.getElementById('pb-mobile-score-review-panel-v1');
+  if(old1) old1.remove();
+
+  const old2 = document.getElementById('pb-mobile-score-review-panel-v2');
+  if(old2) old2.remove();
+}
+
+// Override previous inline panel renderer so Mobile Sync stays compact.
+function pbEnsureMobileScoreReviewPanelV2() {
+  pbDisableInlineMobileScoreReviewV4();
+  return false;
+}
+
+function pbMobileScoreReviewDataV4() {
+  const esc = (v) => {
+    if(typeof escHtml === 'function') return escHtml(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  };
+
+  const fmtTime = (raw) => {
+    if(!raw) return '';
+    const n = Number(raw);
+    const dt = new Date(Number.isFinite(n) ? n : raw);
+    if(isNaN(dt.getTime())) return '';
+    return dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const matches = (state.schedule || [])
+    .flat()
+    .filter(m => m && m.teamA && m.teamB)
+    .filter(m => {
+      const hasScore = m.complete || String(m.scoreA ?? '').trim() !== '' || String(m.scoreB ?? '').trim() !== '';
+      const hasAccepted = !!((m.acceptedByA || '').toString().trim() || (m.acceptedByB || '').toString().trim() || m.acceptedAt);
+      return hasScore || hasAccepted;
+    })
+    .sort((a,b) => ((a.round || 0) - (b.round || 0)) || ((a.court || 0) - (b.court || 0)) || ((a.id || 0) - (b.id || 0)));
+
+  const scored = matches.length;
+  const accepted = matches.filter(m =>
+    (m.acceptedByA || '').toString().trim() &&
+    (m.acceptedByB || '').toString().trim()
+  ).length;
+  const partial = matches.filter(m => {
+    const a = (m.acceptedByA || '').toString().trim();
+    const b = (m.acceptedByB || '').toString().trim();
+    return (a || b) && !(a && b);
+  }).length;
+
+  const cards = matches.slice(-30).reverse().map(m => {
+    const ta = typeof matchTeamName === 'function' ? matchTeamName(m.teamA) : 'Team A';
+    const tb = typeof matchTeamName === 'function' ? matchTeamName(m.teamB) : 'Team B';
+    const a = (m.acceptedByA || '').toString().trim();
+    const b = (m.acceptedByB || '').toString().trim();
+    const when = fmtTime(m.acceptedAt);
+    const score = `${m.scoreA !== '' && m.scoreA != null ? esc(m.scoreA) : '—'}–${m.scoreB !== '' && m.scoreB != null ? esc(m.scoreB) : '—'}`;
+
+    let label = 'Score recorded';
+    let color = 'var(--txt2)';
+    if(a && b) {
+      label = 'Both accepted';
+      color = 'var(--lime)';
+    } else if(a || b) {
+      label = 'Partially accepted';
+      color = 'var(--ball)';
+    }
+
+    return `
+      <div style="border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:0.75rem;margin-top:0.6rem;background:rgba(255,255,255,0.035)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+          <div style="font-weight:900;color:var(--txt)">Round ${esc(m.round)} · Court ${esc(m.court)} · ${score}</div>
+          <div style="font-size:0.78rem;font-weight:900;color:${color}">${esc(label)}</div>
+        </div>
+        <div style="margin-top:0.35rem;color:var(--txt2);font-size:0.82rem">${ta} vs ${tb}</div>
+        <div style="margin-top:0.4rem;display:flex;gap:0.7rem;flex-wrap:wrap;font-size:0.76rem">
+          <span style="color:var(--txt3)">A accepted: <strong style="color:var(--lime)">${a ? esc(a) : '—'}</strong></span>
+          <span style="color:var(--txt3)">B accepted: <strong style="color:var(--lime)">${b ? esc(b) : '—'}</strong></span>
+          ${when ? `<span style="color:var(--txt3)">Time: <strong style="color:var(--txt2)">${esc(when)}</strong></span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  return { scored, accepted, partial, cards };
+}
+
+function pbOpenMobileScoreReviewModalV4() {
+  pbDisableInlineMobileScoreReviewV4();
+
+  let modal = document.getElementById('pb-mobile-score-review-modal-v4');
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pb-mobile-score-review-modal-v4';
+    document.body.appendChild(modal);
+  }
+
+  const data = pbMobileScoreReviewDataV4();
+  const empty = `
+    <div style="border:1px dashed rgba(255,255,255,0.2);border-radius:12px;padding:1rem;color:var(--txt3);font-size:0.9rem;margin-top:0.8rem">
+      No mobile scores pulled yet. Submit/accept a score from the mobile scorekeeper, then use Pull scores now.
+    </div>`;
+
+  modal.innerHTML = `
+    <div onclick="pbCloseMobileScoreReviewModalV4()" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99998"></div>
+    <div role="dialog" aria-modal="true" style="position:fixed;z-index:99999;left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,92vw);max-height:86vh;overflow:auto;border:1px solid rgba(198,255,0,0.35);border-radius:18px;background:var(--card);box-shadow:0 24px 80px rgba(0,0,0,0.55);padding:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0.75rem">
+        <div>
+          <div style="font-weight:1000;color:var(--lime);font-size:1.1rem">✅ Mobile Score Review</div>
+          <div style="color:var(--txt3);font-size:0.82rem;margin-top:0.2rem">Pulled mobile scores and team acceptance.</div>
+        </div>
+        <div style="display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center">
+          <span style="font-size:0.74rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:0.28rem 0.6rem;color:var(--txt2)">${data.scored} scored</span>
+          <span style="font-size:0.74rem;background:rgba(198,255,0,0.12);border:1px solid rgba(198,255,0,0.25);border-radius:999px;padding:0.28rem 0.6rem;color:var(--lime)">${data.accepted} accepted</span>
+          <span style="font-size:0.74rem;background:rgba(249,168,37,0.12);border:1px solid rgba(249,168,37,0.25);border-radius:999px;padding:0.28rem 0.6rem;color:var(--ball)">${data.partial} partial</span>
+          <button class="btn btn-secondary btn-sm" onclick="pbOpenMobileScoreReviewModalV4()">Refresh</button>
+          <button class="btn btn-danger btn-sm" onclick="pbCloseMobileScoreReviewModalV4()">✕ Close</button>
+        </div>
+      </div>
+      <div style="margin-top:0.75rem">
+        ${data.cards || empty}
+      </div>
+    </div>`;
+}
+
+function pbCloseMobileScoreReviewModalV4() {
+  const modal = document.getElementById('pb-mobile-score-review-modal-v4');
+  if(modal) modal.remove();
+}
+
+document.addEventListener('keydown', function(e) {
+  if(e.key === 'Escape') pbCloseMobileScoreReviewModalV4();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(pbDisableInlineMobileScoreReviewV4, 0);
+});
 
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
@@ -16631,6 +16972,8 @@ async function msPullNow() {
     await msApi('/ack', { method:'POST', body: JSON.stringify({ matchIds: appliedIds }) });
 
     renderSchedule();
+    if(typeof pbEnsureMobileScoreReviewPanelV2 === 'function') pbEnsureMobileScoreReviewPanelV2();
+    if(typeof pbRenderMobileScoreReviewPanelV1 === 'function') pbRenderMobileScoreReviewPanelV1();
     updateProgress();
     updateStandings();
     checkRoundComplete();
