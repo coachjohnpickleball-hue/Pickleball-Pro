@@ -12037,6 +12037,529 @@ function pbScoreAuditEnsureHomeButtonV1() {
   }, true);
 })();
 
+
+/* PB_SCORE_CORRECTIONS_V1 */
+window.PB_SCORE_CORRECTIONS_KEY_V1 = 'pbScoreCorrectionsV1';
+
+function pbScoreCorrectionTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbScoreCorrectionEscV1(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function pbScoreCorrectionToastV1(msg) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbScoreCorrectionScoreV1(m) {
+  if(!m) return '';
+
+  const a =
+    m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+
+  const b =
+    m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbScoreCorrectionTeamNameV1(team) {
+  if(!team) return '';
+
+  try {
+    if(Array.isArray(team) && typeof matchTeamName === 'function') {
+      return pbScoreCorrectionTextV1(matchTeamName(team));
+    }
+  } catch(e) {}
+
+  try {
+    if(Array.isArray(team)) {
+      return team.map(idx => {
+        const p = state.players && state.players[idx];
+        return p ? (p.name || p.fullName || `Player ${idx + 1}`) : `Player ${idx + 1}`;
+      }).join(' / ');
+    }
+  } catch(e) {}
+
+  if(typeof team === 'string') return team;
+  return '';
+}
+
+function pbScoreCorrectionTeamsV1(m) {
+  if(!m) return '';
+
+  const a = m.teamA || m.team1 || m.a || m.left || m.home || m.playersA || m.pairA || m.sideA;
+  const b = m.teamB || m.team2 || m.b || m.right || m.away || m.playersB || m.pairB || m.sideB;
+
+  const ta = pbScoreCorrectionTeamNameV1(a);
+  const tb = pbScoreCorrectionTeamNameV1(b);
+
+  if(ta && tb) return `${ta} vs ${tb}`;
+  if(ta) return ta;
+  if(tb) return tb;
+
+  return 'Match';
+}
+
+function pbScoreCorrectionMatchesV1() {
+  const rounds = state.schedule || [];
+  const rows = [];
+
+  rounds.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (mIdx + 1);
+      const score = pbScoreCorrectionScoreV1(m);
+
+      rows.push({
+        key: `r${rIdx}:m${mIdx}`,
+        roundIndex: rIdx,
+        matchIndex: mIdx,
+        round: rIdx + 1,
+        court,
+        score,
+        complete: !!(m && m.complete),
+        teams: pbScoreCorrectionTeamsV1(m),
+        acceptedByA: m?.acceptedByA || '',
+        acceptedByB: m?.acceptedByB || '',
+        acceptedAt: m?.acceptedAt || null
+      });
+    });
+  });
+
+  return rows;
+}
+
+function pbScoreCorrectionLoadLogV1() {
+  try {
+    if(state && Array.isArray(state.scoreCorrectionsV1)) {
+      return state.scoreCorrectionsV1;
+    }
+  } catch(e) {}
+
+  try {
+    const raw = localStorage.getItem(window.PB_SCORE_CORRECTIONS_KEY_V1);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function pbScoreCorrectionSaveLogV1(entries) {
+  const clean = Array.isArray(entries) ? entries.slice(-500) : [];
+
+  try {
+    if(state) state.scoreCorrectionsV1 = clean;
+  } catch(e) {}
+
+  try {
+    localStorage.setItem(window.PB_SCORE_CORRECTIONS_KEY_V1, JSON.stringify(clean));
+  } catch(e) {}
+
+  return clean;
+}
+
+function pbScoreCorrectionAddLogV1(entry) {
+  const entries = pbScoreCorrectionLoadLogV1();
+
+  let tournament = 'Pickleball Tournament';
+  try {
+    if(typeof pbHomeStableTournamentNameV1 === 'function') tournament = pbHomeStableTournamentNameV1();
+    else if(typeof getTournamentName === 'function') tournament = getTournamentName();
+  } catch(e) {}
+
+  const full = {
+    id: `correction-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    tournament,
+    ...entry
+  };
+
+  entries.push(full);
+  pbScoreCorrectionSaveLogV1(entries);
+
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action: entry.action || 'Score correction',
+        source: 'Organizer corrections',
+        round: entry.round,
+        court: entry.court,
+        matchIndex: entry.matchIndex,
+        teams: entry.teams,
+        beforeScore: entry.beforeScore || '—',
+        afterScore: entry.afterScore || '—',
+        reason: entry.reason || '',
+        acceptedByA: entry.acceptedByA || '',
+        acceptedByB: entry.acceptedByB || '',
+        acceptedAt: entry.acceptedAt || null
+      });
+    }
+  } catch(e) {}
+
+  return full;
+}
+
+function pbScoreCorrectionParseScoreV1(raw) {
+  const txt = pbScoreCorrectionTextV1(raw).replace(/[–—:]/g, '-');
+  const m = txt.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+
+  if(!m) return null;
+
+  return {
+    a: Number(m[1]),
+    b: Number(m[2]),
+    label: `${Number(m[1])}–${Number(m[2])}`
+  };
+}
+
+function pbScoreCorrectionSetScoreV1(match, a, b) {
+  if(!match) return;
+
+  const aKeys = ['scoreA', 'score1', 'aScore', 'teamAScore', 'leftScore', 'homeScore', 'pointsA', 'points1'];
+  const bKeys = ['scoreB', 'score2', 'bScore', 'teamBScore', 'rightScore', 'awayScore', 'pointsB', 'points2'];
+
+  const hasAnyScoreKey =
+    aKeys.some(k => Object.prototype.hasOwnProperty.call(match, k)) ||
+    bKeys.some(k => Object.prototype.hasOwnProperty.call(match, k));
+
+  if(hasAnyScoreKey) {
+    aKeys.forEach(k => {
+      if(Object.prototype.hasOwnProperty.call(match, k)) match[k] = a;
+    });
+    bKeys.forEach(k => {
+      if(Object.prototype.hasOwnProperty.call(match, k)) match[k] = b;
+    });
+  } else {
+    match.scoreA = a;
+    match.scoreB = b;
+  }
+
+  match.complete = true;
+
+  // Any organizer override should force teams to re-accept the corrected score.
+  match.acceptedByA = '';
+  match.acceptedByB = '';
+  match.acceptedAt = null;
+  match.correctionPending = false;
+  match.correctedAt = new Date().toISOString();
+}
+
+function pbScoreCorrectionPersistV1() {
+  const names = [
+    'saveState',
+    'saveTournament',
+    'persistState',
+    'autoSave',
+    'saveLocal',
+    'saveToLocalStorage',
+    'saveData'
+  ];
+
+  names.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+
+  const renderNames = [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ];
+
+  renderNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = pbScoreCorrectionMatchesV1().find(r => r.roundIndex === roundIndex && r.matchIndex === matchIndex);
+  const reason = prompt('Reason for correction request?', 'Score reported incorrectly');
+
+  if(reason === null) return;
+
+  match.correctionPending = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+
+  pbScoreCorrectionAddLogV1({
+    action: 'Correction requested',
+    status: 'Open',
+    round: row?.round || roundIndex + 1,
+    court: row?.court || matchIndex + 1,
+    matchIndex: matchIndex + 1,
+    teams: row?.teams || pbScoreCorrectionTeamsV1(match),
+    beforeScore: row?.score || '—',
+    afterScore: row?.score || '—',
+    reason: reason || 'Correction requested',
+    acceptedByA: row?.acceptedByA || '',
+    acceptedByB: row?.acceptedByB || '',
+    acceptedAt: row?.acceptedAt || null
+  });
+
+  pbScoreCorrectionPersistV1();
+  pbScoreCorrectionToastV1('Correction request logged.');
+  pbScoreCorrectionOpenModalV1();
+}
+
+function pbScoreCorrectionOverrideV1(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = pbScoreCorrectionMatchesV1().find(r => r.roundIndex === roundIndex && r.matchIndex === matchIndex);
+  const beforeScore = row?.score || '—';
+
+  const entered = prompt(`Enter corrected score for Round ${roundIndex + 1}, Court ${row?.court || matchIndex + 1}.\n\nExample: 11-8`, beforeScore !== '—' ? beforeScore.replace('–', '-') : '');
+
+  if(entered === null) return;
+
+  const parsed = pbScoreCorrectionParseScoreV1(entered);
+
+  if(!parsed) {
+    alert('Please enter the score like 11-8.');
+    return;
+  }
+
+  const reason = prompt('Reason for organizer override?', 'Organizer correction');
+
+  if(reason === null) return;
+
+  pbScoreCorrectionSetScoreV1(match, parsed.a, parsed.b);
+
+  pbScoreCorrectionAddLogV1({
+    action: 'Organizer override',
+    status: 'Resolved',
+    round: row?.round || roundIndex + 1,
+    court: row?.court || matchIndex + 1,
+    matchIndex: matchIndex + 1,
+    teams: row?.teams || pbScoreCorrectionTeamsV1(match),
+    beforeScore,
+    afterScore: parsed.label,
+    reason: reason || 'Organizer correction',
+    acceptedByA: '',
+    acceptedByB: '',
+    acceptedAt: null
+  });
+
+  pbScoreCorrectionPersistV1();
+  pbScoreCorrectionToastV1('Score override saved. Team acceptance was cleared.');
+  pbScoreCorrectionOpenModalV1();
+}
+
+function pbScoreCorrectionFormatDateV1(iso) {
+  try {
+    const dt = new Date(iso);
+    if(isNaN(dt.getTime())) return iso || '';
+    return dt.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch(e) {
+    return iso || '';
+  }
+}
+
+function pbScoreCorrectionOpenModalV1() {
+  let modal = document.getElementById('pb-score-corrections-modal-v1');
+
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pb-score-corrections-modal-v1';
+    modal.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:99998;
+      background:rgba(0,0,0,0.62);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const matches = pbScoreCorrectionMatchesV1();
+  const log = pbScoreCorrectionLoadLogV1().slice().reverse();
+
+  const scoredMatches = matches.filter(m => m.score || m.complete || m.round === ((typeof pbHomeStableProgressV1 === 'function' ? pbHomeStableProgressV1().currentIdx : 0) + 1));
+
+  const rows = scoredMatches.length ? scoredMatches.map(row => {
+    const accepted = [row.acceptedByA, row.acceptedByB].filter(Boolean).join(' / ');
+    const scoreLabel = row.score || 'No score yet';
+
+    let status = row.complete ? 'Complete' : row.score ? 'Score entered' : 'Open';
+    let statusColor = row.complete ? 'var(--success)' : row.score ? 'var(--info)' : 'var(--warn)';
+
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    if(match?.correctionPending) {
+      status = 'Correction requested';
+      statusColor = 'var(--warn)';
+    }
+
+    return `
+      <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(255,255,255,0.035);padding:0.75rem;margin-bottom:0.55rem">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+          <div style="min-width:0">
+            <div style="font-weight:1000;color:var(--txt)">Round ${pbScoreCorrectionEscV1(row.round)} · Court ${pbScoreCorrectionEscV1(row.court)}</div>
+            <div style="color:var(--txt3);font-size:0.84rem;margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px">
+              ${pbScoreCorrectionEscV1(row.teams)}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:1000;color:var(--lime);font-size:1.05rem">${pbScoreCorrectionEscV1(scoreLabel)}</div>
+            <div style="font-weight:900;color:${statusColor};font-size:0.76rem;margin-top:0.1rem">${pbScoreCorrectionEscV1(status)}</div>
+          </div>
+        </div>
+
+        ${
+          accepted
+            ? `<div style="color:var(--txt3);font-size:0.78rem;margin-top:0.45rem">Accepted by: ${pbScoreCorrectionEscV1(accepted)}</div>`
+            : ''
+        }
+
+        ${
+          match?.correctionReason
+            ? `<div style="color:var(--warn);font-size:0.78rem;margin-top:0.45rem">Correction note: ${pbScoreCorrectionEscV1(match.correctionReason)}</div>`
+            : ''
+        }
+
+        <div style="display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.65rem">
+          <button class="btn btn-secondary btn-sm" onclick="pbScoreCorrectionRequestV1(${row.roundIndex},${row.matchIndex})">Request Correction</button>
+          <button class="btn btn-primary btn-sm" onclick="pbScoreCorrectionOverrideV1(${row.roundIndex},${row.matchIndex})">Override Score</button>
+        </div>
+      </div>
+    `;
+  }).join('') : `
+    <div style="border:1px dashed rgba(255,255,255,0.18);border-radius:14px;padding:1rem;color:var(--txt3);text-align:center">
+      No matches available yet. Create a schedule first.
+    </div>
+  `;
+
+  const recentLog = log.slice(0, 5).map(e => `
+    <div style="border-top:1px solid rgba(255,255,255,0.08);padding:0.55rem 0">
+      <div style="font-weight:900;color:var(--txt);font-size:0.84rem">${pbScoreCorrectionEscV1(e.action || 'Correction')}</div>
+      <div style="color:var(--txt3);font-size:0.76rem">
+        ${pbScoreCorrectionEscV1(pbScoreCorrectionFormatDateV1(e.at))} · R${pbScoreCorrectionEscV1(e.round)} Court ${pbScoreCorrectionEscV1(e.court)}
+        · ${pbScoreCorrectionEscV1(e.beforeScore || '—')} → ${pbScoreCorrectionEscV1(e.afterScore || '—')}
+      </div>
+      ${e.reason ? `<div style="color:var(--txt3);font-size:0.75rem;margin-top:0.15rem">${pbScoreCorrectionEscV1(e.reason)}</div>` : ''}
+    </div>
+  `).join('');
+
+  modal.innerHTML = `
+    <div style="width:min(860px,96vw);max-height:88vh;overflow:auto;border:1px solid rgba(198,255,0,0.28);border-radius:20px;background:var(--panel,#111);box-shadow:0 24px 80px rgba(0,0,0,0.45);padding:1rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem">
+        <div>
+          <div style="font-family:'Anton','Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;color:var(--txt)">Score Corrections</div>
+          <div style="color:var(--txt3);font-size:0.85rem;margin-top:0.25rem">Request corrections or override incorrect scores.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="pbScoreCorrectionCloseModalV1()">Close</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(230px,0.8fr);gap:0.8rem">
+        <div>
+          <div style="font-weight:1000;color:var(--lime);margin-bottom:0.45rem">Matches</div>
+          ${rows}
+        </div>
+
+        <div>
+          <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+            <div style="font-weight:1000;color:var(--lime);margin-bottom:0.35rem">Recent Corrections</div>
+            ${recentLog || '<div style="color:var(--txt3);font-size:0.82rem">No corrections yet.</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function pbScoreCorrectionCloseModalV1() {
+  document.getElementById('pb-score-corrections-modal-v1')?.remove();
+}
+
+function pbScoreCorrectionEnsureHomeButtonV1() {
+  const panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) return;
+
+  if(document.getElementById('pb-score-corrections-home-btn-v1')) return;
+
+  const buttonRows = Array.from(panel.querySelectorAll('div')).filter(div => {
+    const txt = pbScoreCorrectionTextV1(div.textContent || '');
+    return txt.includes('Players') && txt.includes('Schedule') && txt.includes('Mobile Sync');
+  });
+
+  const row = buttonRows[buttonRows.length - 1];
+  if(!row) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'pb-score-corrections-home-btn-v1';
+  btn.className = 'btn btn-secondary btn-sm';
+  btn.textContent = '🛠 Score Corrections';
+  btn.onclick = pbScoreCorrectionOpenModalV1;
+
+  row.appendChild(btn);
+}
+
+(function pbInstallScoreCorrectionsV1(){
+  if(window.__PB_SCORE_CORRECTIONS_V1_INSTALLED__) return;
+  window.__PB_SCORE_CORRECTIONS_V1_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbScoreCorrectionEnsureHomeButtonV1();
+    } catch(e) {}
+  };
+
+  install();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    install();
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
