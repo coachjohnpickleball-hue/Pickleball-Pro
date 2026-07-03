@@ -10513,6 +10513,1494 @@ function pbMobileSyncCompactSectionsV1() {
 }
 window.__PB_MOBILE_SYNC_COMPACT_SECTIONS_V1_INSTALLED__ = true;
 
+
+/* PB_CLEAN_HOME_COMMAND_CENTER_V1 */
+function pbHomeProgressV1() {
+  const rounds = state.schedule || [];
+  const totalGames = rounds.reduce((sum, r) => sum + ((r || []).length), 0);
+  const completeGames = rounds.reduce((sum, r) => sum + ((r || []).filter(m => m && m.complete).length), 0);
+  let currentIdx = rounds.findIndex(r => (r || []).some(m => m && !m.complete));
+  if(currentIdx < 0 && rounds.length) currentIdx = rounds.length - 1;
+
+  return { rounds, totalGames, completeGames, currentIdx };
+}
+
+function pbCleanHomeEscV1(v) {
+  if(typeof escHtml === 'function') return escHtml(String(v == null ? '' : v));
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+
+/* PB_HOME_TOURNAMENT_NAME_DATE_V1 */
+function pbCleanHomeTournamentDateLabelV1() {
+  const raw =
+    document.getElementById('tournament-datetime')?.value ||
+    document.getElementById('tournament-date')?.value ||
+    '';
+
+  if(!raw) return 'Date not set';
+
+  const dt = new Date(raw);
+  if(isNaN(dt.getTime())) return raw;
+
+  return dt.toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+
+/* PB_HOME_TOURNAMENT_DETAILS_PULL_V3 */
+function pbHomeNormTextV3(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbHomeReadInputValueV3(el) {
+  if(!el) return '';
+  const val = (el.value != null ? el.value : el.textContent);
+  return pbHomeNormTextV3(val);
+}
+
+function pbHomeFindBySelectorsV3(selectors) {
+  for(const sel of selectors) {
+    try {
+      const el = document.querySelector(sel);
+      const val = pbHomeReadInputValueV3(el);
+      if(val) return val;
+    } catch(e) {}
+  }
+  return '';
+}
+
+function pbHomeFindFieldByLabelV3(labelTerms, preferDate) {
+  const terms = labelTerms.map(t => String(t).toLowerCase());
+
+  const nodes = Array.from(document.querySelectorAll('label, div, span, strong, h2, h3, h4'))
+    .filter(el => {
+      if(el.closest('#pb-clean-home-command-center-v1')) return false;
+      const text = pbHomeNormTextV3(el.textContent).toLowerCase();
+      if(!text || text.length > 80) return false;
+      return terms.some(term => text === term || text.includes(term));
+    });
+
+  for(const el of nodes) {
+    const forId = el.getAttribute && el.getAttribute('for');
+    if(forId) {
+      const input = document.getElementById(forId);
+      const val = pbHomeReadInputValueV3(input);
+      if(val) return val;
+    }
+
+    let scope = el;
+    for(let i = 0; i < 5 && scope; i++, scope = scope.parentElement) {
+      const inputs = Array.from(scope.querySelectorAll('input, textarea, select'))
+        .filter(input => input.type !== 'hidden' && !input.closest('#pb-clean-home-command-center-v1'));
+
+      if(inputs.length) {
+        let chosen = null;
+
+        if(preferDate) {
+          chosen = inputs.find(input =>
+            input.type === 'date' ||
+            input.type === 'datetime-local' ||
+            /date|time/i.test(input.id || '') ||
+            /date|time/i.test(input.name || '')
+          ) || inputs[0];
+        } else {
+          chosen = inputs.find(input =>
+            input.type !== 'date' &&
+            input.type !== 'datetime-local' &&
+            input.type !== 'checkbox' &&
+            input.type !== 'radio'
+          ) || inputs[0];
+        }
+
+        const val = pbHomeReadInputValueV3(chosen);
+        if(val) return val;
+      }
+
+      let sib = el.nextElementSibling;
+      for(let j = 0; j < 4 && sib; j++, sib = sib.nextElementSibling) {
+        const input = sib.matches && sib.matches('input, textarea, select')
+          ? sib
+          : sib.querySelector && sib.querySelector('input, textarea, select');
+
+        const val = pbHomeReadInputValueV3(input);
+        if(val) return val;
+      }
+    }
+  }
+
+  return '';
+}
+
+function pbCleanHomeTournamentNameV3() {
+  return (
+    pbHomeFindBySelectorsV3([
+      '#tournament-name',
+      '#tournament-title',
+      '#event-name',
+      '[name="tournamentName"]',
+      '[name="tournament-name"]',
+      '[name="eventName"]'
+    ]) ||
+    pbHomeFindFieldByLabelV3(['tournament name', 'event name'], false) ||
+    'Pickleball Tournament'
+  );
+}
+
+function pbCleanHomeTournamentDateRawV3() {
+  return (
+    pbHomeFindBySelectorsV3([
+      '#tournament-datetime',
+      '#tournament-date',
+      '#event-date',
+      '[name="tournamentDateTime"]',
+      '[name="tournamentDate"]',
+      '[name="tournament-date"]',
+      '[name="eventDate"]',
+      'input[type="datetime-local"]',
+      'input[type="date"]'
+    ]) ||
+    pbHomeFindFieldByLabelV3(['date', 'tournament date', 'event date'], true)
+  );
+}
+
+// Override/upgrade earlier date label function.
+function pbCleanHomeTournamentDateLabelV1() {
+  const raw = pbCleanHomeTournamentDateRawV3();
+
+  if(!raw) return 'Date not set';
+
+  // Important: parse YYYY-MM-DD as local date so it does not shift backward by timezone.
+  const dateOnly = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(dateOnly) {
+    const dt = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+    return dt.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  const dt = new Date(raw);
+  if(isNaN(dt.getTime())) return raw;
+
+  return dt.toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+
+function pbCleanHomePrimaryActionV1() {
+  const progress = pbHomeProgressV1();
+
+  if(!progress.rounds.length) {
+    if(typeof promptGenerateSchedule === 'function') promptGenerateSchedule();
+    else showTab('schedule');
+    return;
+  }
+
+  if(progress.totalGames && progress.completeGames >= progress.totalGames) {
+    showTab('standings');
+    return;
+  }
+
+  if(progress.currentIdx >= 0 && !(state.startedRounds && state.startedRounds.has(progress.currentIdx))) {
+    if(typeof lockRound === 'function') lockRound(progress.currentIdx);
+    showTab('schedule');
+    return;
+  }
+
+  if(typeof recordNextScore === 'function') recordNextScore();
+  else showTab('schedule');
+}
+
+function pbCleanHomeToggleFullV1() {
+  window.__PB_CLEAN_HOME_SHOW_FULL_V1__ = !window.__PB_CLEAN_HOME_SHOW_FULL_V1__;
+  pbRenderCleanHomeV1(true);
+}
+
+function pbRenderCleanHomeV1(force) {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  let panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) {
+    panel = document.createElement('div');
+    panel.id = 'pb-clean-home-command-center-v1';
+    panel.setAttribute('data-pb-clean-home-command-center-v1', 'true');
+    sec.insertBefore(panel, sec.firstChild);
+  }
+
+  const activePlayers = (state.players || []).filter(p =>
+    p && p.waitlist !== true && p.active !== false && p.checkedIn !== false
+  ).length;
+
+  const selectedCourts = state.selectedCourts && state.selectedCourts.size
+    ? state.selectedCourts.size
+    : 0;
+
+  const progress = pbHomeProgressV1();
+  const tournamentName = pbCleanHomeTournamentNameV3();
+  const tournamentDateLabel = pbCleanHomeTournamentDateLabelV1();
+
+  let statusText = 'Ready to build your schedule.';
+  let primaryText = '⚡ Generate Schedule';
+
+  if(progress.rounds.length) {
+    if(progress.totalGames && progress.completeGames >= progress.totalGames) {
+      statusText = 'Tournament rounds are complete. Review standings or export the report.';
+      primaryText = '📊 View Standings';
+    } else if(progress.currentIdx >= 0 && state.startedRounds && state.startedRounds.has(progress.currentIdx)) {
+      statusText = `Round ${progress.currentIdx + 1} is live. Record scores as matches finish.`;
+      primaryText = '📝 Record Next Score';
+    } else if(progress.currentIdx >= 0) {
+      statusText = `Round ${progress.currentIdx + 1} is ready. Start the round when players are on court.`;
+      primaryText = `▶ Start Round ${progress.currentIdx + 1}`;
+    }
+  } else if(activePlayers < 4) {
+    statusText = 'Add at least 4 active players to generate a schedule.';
+    primaryText = '👥 Add Players';
+  }
+
+  const mobileCode = (typeof msState !== 'undefined' && msState && msState.code) ? msState.code : '';
+  const mobilePushed = (typeof msState !== 'undefined' && msState && msState.lastPushAt) ? true : false;
+  const mobileStatus = mobileCode
+    ? `${mobileCode}${mobilePushed ? ' · pushed' : ' · not pushed'}`
+    : 'Not set';
+
+  const fullShown = !!window.__PB_CLEAN_HOME_SHOW_FULL_V1__;
+
+  panel.innerHTML = `
+    <div style="border:1px solid rgba(198,255,0,0.32);border-radius:20px;background:linear-gradient(135deg,rgba(198,255,0,0.075),rgba(255,255,255,0.035));padding:1rem;margin-bottom:1rem;box-shadow:0 18px 45px rgba(0,0,0,0.16)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div>
+          <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.09em;color:var(--ball);font-weight:900">🏠 Command Center</div>
+          <!-- PB_HOME_TOURNAMENT_LABEL_V2 -->
+          <div style="margin-top:0.3rem">
+            <div style="color:var(--txt3);font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em">Tournament</div>
+            <div style="font-family:'Anton','Bebas Neue',sans-serif;font-size:clamp(1.5rem,4vw,2.5rem);line-height:1;color:var(--txt);margin-top:0.18rem">
+              ${pbCleanHomeEscV1(tournamentName)}
+            </div>
+          </div>
+          <div style="display:inline-flex;align-items:center;gap:0.35rem;margin-top:0.45rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:0.28rem 0.65rem;color:var(--ball);font-size:0.82rem;font-weight:900">
+            📅 ${pbCleanHomeEscV1(tournamentDateLabel)}
+          </div>
+          <div style="color:var(--txt2);font-size:0.92rem;margin-top:0.55rem">${pbCleanHomeEscV1(statusText)}</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="pbCleanHomePrimaryActionV1()" style="min-width:170px">
+          ${pbCleanHomeEscV1(primaryText)}
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.65rem;margin-top:1rem">
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Players</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${activePlayers}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Courts</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${selectedCourts || '—'}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Round</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.rounds.length ? `${progress.currentIdx + 1}/${progress.rounds.length}` : '—'}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Scores</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.completeGames}/${progress.totalGames || 0}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Mobile</div>
+          <div style="font-size:0.9rem;font-weight:900;color:var(--lime);margin-top:0.25rem">${pbCleanHomeEscV1(mobileStatus)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem">
+        <button class="btn btn-secondary btn-sm" onclick="showTab('players')">👥 Players</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('schedule')">📅 Schedule</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('mobilesync')">📱 Mobile Sync</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('standings')">📊 Standings</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('report')">📄 Report</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('fairness')">⚖ Fairness</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbCleanHomeToggleFullV1()">${fullShown ? 'Hide full dashboard' : 'Show full dashboard'}</button>
+      </div>
+    </div>
+  `;
+
+  Array.from(sec.children).forEach(child => {
+    if(child.id === 'pb-clean-home-command-center-v1') return;
+    if(child.dataset.pbCleanHomeOriginalV1 !== 'true') child.dataset.pbCleanHomeOriginalV1 = 'true';
+    child.style.display = fullShown ? '' : 'none';
+  });
+}
+
+(function pbInstallCleanHomeV1(){
+  if(window.__PB_CLEAN_HOME_COMMAND_CENTER_V1_INSTALLED__) return;
+  window.__PB_CLEAN_HOME_COMMAND_CENTER_V1_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('dashboard') || txt.includes('Home')) {
+        setTimeout(pbRenderCleanHomeV1, 0);
+        setTimeout(pbRenderCleanHomeV1, 350);
+      }
+    } catch(err) {}
+  }, true);
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) pbRenderCleanHomeV1();
+    } catch(err) {}
+  }, 1500);
+})();
+
+
+/* PB_HOME_TOURNAMENT_NAME_FIX_V4 */
+function pbCleanHomeTournamentNameV3() {
+  const clean = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  const isGood = (v) => {
+    v = clean(v);
+    if(!v) return false;
+    if(v === 'Pickleball Tournament') return false;
+    if(v === 'Pickleball Tournament Manager') return false;
+    if(v === 'Tournament Name') return false;
+    if(v === 'Date') return false;
+    if(/^https?:\/\//i.test(v)) return false;
+    if(/^PICKLE\d+/i.test(v)) return false;
+    return true;
+  };
+
+  // 1) Use the app's own source of truth if available.
+  try {
+    if(typeof getTournamentName === 'function') {
+      const v = clean(getTournamentName());
+      if(isGood(v)) return v;
+    }
+  } catch(e) {}
+
+  // 2) Known IDs / names.
+  const selectors = [
+    '#tournament-name',
+    '#tournament-title',
+    '#event-name',
+    '[name="tournamentName"]',
+    '[name="tournament-name"]',
+    '[name="eventName"]',
+    '[name="event-name"]',
+    '[name="title"]'
+  ];
+
+  for(const sel of selectors) {
+    try {
+      const el = document.querySelector(sel);
+      const v = clean(el && (el.value != null ? el.value : el.textContent));
+      if(isGood(v)) return v;
+    } catch(e) {}
+  }
+
+  // 3) Search the Home/Tournament Details area for a labeled Tournament Name field.
+  const sec = document.getElementById('sec-dashboard') || document.body;
+  const inputs = Array.from(sec.querySelectorAll('input, textarea, select'))
+    .filter(el =>
+      el &&
+      !el.closest('#pb-clean-home-command-center-v1') &&
+      el.type !== 'hidden' &&
+      el.type !== 'date' &&
+      el.type !== 'datetime-local' &&
+      el.type !== 'checkbox' &&
+      el.type !== 'radio'
+    );
+
+  const labelTextFor = (el) => {
+    let txt = '';
+
+    try {
+      if(el.id) {
+        const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if(lab) txt += ' ' + clean(lab.textContent);
+      }
+    } catch(e) {}
+
+    let p = el;
+    for(let i = 0; i < 5 && p; i++, p = p.parentElement) {
+      txt += ' ' + clean(p.textContent || '');
+      if(/Tournament Details/i.test(txt)) break;
+    }
+
+    let prev = el.previousElementSibling;
+    for(let i = 0; i < 4 && prev; i++, prev = prev.previousElementSibling) {
+      txt += ' ' + clean(prev.textContent || '');
+    }
+
+    return clean(txt).toLowerCase();
+  };
+
+  // Best match: field with id/name/placeholder/label indicating tournament/event name.
+  for(const el of inputs) {
+    const v = clean(el.value != null ? el.value : el.textContent);
+    if(!isGood(v)) continue;
+
+    const meta = clean([
+      el.id,
+      el.name,
+      el.placeholder,
+      el.getAttribute('aria-label'),
+      labelTextFor(el)
+    ].join(' ')).toLowerCase();
+
+    if(
+      meta.includes('tournament name') ||
+      meta.includes('event name') ||
+      meta.includes('tournament title') ||
+      meta.includes('tournament') ||
+      meta.includes('event')
+    ) {
+      return v;
+    }
+  }
+
+  // 4) Fallback: first sensible non-empty text field inside dashboard.
+  for(const el of inputs) {
+    const v = clean(el.value != null ? el.value : el.textContent);
+    if(isGood(v)) return v;
+  }
+
+  // 5) Fallback: autosave JSON if available.
+  try {
+    const keys = Object.keys(localStorage || {});
+    for(const k of keys) {
+      const raw = localStorage.getItem(k);
+      if(!raw || raw[0] !== '{') continue;
+      const obj = JSON.parse(raw);
+      const candidates = [
+        obj.tournamentName,
+        obj.tournamentDateName,
+        obj.name,
+        obj.save && obj.save.tournamentName
+      ];
+      for(const c of candidates) {
+        const v = clean(c);
+        if(isGood(v)) return v;
+      }
+    }
+  } catch(e) {}
+
+  return 'Pickleball Tournament';
+}
+
+
+/* PB_HOME_FULL_DASHBOARD_FIX_V1 */
+function pbHomeEnsureLegacyBackButtonV1() {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  let bar = document.getElementById('pb-home-legacy-backbar-v1');
+  if(!bar) {
+    bar = document.createElement('div');
+    bar.id = 'pb-home-legacy-backbar-v1';
+    bar.style.margin = '0 0 0.85rem';
+    bar.innerHTML = `
+      <div style="border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,0.035);padding:0.75rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:900;color:var(--lime)">Full Dashboard</div>
+          <div style="color:var(--txt3);font-size:0.82rem">Legacy/operator view with all dashboard details.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="pbCleanHomeToggleFullV1()">← Back to clean Home</button>
+      </div>
+    `;
+    sec.insertBefore(bar, sec.firstChild);
+  }
+
+  bar.style.display = window.__PB_CLEAN_HOME_SHOW_FULL_V1__ ? '' : 'none';
+}
+
+// Override the earlier toggle so full dashboard does not include Command Center.
+function pbCleanHomeToggleFullV1() {
+  window.__PB_CLEAN_HOME_SHOW_FULL_V1__ = !window.__PB_CLEAN_HOME_SHOW_FULL_V1__;
+  pbRenderCleanHomeV1(true);
+}
+
+// Override/upgrade the earlier render behavior.
+const pbOriginalRenderCleanHomeV1 = typeof pbRenderCleanHomeV1 === 'function' ? pbRenderCleanHomeV1 : null;
+
+function pbRenderCleanHomeFullDashboardFixedV1(force) {
+  if(pbOriginalRenderCleanHomeV1) {
+    pbOriginalRenderCleanHomeV1(force);
+  }
+
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  const fullShown = !!window.__PB_CLEAN_HOME_SHOW_FULL_V1__;
+  const panel = document.getElementById('pb-clean-home-command-center-v1');
+
+  pbHomeEnsureLegacyBackButtonV1();
+  const backbar = document.getElementById('pb-home-legacy-backbar-v1');
+
+  if(panel) panel.style.display = fullShown ? 'none' : '';
+  if(backbar) backbar.style.display = fullShown ? '' : 'none';
+
+  Array.from(sec.children).forEach(child => {
+    if(child.id === 'pb-clean-home-command-center-v1') return;
+    if(child.id === 'pb-home-legacy-backbar-v1') return;
+
+    child.style.display = fullShown ? '' : 'none';
+  });
+}
+
+// Make the public function name point to the fixed behavior.
+pbRenderCleanHomeV1 = pbRenderCleanHomeFullDashboardFixedV1;
+
+
+/* PB_HOME_REMOVE_TOURNAMENT_OPERATOR_V1 */
+function pbHomeRemoveTournamentOperatorV1() {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+
+  const directText = (el) => {
+    let out = '';
+    el.childNodes.forEach(n => {
+      if(n.nodeType === Node.TEXT_NODE) out += n.textContent || '';
+    });
+    return norm(out);
+  };
+
+  const nodes = Array.from(sec.querySelectorAll('*'));
+
+  nodes.forEach(el => {
+    if(el.dataset && el.dataset.pbTournamentOperatorRemovedV1 === 'true') return;
+
+    const own = directText(el);
+    const all = norm(el.textContent || '');
+
+    const isOperatorTitle =
+      own === 'Tournament Operator' ||
+      all === 'Tournament Operator' ||
+      (own.includes('Tournament Operator') && own.length < 80);
+
+    if(!isOperatorTitle) return;
+
+    let box = el;
+    let p = el.parentElement;
+
+    for(let i = 0; i < 8 && p && p !== sec; i++, p = p.parentElement) {
+      const txt = norm(p.textContent || '');
+
+      if(
+        txt.includes('Tournament Operator') &&
+        (
+          txt.includes('Next Action') ||
+          txt.includes('Current Round') ||
+          txt.includes('Missing Scores') ||
+          txt.includes('Completed Rounds') ||
+          txt.includes('Round live')
+        )
+      ) {
+        box = p;
+      }
+    }
+
+    box.dataset.pbTournamentOperatorRemovedV1 = 'true';
+    box.style.display = 'none';
+  });
+}
+
+(function pbInstallRemoveTournamentOperatorV1(){
+  if(window.__PB_HOME_REMOVE_TOURNAMENT_OPERATOR_V1_INSTALLED__) return;
+  window.__PB_HOME_REMOVE_TOURNAMENT_OPERATOR_V1_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('dashboard') || txt.includes('Home') || txt.includes('full dashboard')) {
+        setTimeout(pbHomeRemoveTournamentOperatorV1, 0);
+        setTimeout(pbHomeRemoveTournamentOperatorV1, 350);
+        setTimeout(pbHomeRemoveTournamentOperatorV1, 900);
+      }
+    } catch(err) {}
+  }, true);
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) pbHomeRemoveTournamentOperatorV1();
+    } catch(err) {}
+  }, 1200);
+})();
+
+
+/* PB_FORCE_REMOVE_TOURNAMENT_OPERATOR_V2 */
+function pbForceRemoveTournamentOperatorV2() {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+
+  const looksLikeOperator = (el) => {
+    if(!el || !el.textContent) return false;
+    const txt = norm(el.textContent);
+
+    return (
+      txt.includes('Tournament Operator') &&
+      txt.includes('Next Action') &&
+      txt.includes('Current Round') &&
+      txt.includes('Missing Scores') &&
+      txt.includes('Completed Rounds')
+    );
+  };
+
+  const candidates = Array.from(sec.querySelectorAll('*')).filter(el => {
+    const txt = norm(el.textContent || '');
+    return txt.includes('Tournament Operator');
+  });
+
+  candidates.forEach(node => {
+    let best = null;
+    let p = node;
+
+    for(let i = 0; i < 12 && p && p !== sec; i++, p = p.parentElement) {
+      if(looksLikeOperator(p)) best = p;
+    }
+
+    if(best) {
+      best.setAttribute('data-pb-force-removed-tournament-operator-v2', 'true');
+      best.remove();
+    }
+  });
+
+  // Safety pass: remove any direct leftover title line if the card wrapper was unusual.
+  Array.from(sec.querySelectorAll('*')).forEach(el => {
+    const txt = norm(el.textContent || '');
+    if(txt === 'Tournament Operator' || txt === '🎛️ Round live') {
+      const p = el.closest('.card, .premium-panel, section, article, div');
+      if(p && p !== sec) {
+        p.setAttribute('data-pb-force-removed-tournament-operator-v2', 'true');
+        p.remove();
+      }
+    }
+  });
+}
+
+(function pbInstallForceRemoveTournamentOperatorV2(){
+  if(window.__PB_FORCE_REMOVE_TOURNAMENT_OPERATOR_V2_INSTALLED__) return;
+  window.__PB_FORCE_REMOVE_TOURNAMENT_OPERATOR_V2_INSTALLED__ = true;
+
+  const run = () => {
+    try {
+      pbForceRemoveTournamentOperatorV2();
+    } catch(e) {
+      console.error('Tournament Operator removal failed', e);
+    }
+  };
+
+  // Wrap renderDashboard directly if available.
+  const originalRenderDashboard = window.renderDashboard;
+  if(typeof originalRenderDashboard === 'function') {
+    window.renderDashboard = function() {
+      const result = originalRenderDashboard.apply(this, arguments);
+      setTimeout(run, 0);
+      setTimeout(run, 200);
+      return result;
+    };
+  }
+
+  // Wrap clean Home render if available.
+  if(typeof pbRenderCleanHomeV1 === 'function') {
+    const originalCleanHome = pbRenderCleanHomeV1;
+    pbRenderCleanHomeV1 = function() {
+      const result = originalCleanHome.apply(this, arguments);
+      setTimeout(run, 0);
+      setTimeout(run, 200);
+      return result;
+    };
+  }
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('dashboard') || txt.includes('Home') || txt.includes('full dashboard') || txt.includes('clean Home')) {
+        setTimeout(run, 0);
+        setTimeout(run, 250);
+        setTimeout(run, 750);
+      }
+    } catch(err) {}
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(run, 0);
+    setTimeout(run, 500);
+    setTimeout(run, 1500);
+  });
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) run();
+    } catch(err) {}
+  }, 1000);
+})();
+
+
+/* PB_REMOVE_OLD_DASHBOARD_SUMMARY_CARD_V1 */
+function pbRemoveOldDashboardSummaryCardV1() {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+
+  const looksLikeOldSummary = (el) => {
+    if(!el || !el.textContent) return false;
+    const txt = norm(el.textContent);
+
+    return (
+      txt.includes('Pickleball Tournament') &&
+      (
+        txt.includes('Generate First Draft Round') ||
+        txt.includes('Record Scores') ||
+        txt.includes('Generate Schedule')
+      ) &&
+      txt.includes('Start Round') &&
+      txt.includes('TV Mode') &&
+      txt.includes('Active players') &&
+      txt.includes('Courts selected') &&
+      txt.includes('Current round')
+    );
+  };
+
+  const candidates = Array.from(sec.querySelectorAll('*')).filter(el => {
+    const txt = norm(el.textContent || '');
+    return (
+      txt.includes('Pickleball Tournament') ||
+      txt.includes('Generate First Draft Round') ||
+      txt.includes('Active players')
+    );
+  });
+
+  candidates.forEach(node => {
+    let best = null;
+    let p = node;
+
+    for(let i = 0; i < 12 && p && p !== sec; i++, p = p.parentElement) {
+      if(looksLikeOldSummary(p)) best = p;
+    }
+
+    if(best) {
+      best.setAttribute('data-pb-removed-old-dashboard-summary-card-v1', 'true');
+      best.remove();
+    }
+  });
+}
+
+(function pbInstallRemoveOldDashboardSummaryCardV1(){
+  if(window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_CARD_V1_INSTALLED__) return;
+  window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_CARD_V1_INSTALLED__ = true;
+
+  const run = () => {
+    try {
+      pbRemoveOldDashboardSummaryCardV1();
+      if(typeof pbForceRemoveTournamentOperatorV2 === 'function') pbForceRemoveTournamentOperatorV2();
+    } catch(e) {
+      console.error('Old dashboard summary removal failed', e);
+    }
+  };
+
+  // Wrap dashboard render so the old card is removed after every rebuild.
+  const originalRenderDashboard = window.renderDashboard;
+  if(typeof originalRenderDashboard === 'function' && !window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_RENDER_WRAPPED_V1__) {
+    window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_RENDER_WRAPPED_V1__ = true;
+    window.renderDashboard = function() {
+      const result = originalRenderDashboard.apply(this, arguments);
+      setTimeout(run, 0);
+      setTimeout(run, 200);
+      setTimeout(run, 600);
+      return result;
+    };
+  }
+
+  // Wrap clean Home render too.
+  if(typeof pbRenderCleanHomeV1 === 'function' && !window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_CLEAN_WRAPPED_V1__) {
+    window.__PB_REMOVE_OLD_DASHBOARD_SUMMARY_CLEAN_WRAPPED_V1__ = true;
+    const originalCleanHome = pbRenderCleanHomeV1;
+    pbRenderCleanHomeV1 = function() {
+      const result = originalCleanHome.apply(this, arguments);
+      setTimeout(run, 0);
+      setTimeout(run, 200);
+      setTimeout(run, 600);
+      return result;
+    };
+  }
+
+  document.addEventListener('click', function(e) {
+    try {
+      const txt = e.target?.textContent || '';
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+
+      if(
+        txt.includes('Home') ||
+        txt.includes('full dashboard') ||
+        txt.includes('clean Home') ||
+        raw.includes('dashboard')
+      ) {
+        setTimeout(run, 0);
+        setTimeout(run, 250);
+        setTimeout(run, 750);
+      }
+    } catch(err) {}
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(run, 0);
+    setTimeout(run, 500);
+    setTimeout(run, 1500);
+  });
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) run();
+    } catch(err) {}
+  }, 1000);
+})();
+
+
+/* PB_HOME_STABLE_NO_TWITCH_V1 */
+function pbHomeStableTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbHomeStableEscV1(v) {
+  if(typeof pbCleanHomeEscV1 === 'function') return pbCleanHomeEscV1(v);
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function pbHomeStableTournamentNameV1() {
+  try {
+    if(typeof pbCleanHomeTournamentNameV3 === 'function') {
+      const v = pbHomeStableTextV1(pbCleanHomeTournamentNameV3());
+      if(v && v !== 'Pickleball Tournament') return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof getTournamentName === 'function') {
+      const v = pbHomeStableTextV1(getTournamentName());
+      if(v && v !== 'Pickleball Tournament') return v;
+    }
+  } catch(e) {}
+
+  const selectors = [
+    '#tournament-name',
+    '[name="tournamentName"]',
+    '[name="tournament-name"]',
+    '#event-name',
+    '[name="eventName"]'
+  ];
+
+  for(const sel of selectors) {
+    try {
+      const el = document.querySelector(sel);
+      const v = pbHomeStableTextV1(el && (el.value != null ? el.value : el.textContent));
+      if(v && v !== 'Pickleball Tournament') return v;
+    } catch(e) {}
+  }
+
+  return 'Pickleball Tournament';
+}
+
+function pbHomeStableDateLabelV1() {
+  try {
+    if(typeof pbCleanHomeTournamentDateLabelV1 === 'function') {
+      const v = pbHomeStableTextV1(pbCleanHomeTournamentDateLabelV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  const raw =
+    document.getElementById('tournament-datetime')?.value ||
+    document.getElementById('tournament-date')?.value ||
+    document.querySelector('[name="tournamentDate"]')?.value ||
+    document.querySelector('[name="tournamentDateTime"]')?.value ||
+    '';
+
+  if(!raw) return 'Date not set';
+
+  const dateOnly = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(dateOnly) {
+    const dt = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+    return dt.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  const dt = new Date(raw);
+  if(isNaN(dt.getTime())) return raw;
+
+  return dt.toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function pbHomeStableProgressV1() {
+  const rounds = state.schedule || [];
+  const totalGames = rounds.reduce((sum, r) => sum + ((r || []).length), 0);
+  const completeGames = rounds.reduce((sum, r) => sum + ((r || []).filter(m => m && m.complete).length), 0);
+
+  let currentIdx = rounds.findIndex(r => (r || []).some(m => m && !m.complete));
+  if(currentIdx < 0 && rounds.length) currentIdx = rounds.length - 1;
+
+  const activePlayers = (state.players || []).filter(p =>
+    p && p.waitlist !== true && p.active !== false && p.checkedIn !== false
+  ).length;
+
+  const selectedCourts = state.selectedCourts && state.selectedCourts.size
+    ? state.selectedCourts.size
+    : 0;
+
+  return { rounds, totalGames, completeGames, currentIdx, activePlayers, selectedCourts };
+}
+
+function pbHomeStablePrimaryActionV1() {
+  const progress = pbHomeStableProgressV1();
+
+  if(progress.activePlayers < 4) {
+    showTab('players');
+    return;
+  }
+
+  if(!progress.rounds.length) {
+    showTab('schedule');
+    return;
+  }
+
+  if(progress.totalGames && progress.completeGames >= progress.totalGames) {
+    showTab('standings');
+    return;
+  }
+
+  showTab('schedule');
+}
+
+function pbRenderHomeStableNoTwitchV1(force) {
+  const sec = document.getElementById('sec-dashboard');
+  if(!sec) return;
+
+  window.__PB_CLEAN_HOME_SHOW_FULL_V1__ = false;
+
+  let style = document.getElementById('pb-home-stable-style-v1');
+  if(!style) {
+    style = document.createElement('style');
+    style.id = 'pb-home-stable-style-v1';
+    style.textContent = `
+      #sec-dashboard > :not(#pb-clean-home-command-center-v1) {
+        display: none !important;
+      }
+      #pb-clean-home-command-center-v1 {
+        display: block !important;
+      }
+      #pb-clean-home-command-center-v1 button {
+        white-space: nowrap;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  let panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) {
+    panel = document.createElement('div');
+    panel.id = 'pb-clean-home-command-center-v1';
+    panel.setAttribute('data-pb-home-stable-no-twitch-v1', 'true');
+    sec.insertBefore(panel, sec.firstChild);
+  }
+
+  const progress = pbHomeStableProgressV1();
+  const tournamentName = pbHomeStableTournamentNameV1();
+  const tournamentDate = pbHomeStableDateLabelV1();
+
+  let statusText = 'Add players first. Once you have 4+ active players, generate the schedule.';
+  let primaryText = '👥 Add Players';
+
+  if(progress.activePlayers >= 4 && !progress.rounds.length) {
+    statusText = 'Players are ready. Create the schedule when you are ready.';
+    primaryText = '📅 Create Schedule';
+  } else if(progress.rounds.length && progress.totalGames && progress.completeGames >= progress.totalGames) {
+    statusText = 'Tournament rounds are complete. Review standings and reports.';
+    primaryText = '📊 View Standings';
+  } else if(progress.rounds.length && progress.currentIdx >= 0) {
+    statusText = `Round ${progress.currentIdx + 1} is live. Record scores as matches finish.`;
+    primaryText = '📅 Open Schedule';
+  }
+
+  const mobileCode = (typeof msState !== 'undefined' && msState && msState.code) ? msState.code : '';
+  const mobilePushed = (typeof msState !== 'undefined' && msState && msState.lastPushAt) ? true : false;
+  const mobileStatus = mobileCode ? `${mobileCode}${mobilePushed ? ' · pushed' : ' · not pushed'}` : 'Not set';
+
+  const html = `
+    <div style="border:1px solid rgba(198,255,0,0.32);border-radius:20px;background:linear-gradient(135deg,rgba(198,255,0,0.075),rgba(255,255,255,0.035));padding:1rem;margin-bottom:1rem;box-shadow:0 18px 45px rgba(0,0,0,0.16)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div>
+          <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.09em;color:var(--ball);font-weight:900">🏠 Home</div>
+
+          <div style="margin-top:0.45rem">
+            <div style="color:var(--txt3);font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:0.08em">Tournament</div>
+            <div style="font-family:'Anton','Bebas Neue',sans-serif;font-size:clamp(1.5rem,4vw,2.5rem);line-height:1;color:var(--txt);margin-top:0.18rem">
+              ${pbHomeStableEscV1(tournamentName)}
+            </div>
+          </div>
+
+          <div style="display:inline-flex;align-items:center;gap:0.35rem;margin-top:0.55rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:0.28rem 0.65rem;color:var(--ball);font-size:0.82rem;font-weight:900">
+            📅 ${pbHomeStableEscV1(tournamentDate)}
+          </div>
+
+          <div style="color:var(--txt2);font-size:0.92rem;margin-top:0.6rem">${pbHomeStableEscV1(statusText)}</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="pbHomeStablePrimaryActionV1()" style="min-width:160px">
+          ${pbHomeStableEscV1(primaryText)}
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.65rem;margin-top:1rem">
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Players</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.activePlayers}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Courts</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.selectedCourts || '—'}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Round</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.rounds.length ? `${progress.currentIdx + 1}/${progress.rounds.length}` : '—'}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Scores</div>
+          <div style="font-size:1.5rem;font-weight:1000;color:var(--lime)">${progress.completeGames}/${progress.totalGames || 0}</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+          <div style="color:var(--txt3);font-size:0.72rem;font-weight:800;text-transform:uppercase">Mobile</div>
+          <div style="font-size:0.9rem;font-weight:900;color:var(--lime);margin-top:0.25rem">${pbHomeStableEscV1(mobileStatus)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem">
+        <button class="btn btn-secondary btn-sm" onclick="showTab('players')">👥 Players</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('schedule')">📅 Schedule</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('mobilesync')">📱 Mobile Sync</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('standings')">📊 Standings</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('report')">📄 Report</button>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('fairness')">⚖ Fairness</button>
+      </div>
+    </div>
+  `;
+
+  // Important: only update if content changed. This prevents twitching.
+  if(panel.dataset.pbStableHtmlV1 !== html) {
+    panel.innerHTML = html;
+    panel.dataset.pbStableHtmlV1 = html;
+  }
+}
+
+// Disable old twitchy cleanup functions. Existing timers may still call them, so make them harmless.
+function pbHomeRemoveTournamentOperatorV1() { return false; }
+function pbForceRemoveTournamentOperatorV2() { return false; }
+function pbRemoveOldDashboardSummaryCardV1() { return false; }
+
+// Disable full-dashboard mode completely.
+function pbCleanHomeToggleFullV1() {
+  window.__PB_CLEAN_HOME_SHOW_FULL_V1__ = false;
+  pbRenderHomeStableNoTwitchV1(true);
+}
+
+// Make all Home render calls use the stable renderer.
+pbRenderCleanHomeV1 = pbRenderHomeStableNoTwitchV1;
+
+(function pbInstallHomeStableNoTwitchV1(){
+  if(window.__PB_HOME_STABLE_NO_TWITCH_V1_INSTALLED__) return;
+  window.__PB_HOME_STABLE_NO_TWITCH_V1_INSTALLED__ = true;
+
+  const run = () => {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) pbRenderHomeStableNoTwitchV1();
+    } catch(e) {
+      console.error('Home stable render failed', e);
+    }
+  };
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('dashboard') || txt.includes('Home')) {
+        setTimeout(run, 0);
+        setTimeout(run, 250);
+      }
+    } catch(err) {}
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(run, 0);
+    setTimeout(run, 300);
+  });
+})();
+
+
+/* PB_HOME_COURT_STATUS_PANEL_V1 */
+function pbHomeCourtStatusScoreV1(m) {
+  if(!m) return '';
+
+  const left =
+    m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+
+  const right =
+    m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(left === undefined || left === null || left === '') return '';
+  if(right === undefined || right === null || right === '') return '';
+
+  return `${left}–${right}`;
+}
+
+function pbHomeCourtStatusTeamNameV1(team) {
+  if(!team) return '';
+
+  try {
+    if(Array.isArray(team) && typeof matchTeamName === 'function') {
+      const v = matchTeamName(team);
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(Array.isArray(team)) {
+      return team.map(idx => {
+        const p = state.players && state.players[idx];
+        return p ? (p.name || p.fullName || `Player ${idx + 1}`) : `Player ${idx + 1}`;
+      }).join(' / ');
+    }
+  } catch(e) {}
+
+  if(typeof team === 'string') return team;
+
+  return '';
+}
+
+function pbHomeCourtStatusTeamsV1(m) {
+  if(!m) return '';
+
+  const a =
+    m.teamA || m.team1 || m.a || m.left || m.home || m.playersA || m.pairA || m.sideA;
+
+  const b =
+    m.teamB || m.team2 || m.b || m.right || m.away || m.playersB || m.pairB || m.sideB;
+
+  const ta = pbHomeCourtStatusTeamNameV1(a);
+  const tb = pbHomeCourtStatusTeamNameV1(b);
+
+  if(ta && tb) return `${ta} vs ${tb}`;
+  if(ta) return ta;
+  if(tb) return tb;
+
+  return '';
+}
+
+function pbHomeCourtStatusPanelHtmlV1() {
+  const progress = typeof pbHomeStableProgressV1 === 'function'
+    ? pbHomeStableProgressV1()
+    : { rounds: state.schedule || [], currentIdx: 0 };
+
+  const rounds = progress.rounds || state.schedule || [];
+
+  if(!rounds.length) {
+    return `
+      <div id="pb-home-court-status-panel-v1" style="border:1px solid rgba(255,255,255,0.12);border-radius:18px;background:rgba(255,255,255,0.035);padding:0.9rem;margin-top:0.85rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+          <div>
+            <div style="font-weight:1000;color:var(--lime)">🏟️ Court Status</div>
+            <div style="color:var(--txt3);font-size:0.85rem;margin-top:0.15rem">Create a schedule to see courts here.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="showTab('schedule')">📅 Schedule</button>
+        </div>
+      </div>
+    `;
+  }
+
+  let currentIdx = progress.currentIdx;
+  if(currentIdx == null || currentIdx < 0) currentIdx = 0;
+
+  const currentRound = rounds[currentIdx] || [];
+  const total = currentRound.length;
+  const complete = currentRound.filter(m => m && m.complete).length;
+  const missing = Math.max(0, total - complete);
+
+  const rows = currentRound.map((m, idx) => {
+    const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (idx + 1);
+    const score = pbHomeCourtStatusScoreV1(m);
+    const teams = pbHomeCourtStatusTeamsV1(m);
+
+    let status = 'Score needed';
+    let badgeBg = 'rgba(255,193,7,0.16)';
+    let badgeColor = 'var(--warn)';
+
+    if(m && m.complete) {
+      status = score ? `Complete ${score}` : 'Complete';
+      badgeBg = 'rgba(76,175,80,0.16)';
+      badgeColor = 'var(--success)';
+    } else if(score) {
+      status = `Score entered ${score}`;
+      badgeBg = 'rgba(33,150,243,0.16)';
+      badgeColor = 'var(--info)';
+    }
+
+    return `
+      <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.72rem;display:flex;align-items:center;justify-content:space-between;gap:0.7rem">
+        <div style="min-width:0">
+          <div style="font-weight:1000;color:var(--txt)">Court ${pbHomeStableEscV1(court)}</div>
+          <div style="color:var(--txt3);font-size:0.78rem;margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px">
+            ${teams ? pbHomeStableEscV1(teams) : 'Current match'}
+          </div>
+        </div>
+        <div style="white-space:nowrap;border-radius:999px;background:${badgeBg};color:${badgeColor};font-size:0.76rem;font-weight:1000;padding:0.28rem 0.55rem">
+          ${pbHomeStableEscV1(status)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div id="pb-home-court-status-panel-v1" style="border:1px solid rgba(255,255,255,0.12);border-radius:18px;background:rgba(255,255,255,0.035);padding:0.9rem;margin-top:0.85rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.75rem">
+        <div>
+          <div style="font-weight:1000;color:var(--lime)">🏟️ Live Court Status</div>
+          <div style="color:var(--txt3);font-size:0.85rem;margin-top:0.15rem">
+            Round ${currentIdx + 1} · ${complete}/${total} complete · ${missing} score${missing === 1 ? '' : 's'} needed
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="showTab('schedule')">📝 Enter Scores</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0.55rem">
+        ${rows || '<div style="color:var(--txt3)">No matches in this round.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function pbHomeEnsureCourtStatusPanelV1() {
+  const panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) return;
+
+  let courtPanel = document.getElementById('pb-home-court-status-panel-v1');
+  const html = pbHomeCourtStatusPanelHtmlV1();
+
+  if(courtPanel) {
+    if(courtPanel.dataset.pbCourtStatusHtmlV1 !== html) {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html.trim();
+      courtPanel.replaceWith(wrapper.firstElementChild);
+      document.getElementById('pb-home-court-status-panel-v1').dataset.pbCourtStatusHtmlV1 = html;
+    }
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html.trim();
+  const next = wrapper.firstElementChild;
+  next.dataset.pbCourtStatusHtmlV1 = html;
+  panel.appendChild(next);
+}
+
+(function pbInstallHomeCourtStatusPanelV1(){
+  if(window.__PB_HOME_COURT_STATUS_PANEL_V1_INSTALLED__) return;
+  window.__PB_HOME_COURT_STATUS_PANEL_V1_INSTALLED__ = true;
+
+  const run = () => {
+    try {
+      const sec = document.getElementById('sec-dashboard');
+      if(sec && sec.classList.contains('active')) {
+        if(typeof pbRenderHomeStableNoTwitchV1 === 'function') pbRenderHomeStableNoTwitchV1();
+        pbHomeEnsureCourtStatusPanelV1();
+      }
+    } catch(e) {
+      console.error('Home court status panel failed', e);
+    }
+  };
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('dashboard') || txt.includes('Home') || txt.includes('Schedule') || txt.includes('Score')) {
+        setTimeout(run, 0);
+        setTimeout(run, 250);
+      }
+    } catch(err) {}
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(run, 0);
+    setTimeout(run, 350);
+  });
+})();
+
+
+
+/* PB_POPUP_MESSAGE_DURATION_V1 */
+window.PB_POPUP_MESSAGE_DURATION_MS = 7000;
+
+function pbPopupDurationWrapV1() {
+  const duration = window.PB_POPUP_MESSAGE_DURATION_MS || 7000;
+
+  const names = [
+    'showToast',
+    'toast',
+    'notify',
+    'showNotification',
+    'showMessage',
+    'showPopup',
+    'showAlert',
+    'showSuccess',
+    'showError',
+    'showWarning'
+  ];
+
+  names.forEach(name => {
+    const fn = window[name];
+    if(typeof fn !== 'function') return;
+    if(fn.__pbPopupDurationWrappedV1) return;
+
+    const wrapped = function(...args) {
+      args = args.map(arg => {
+        if(typeof arg === 'number' && arg > 0 && arg < duration) return duration;
+
+        if(arg && typeof arg === 'object') {
+          ['duration', 'timeout', 'delay', 'ttl', 'time'].forEach(k => {
+            if(typeof arg[k] === 'number' && arg[k] > 0 && arg[k] < duration) {
+              arg[k] = duration;
+            }
+          });
+        }
+
+        return arg;
+      });
+
+      // If the app function supports a duration but none was passed, add one.
+      if(args.length <= 2) args.push(duration);
+
+      return fn.apply(this, args);
+    };
+
+    wrapped.__pbPopupDurationWrappedV1 = true;
+    window[name] = wrapped;
+  });
+}
+
+function pbPopupDurationStyleV1() {
+  let style = document.getElementById('pb-popup-duration-style-v1');
+  if(style) return;
+
+  style = document.createElement('style');
+  style.id = 'pb-popup-duration-style-v1';
+  style.textContent = `
+    .toast,
+    .notification,
+    .snackbar,
+    .popup-message,
+    .alert-toast,
+    [data-toast],
+    [data-notification],
+    [role="status"],
+    [aria-live="polite"] {
+      animation-duration: 0.25s !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+(function pbInstallPopupDurationV1(){
+  if(window.__PB_POPUP_MESSAGE_DURATION_V1_INSTALLED__) return;
+  window.__PB_POPUP_MESSAGE_DURATION_V1_INSTALLED__ = true;
+
+  pbPopupDurationStyleV1();
+  pbPopupDurationWrapV1();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    pbPopupDurationStyleV1();
+    pbPopupDurationWrapV1();
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(pbPopupDurationWrapV1, 0);
+    setTimeout(pbPopupDurationWrapV1, 250);
+  }, true);
+})();
+
+
+/* PB_REMOVE_FLOATING_TIME_V1 */
+function pbRemoveFloatingTimeV1() {
+  try {
+    document.getElementById('pb-floating-time-v2')?.remove();
+    document.getElementById('pb-floating-time-style-v2')?.remove();
+
+    Array.from(document.querySelectorAll('.floating-time, .floating-timer, #floating-time, #floatingTimer, #floating-clock, [data-floating-time]'))
+      .forEach(el => el.remove());
+  } catch(e) {}
+}
+
+(function pbInstallRemoveFloatingTimeV1(){
+  if(window.__PB_REMOVE_FLOATING_TIME_V1_INSTALLED__) return;
+  window.__PB_REMOVE_FLOATING_TIME_V1_INSTALLED__ = true;
+
+  pbRemoveFloatingTimeV1();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    pbRemoveFloatingTimeV1();
+    setTimeout(pbRemoveFloatingTimeV1, 300);
+  });
+
+  setTimeout(pbRemoveFloatingTimeV1, 500);
+})();
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
@@ -11586,7 +13074,7 @@ function highlightScheduleMatch(matchId) {
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
     row.style.transition = 'background 0.15s';
     row.style.background = 'rgba(198,255,0,0.18)';
-    setTimeout(() => { row.style.background = ''; }, 1800);
+    setTimeout(() => { row.style.background = ''; }, (window.PB_POPUP_MESSAGE_DURATION_MS || 7000));
   });
 }
 
@@ -13398,7 +14886,7 @@ function toast(msg, type='ok') {
   el.style.background = type==='err' ? 'var(--red)' : 'var(--lime)';
   el.style.color = type==='err' ? '#fff' : '#000';
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2800);
+  setTimeout(() => el.classList.remove('show'), (window.PB_POPUP_MESSAGE_DURATION_MS || 7000));
 }
 
 function downloadCSV(rows, filename) {
@@ -35809,7 +37297,7 @@ function exportEndSessionSummary(){
     removeOldDuplicatePanels();
   }, 500);
 
-  setTimeout(removeOldDuplicatePanels, 1200);
+  setTimeout(removeOldDuplicatePanels, (window.PB_POPUP_MESSAGE_DURATION_MS || 7000));
 })();
 
 
