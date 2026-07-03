@@ -9846,7 +9846,7 @@ function renderSchedule() {
               <td style="font-size:0.82rem;color:var(--ball)">${winner}</td>
               <td>${balanceTag}</td>
               <td>${repeatCell}</td>
-              <td><span class="badge badge-${status}">${statusTxt}</span>${mixedStatus}</td>
+              <td><span class="badge badge-${status}">${statusTxt}</span>${mixedStatus}${pbAcceptedScoreDisplayHtmlV1(m)}</td>
               <td style="white-space:nowrap">
         <button class="btn btn-secondary btn-sm" onclick="openScoreModal(${m.id})" style="margin-right:2px" title="Enter score (or press court number key)">📝</button>
                 ${!m.complete ? `<button class="btn btn-secondary btn-sm" onclick="openPlayerSwapModal(${m.id})" title="Adjust players for this match" style="color:var(--lime)">⇄</button>` : ''}
@@ -9858,6 +9858,47 @@ function renderSchedule() {
       </table></div>`;
   }).join('');
   renderMixedModeWarning();
+}
+
+
+/* PB_ACCEPTED_SCORE_DISPLAY_V1 */
+function pbAcceptedScoreDisplayHtmlV1(m) {
+  if(!m) return '';
+
+  const acceptedA = (m.acceptedByA || '').toString().trim();
+  const acceptedB = (m.acceptedByB || '').toString().trim();
+  const acceptedAtRaw = m.acceptedAt;
+
+  if(!acceptedA && !acceptedB && !acceptedAtRaw) return '';
+
+  const esc = (v) => {
+    if(typeof escHtml === 'function') return escHtml(String(v == null ? '' : v));
+    return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  };
+
+  let acceptedWhen = '';
+  if(acceptedAtRaw) {
+    const n = Number(acceptedAtRaw);
+    const dt = new Date(Number.isFinite(n) ? n : acceptedAtRaw);
+    if(!isNaN(dt.getTime())) {
+      acceptedWhen = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+  }
+
+  const lines = [];
+  if(acceptedA) lines.push(`<div><span style="color:var(--txt3)">A:</span> <strong>${esc(acceptedA)}</strong></div>`);
+  if(acceptedB) lines.push(`<div><span style="color:var(--txt3)">B:</span> <strong>${esc(acceptedB)}</strong></div>`);
+  if(acceptedWhen) lines.push(`<div style="color:var(--txt3)">${esc(acceptedWhen)}</div>`);
+
+  return `<div data-pb-accepted-score-display-v1="true" style="margin-top:4px;font-size:0.68rem;line-height:1.25;color:var(--lime);white-space:nowrap">
+    <div style="font-weight:800">✓ Accepted</div>${lines.join('')}
+  </div>`;
 }
 
 function matchTeamName(playerIdxArr) {
@@ -10448,6 +10489,9 @@ function saveScore() {
   const prevSa = m.scoreA, prevSb = m.scoreB, prevComplete = m.complete;
 
   m.scoreA = sa; m.scoreB = sb; m.complete = true;
+  m.acceptedByA = '';
+  m.acceptedByB = '';
+  m.acceptedAt = null;
 
   // Record for undo
   pushUndo(m.id, prevSa, prevSb, prevComplete);
@@ -10510,6 +10554,9 @@ function saveScoreInline(matchId) {
 
   const prevSa = m.scoreA, prevSb = m.scoreB, prevComplete = m.complete;
   m.scoreA = sa; m.scoreB = sb; m.complete = true;
+  m.acceptedByA = '';
+  m.acceptedByB = '';
+  m.acceptedAt = null;
   pushUndo(m.id, prevSa, prevSb, prevComplete);
   autoSave();
 
@@ -16564,6 +16611,9 @@ async function msPullNow() {
       if(!m || m.complete) { appliedIds.push(u.matchId); return; } // already applied or stale — ack anyway
       const prevSa = m.scoreA, prevSb = m.scoreB, prevComplete = m.complete;
       m.scoreA = u.scoreA; m.scoreB = u.scoreB; m.complete = true;
+      m.acceptedByA = u.acceptedByA || '';
+      m.acceptedByB = u.acceptedByB || '';
+      m.acceptedAt = u.acceptedAt || null;
       m._submittedBy = u.submittedBy || '';
       m._submittedAt = u.submittedAt || Date.now();
       pushUndo(m.id, prevSa, prevSb, prevComplete);
