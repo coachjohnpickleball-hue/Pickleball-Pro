@@ -10242,6 +10242,277 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(pbDisableInlineMobileScoreReviewV4, 0);
 });
 
+
+/* PB_MOBILE_SYNC_COMPACT_SECTIONS_V1 */
+function pbMobileSyncCompactSectionsV1() {
+  const sec = document.getElementById('sec-mobilesync');
+  if(!sec) return;
+
+  const shouldCollapse = (text) => {
+    const t = (text || '').toLowerCase();
+    return (
+      t.includes('scorekeeper link') ||
+      t.includes('send link by sms') ||
+      t.includes('per-court qr') ||
+      t.includes('court qr') ||
+      t.includes('pins') ||
+      t.includes('announce to everyone')
+    );
+  };
+
+  const shouldStayOpen = (text) => {
+    const t = (text || '').toLowerCase();
+    return (
+      t.includes('mobile score entry') ||
+      t.includes('mobile sync setup') ||
+      t.includes('live court status')
+    );
+  };
+
+  const cards = Array.from(sec.querySelectorAll('.card, .premium-panel'));
+  cards.forEach((card, idx) => {
+    if(!card || card.dataset.pbMobileSyncCompactV1 === 'true') return;
+
+    const text = card.textContent || '';
+    if(shouldStayOpen(text)) return;
+    if(!shouldCollapse(text)) return;
+
+    const header =
+      card.querySelector('.card-title') ||
+      card.querySelector('h2,h3') ||
+      card.querySelector('div[style*="font-weight:900"]') ||
+      card.firstElementChild;
+
+    const title = header ? header.textContent.trim().replace(/\s+/g, ' ') : 'Section';
+    const body = document.createElement('div');
+
+    while(card.firstChild) {
+      body.appendChild(card.firstChild);
+    }
+
+    const details = document.createElement('details');
+    details.dataset.pbMobileSyncCompactV1 = 'true';
+    details.style.border = '1px solid var(--border)';
+    details.style.borderRadius = '14px';
+    details.style.background = 'rgba(255,255,255,0.035)';
+    details.style.margin = '0.75rem 0';
+    details.style.overflow = 'hidden';
+
+    const summary = document.createElement('summary');
+    summary.style.cursor = 'pointer';
+    summary.style.padding = '0.85rem 1rem';
+    summary.style.fontWeight = '900';
+    summary.style.color = 'var(--lime)';
+    summary.style.listStyle = 'none';
+    summary.style.display = 'flex';
+    summary.style.alignItems = 'center';
+    summary.style.justifyContent = 'space-between';
+    summary.style.gap = '0.75rem';
+
+    summary.innerHTML = `<span>${title}</span><span style="font-size:0.76rem;color:var(--txt3)">Open</span>`;
+
+    body.style.padding = '0 1rem 1rem';
+
+    details.appendChild(summary);
+    details.appendChild(body);
+
+    card.innerHTML = '';
+    card.appendChild(details);
+    card.dataset.pbMobileSyncCompactV1 = 'true';
+    card.style.border = 'none';
+    card.style.background = 'transparent';
+    card.style.padding = '0';
+  });
+}
+
+(function pbInstallMobileSyncCompactSectionsV1(){
+  if(window.__PB_MOBILE_SYNC_COMPACT_SECTIONS_V1_INSTALLED__) return;
+  window.__PB_MOBILE_SYNC_COMPACT_SECTIONS_V1_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      if(raw.includes('mobilesync')) {
+        setTimeout(pbMobileSyncCompactSectionsV1, 0);
+        setTimeout(pbMobileSyncCompactSectionsV1, 400);
+      }
+    } catch(err) {}
+  }, true);
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-mobilesync');
+      if(sec && sec.classList.contains('active')) pbMobileSyncCompactSectionsV1();
+    } catch(err) {}
+  }, 1500);
+})();
+
+
+/* PB_MOBILE_SYNC_SUBSECTION_COLLAPSE_V2 */
+function pbMobileSyncSubsectionCollapseV2() {
+  const sec = document.getElementById('sec-mobilesync');
+  if(!sec) return;
+
+  const groups = [
+    {
+      key: 'announcements',
+      title: '📢 Announcements',
+      find: ['Announce to Everyone', "Everyone's Phone"],
+      stop: []
+    },
+    {
+      key: 'qrpins',
+      title: '🔲 Court QR Codes & PINs',
+      find: ['Per-Court QR Codes', 'QR Codes & PINs', 'Randomize all PINs'],
+      stop: ['Live Court Status', 'Announce to Everyone', "Everyone's Phone"]
+    },
+    {
+      key: 'scorekeeper',
+      title: '📲 Scorekeeper Link / SMS',
+      find: ['Scorekeeper Link', 'Send Link by SMS'],
+      stop: ['Per-Court QR Codes', 'QR Codes & PINs', 'Live Court Status', 'Announce to Everyone', "Everyone's Phone"]
+    }
+  ];
+
+  const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+
+  const ownText = (el) => {
+    let out = '';
+    el.childNodes.forEach(n => {
+      if(n.nodeType === Node.TEXT_NODE) out += n.textContent || '';
+    });
+    return norm(out);
+  };
+
+  const hasAny = (txt, terms) => {
+    txt = norm(txt).toLowerCase();
+    return terms.some(term => txt.includes(String(term).toLowerCase()));
+  };
+
+  const findHeading = (terms) => {
+    const nodes = Array.from(sec.querySelectorAll('h1,h2,h3,h4,.card-title,div,span,strong,button'));
+    for(const el of nodes) {
+      if(el.closest('[data-pb-mobile-sync-collapse-v2="true"]')) continue;
+      const direct = ownText(el);
+      const all = norm(el.textContent || '');
+      if(direct && direct.length < 140 && hasAny(direct, terms)) return el;
+      if(all && all.length < 180 && hasAny(all, terms)) return el;
+    }
+    return null;
+  };
+
+  const findStartBlock = (heading) => {
+    let block = heading;
+
+    // Climb until this block has siblings to wrap, but don't climb to the entire Mobile Sync card.
+    while(
+      block.parentElement &&
+      block.parentElement !== sec &&
+      !block.nextElementSibling &&
+      !block.parentElement.classList.contains('card') &&
+      !block.parentElement.classList.contains('premium-panel')
+    ) {
+      block = block.parentElement;
+    }
+
+    return block;
+  };
+
+  const isStopNode = (node, terms) => {
+    if(!node) return true;
+    if(node.dataset && node.dataset.pbMobileSyncCollapseV2 === 'true') return true;
+    const txt = norm(node.textContent || '');
+    return hasAny(txt, terms);
+  };
+
+  const wrapGroup = (group) => {
+    if(sec.querySelector(`[data-pb-mobile-sync-collapse-key-v2="${group.key}"]`)) return;
+
+    const heading = findHeading(group.find);
+    if(!heading) return;
+
+    const start = findStartBlock(heading);
+    const parent = start.parentElement;
+    if(!parent) return;
+
+    const details = document.createElement('details');
+    details.dataset.pbMobileSyncCollapseV2 = 'true';
+    details.dataset.pbMobileSyncCollapseKeyV2 = group.key;
+    details.style.border = '1px solid var(--border)';
+    details.style.borderRadius = '14px';
+    details.style.background = 'rgba(255,255,255,0.035)';
+    details.style.margin = '0.75rem 0';
+    details.style.overflow = 'hidden';
+
+    const summary = document.createElement('summary');
+    summary.style.cursor = 'pointer';
+    summary.style.padding = '0.85rem 1rem';
+    summary.style.fontWeight = '900';
+    summary.style.color = 'var(--lime)';
+    summary.style.listStyle = 'none';
+    summary.style.display = 'flex';
+    summary.style.alignItems = 'center';
+    summary.style.justifyContent = 'space-between';
+    summary.style.gap = '0.75rem';
+    summary.innerHTML = `<span>${group.title}</span><span style="font-size:0.76rem;color:var(--txt3)">Open</span>`;
+
+    const body = document.createElement('div');
+    body.style.padding = '0 1rem 1rem';
+
+    parent.insertBefore(details, start);
+    details.appendChild(summary);
+    details.appendChild(body);
+
+    let node = start;
+    while(node) {
+      const next = node.nextElementSibling;
+
+      if(node !== start && isStopNode(node, group.stop)) break;
+
+      body.appendChild(node);
+      node = next;
+    }
+  };
+
+  // Later sections first, so earlier sections stop cleanly before them.
+  groups.forEach(wrapGroup);
+}
+
+(function pbInstallMobileSyncSubsectionCollapseV2(){
+  if(window.__PB_MOBILE_SYNC_SUBSECTION_COLLAPSE_V2_INSTALLED__) return;
+  window.__PB_MOBILE_SYNC_SUBSECTION_COLLAPSE_V2_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const raw = e.target?.closest?.('button, .tab-btn, .user-dropdown-item')?.getAttribute?.('onclick') || '';
+      const txt = e.target?.textContent || '';
+      if(raw.includes('mobilesync') || txt.includes('Mobile Sync')) {
+        setTimeout(pbMobileSyncSubsectionCollapseV2, 0);
+        setTimeout(pbMobileSyncSubsectionCollapseV2, 400);
+        setTimeout(pbMobileSyncSubsectionCollapseV2, 1000);
+      }
+    } catch(err) {}
+  }, true);
+
+  setInterval(function() {
+    try {
+      const sec = document.getElementById('sec-mobilesync');
+      if(sec && sec.classList.contains('active')) pbMobileSyncSubsectionCollapseV2();
+    } catch(err) {}
+  }, 1500);
+})();
+
+
+/* PB_DISABLE_OLD_MOBILE_SYNC_COLLAPSE_V1 */
+/*
+  Disable the older card-level Mobile Sync collapse.
+  Keep PB_MOBILE_SYNC_SUBSECTION_COLLAPSE_V2 active.
+*/
+function pbMobileSyncCompactSectionsV1() {
+  return false;
+}
+window.__PB_MOBILE_SYNC_COMPACT_SECTIONS_V1_INSTALLED__ = true;
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
