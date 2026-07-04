@@ -21582,6 +21582,9 @@ function saveTournament() {
     if (typeof pbClientIdentityV22AttachToExport === 'function') pbClientIdentityV22AttachToExport(data);
   } catch(e) {}
   try {
+    if (typeof pbLicenseV23AttachToExport === 'function') pbLicenseV23AttachToExport(data);
+  } catch(e) {}
+  try {
     if (typeof pbFixedPairsV19AttachToExport === 'function') pbFixedPairsV19AttachToExport(data);
   } catch(e) {}
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
@@ -22290,6 +22293,434 @@ function pbClientIdentityV22RenderAll() {
 })();
 
 
+
+/* PB_LICENSE_POLICY_FOUNDATION_V23 */
+function pbLicenseV23Identity() {
+  try {
+    if (typeof pbClientIdentityV22Load === "function") return pbClientIdentityV22Load();
+  } catch(e) {}
+
+  try {
+    var raw = localStorage.getItem("PB_CLIENT_IDENTITY_V22");
+    if (raw) return JSON.parse(raw);
+  } catch(e2) {}
+
+  return {
+    clientName: "Pickleball Pro",
+    clientId: "local-client",
+    licenseLevel: "club",
+    licenseStatus: "active"
+  };
+}
+
+function pbLicenseV23PolicyFor(level) {
+  level = String(level || "club").toLowerCase();
+
+  var policies = {
+    trial: {
+      level: "trial",
+      label: "Trial",
+      playerLimit: 16,
+      tournamentLimit: 3,
+      exportJson: true,
+      restoreJson: true,
+      fixedPairs: true,
+      mobileScoring: false,
+      scoreAudit: true,
+      officialResults: false,
+      branding: "Pickleball Pro Trial",
+      support: "Community support"
+    },
+    club: {
+      level: "club",
+      label: "Club",
+      playerLimit: 40,
+      tournamentLimit: 999,
+      exportJson: true,
+      restoreJson: true,
+      fixedPairs: true,
+      mobileScoring: true,
+      scoreAudit: true,
+      officialResults: true,
+      branding: "Club branding",
+      support: "Standard support"
+    },
+    pro: {
+      level: "pro",
+      label: "Pro",
+      playerLimit: 96,
+      tournamentLimit: 9999,
+      exportJson: true,
+      restoreJson: true,
+      fixedPairs: true,
+      mobileScoring: true,
+      scoreAudit: true,
+      officialResults: true,
+      branding: "Pro branding",
+      support: "Priority support"
+    },
+    enterprise: {
+      level: "enterprise",
+      label: "Enterprise",
+      playerLimit: 250,
+      tournamentLimit: 99999,
+      exportJson: true,
+      restoreJson: true,
+      fixedPairs: true,
+      mobileScoring: true,
+      scoreAudit: true,
+      officialResults: true,
+      branding: "Enterprise branding",
+      support: "Dedicated support"
+    }
+  };
+
+  return policies[level] || policies.club;
+}
+
+function pbLicenseV23CurrentPolicy() {
+  var identity = pbLicenseV23Identity();
+  var policy = pbLicenseV23PolicyFor(identity.licenseLevel);
+
+  policy.clientName = identity.clientName || "Pickleball Pro";
+  policy.clientId = identity.clientId || "";
+  policy.licenseStatus = String(identity.licenseStatus || "active").toLowerCase();
+  policy.isActive = policy.licenseStatus === "active" || policy.licenseStatus === "trial";
+  policy.generatedAt = new Date().toISOString();
+
+  return policy;
+}
+
+function pbLicenseV23PlayerCount() {
+  try {
+    if (!window.state || !Array.isArray(state.players)) return 0;
+
+    return state.players.filter(function(p) {
+      return p && p.active !== false && p.waitlist !== true;
+    }).length;
+  } catch(e) {
+    return 0;
+  }
+}
+
+function pbLicenseV23StatusText(policy) {
+  policy = policy || pbLicenseV23CurrentPolicy();
+
+  var count = pbLicenseV23PlayerCount();
+
+  return policy.clientName +
+    " · " + policy.label +
+    " · " + String(policy.licenseStatus || "active").toUpperCase() +
+    " · " + count + "/" + policy.playerLimit + " players";
+}
+
+function pbLicenseV23Can(action) {
+  var policy = pbLicenseV23CurrentPolicy();
+  var count = pbLicenseV23PlayerCount();
+
+  action = String(action || "").toLowerCase();
+
+  if (!policy.isActive) {
+    return {
+      ok: false,
+      reason: "License is " + String(policy.licenseStatus || "inactive") + ". Update the Company / License settings in Admin."
+    };
+  }
+
+  if ((action === "add-player" || action === "generate-schedule") && count >= policy.playerLimit) {
+    return {
+      ok: false,
+      reason: policy.label + " plan allows up to " + policy.playerLimit + " active players. Current active players: " + count + "."
+    };
+  }
+
+  if (action === "mobile-scoring" && !policy.mobileScoring) {
+    return {
+      ok: false,
+      reason: policy.label + " plan does not include mobile scoring."
+    };
+  }
+
+  if (action === "official-results" && !policy.officialResults) {
+    return {
+      ok: false,
+      reason: policy.label + " plan does not include official results export."
+    };
+  }
+
+  return {
+    ok: true,
+    reason: "Allowed",
+    policy: policy
+  };
+}
+
+function pbLicenseV23NotifyBlocked(result) {
+  try {
+    var msg = result && result.reason ? result.reason : "This feature is not available on the current license.";
+
+    if (typeof toast === "function") toast(msg, "err");
+    else alert(msg);
+  } catch(e) {}
+}
+
+function pbLicenseV23ExportObject() {
+  var policy = pbLicenseV23CurrentPolicy();
+
+  return {
+    version: 23,
+    exportedAt: new Date().toISOString(),
+    clientName: policy.clientName,
+    clientId: policy.clientId,
+    licenseLevel: policy.level,
+    licenseLabel: policy.label,
+    licenseStatus: policy.licenseStatus,
+    playerLimit: policy.playerLimit,
+    currentPlayers: pbLicenseV23PlayerCount(),
+    capabilities: {
+      exportJson: !!policy.exportJson,
+      restoreJson: !!policy.restoreJson,
+      fixedPairs: !!policy.fixedPairs,
+      mobileScoring: !!policy.mobileScoring,
+      scoreAudit: !!policy.scoreAudit,
+      officialResults: !!policy.officialResults,
+      branding: policy.branding,
+      support: policy.support
+    }
+  };
+}
+
+function pbLicenseV23AttachToExport(data) {
+  try {
+    if (!data || typeof data !== "object") return data;
+
+    var license = pbLicenseV23ExportObject();
+
+    data.licensePolicyV23 = license;
+
+    data.state = data.state || {};
+    data.state.licensePolicyV23 = license;
+
+    data.settings = data.settings || {};
+    data.settings.licensePolicyV23 = license;
+
+    try {
+      if (window.state) state.licensePolicyV23 = license;
+    } catch(e) {}
+
+    return data;
+  } catch(e) {
+    console.warn("License policy V23 export attach failed", e);
+    return data;
+  }
+}
+
+function pbLicenseV23ApplyImported(data, source) {
+  try {
+    if (!data || typeof data !== "object") return false;
+
+    var license =
+      data.licensePolicyV23 ||
+      (data.state && data.state.licensePolicyV23) ||
+      (data.settings && data.settings.licensePolicyV23) ||
+      null;
+
+    if (!license) return false;
+
+    if (window.state) {
+      state.licensePolicyV23 = license;
+    }
+
+    setTimeout(pbLicenseV23RenderAll, 150);
+    setTimeout(pbLicenseV23RenderAll, 900);
+
+    return true;
+  } catch(e) {
+    console.warn("License policy V23 import apply failed", e);
+    return false;
+  }
+}
+
+function pbLicenseV23RenderBanner() {
+  try {
+    var policy = pbLicenseV23CurrentPolicy();
+    var count = pbLicenseV23PlayerCount();
+
+    var root =
+      document.querySelector("main") ||
+      document.querySelector("#app") ||
+      document.body;
+
+    if (!root) return;
+
+    var banner = document.getElementById("pb-license-policy-banner-v23");
+
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "pb-license-policy-banner-v23";
+      banner.style.cssText =
+        "display:none;margin:.75rem 0;padding:.7rem .85rem;border-radius:.75rem;" +
+        "border:1px solid rgba(255,193,7,.45);background:rgba(255,193,7,.10);" +
+        "color:var(--txt);font-size:.9rem;font-weight:800;";
+
+      root.insertBefore(banner, root.firstChild || null);
+    }
+
+    var messages = [];
+
+    if (!policy.isActive) {
+      messages.push("License is " + String(policy.licenseStatus || "inactive").toUpperCase() + ".");
+    }
+
+    if (count >= policy.playerLimit) {
+      messages.push("Player limit reached: " + count + "/" + policy.playerLimit + ".");
+    } else if (count >= Math.max(1, policy.playerLimit - 3)) {
+      messages.push("Near player limit: " + count + "/" + policy.playerLimit + ".");
+    }
+
+    if (!messages.length) {
+      banner.style.display = "none";
+      banner.textContent = "";
+      return;
+    }
+
+    banner.style.display = "block";
+    banner.textContent = "⚠️ " + messages.join(" ") + " Plan: " + policy.label + ".";
+  } catch(e) {}
+}
+
+function pbLicenseV23RenderAdminCard() {
+  try {
+    var admin =
+      document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin || !admin.appendChild) return false;
+
+    var card = document.getElementById("pb-license-policy-card-v23");
+    var policy = pbLicenseV23CurrentPolicy();
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-license-policy-card-v23";
+      card.className = "card";
+      card.style.marginTop = "1rem";
+
+      card.innerHTML =
+        '<div class="card-title">License Limits</div>' +
+        '<p style="color:var(--txt2);margin-top:.25rem">Soft plan limits for monetization testing. True security enforcement comes later on the server side.</p>' +
+        '<div id="pb-license-policy-summary-v23" style="margin-top:.65rem;font-weight:900"></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.65rem;margin-top:.75rem">' +
+          '<div class="card" style="margin:0;padding:.65rem"><strong>Players</strong><br><span id="pb-license-players-v23"></span></div>' +
+          '<div class="card" style="margin:0;padding:.65rem"><strong>Mobile Scoring</strong><br><span id="pb-license-mobile-v23"></span></div>' +
+          '<div class="card" style="margin:0;padding:.65rem"><strong>Official Results</strong><br><span id="pb-license-results-v23"></span></div>' +
+          '<div class="card" style="margin:0;padding:.65rem"><strong>Support</strong><br><span id="pb-license-support-v23"></span></div>' +
+        '</div>';
+
+      admin.appendChild(card);
+    }
+
+    var count = pbLicenseV23PlayerCount();
+
+    var summary = document.getElementById("pb-license-policy-summary-v23");
+    var players = document.getElementById("pb-license-players-v23");
+    var mobile = document.getElementById("pb-license-mobile-v23");
+    var results = document.getElementById("pb-license-results-v23");
+    var support = document.getElementById("pb-license-support-v23");
+
+    if (summary) summary.textContent = pbLicenseV23StatusText(policy);
+    if (players) players.textContent = count + " active / " + policy.playerLimit + " allowed";
+    if (mobile) mobile.textContent = policy.mobileScoring ? "Included" : "Not included";
+    if (results) results.textContent = policy.officialResults ? "Included" : "Not included";
+    if (support) support.textContent = policy.support || "Standard support";
+
+    return true;
+  } catch(e) {
+    console.warn("License policy V23 admin render failed", e);
+    return false;
+  }
+}
+
+function pbLicenseV23RenderAll() {
+  pbLicenseV23RenderBanner();
+  pbLicenseV23RenderAdminCard();
+}
+
+function pbLicenseV23TextAction(txt, onclickText) {
+  txt = String(txt || "").toLowerCase();
+  onclickText = String(onclickText || "").toLowerCase();
+
+  if (txt.indexOf("add player") >= 0 || onclickText.indexOf("addplayer") >= 0) return "add-player";
+
+  if (
+    txt.indexOf("generate") >= 0 ||
+    txt.indexOf("publish") >= 0 ||
+    onclickText.indexOf("generateschedule") >= 0 ||
+    onclickText.indexOf("promptgenerateschedule") >= 0
+  ) {
+    return "generate-schedule";
+  }
+
+  if (txt.indexOf("mobile") >= 0 || txt.indexOf("sms") >= 0) return "mobile-scoring";
+
+  if (txt.indexOf("official results") >= 0) return "official-results";
+
+  return "";
+}
+
+(function installLicensePolicyV23() {
+  if (window.__PB_LICENSE_POLICY_FOUNDATION_V23_INSTALLED__) return;
+  window.__PB_LICENSE_POLICY_FOUNDATION_V23_INSTALLED__ = true;
+
+  document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(pbLicenseV23RenderAll, 400);
+    setTimeout(pbLicenseV23RenderAll, 1200);
+    setTimeout(pbLicenseV23RenderAll, 2500);
+  });
+
+  document.addEventListener("click", function(e) {
+    try {
+      var target = e.target;
+      var btn = target && target.closest ? target.closest("button,a,.btn") : target;
+
+      if (!btn) return;
+
+      var txt = String(btn.innerText || btn.textContent || "");
+      var onclickText = String(btn.getAttribute && btn.getAttribute("onclick") || "");
+      var action = pbLicenseV23TextAction(txt, onclickText);
+
+      if (!action) {
+        setTimeout(pbLicenseV23RenderAll, 200);
+        return;
+      }
+
+      var result = pbLicenseV23Can(action);
+
+      if (!result.ok) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        pbLicenseV23NotifyBlocked(result);
+        pbLicenseV23RenderAll();
+        return false;
+      }
+
+      setTimeout(pbLicenseV23RenderAll, 400);
+      setTimeout(pbLicenseV23RenderAll, 1200);
+    } catch(err) {}
+  }, true);
+
+  document.addEventListener("change", function() {
+    setTimeout(pbLicenseV23RenderAll, 300);
+    setTimeout(pbLicenseV23RenderAll, 900);
+  }, true);
+
+  setTimeout(pbLicenseV23RenderAll, 700);
+  setTimeout(pbLicenseV23RenderAll, 2000);
+})();
+
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
@@ -22299,6 +22730,9 @@ function loadTournament(event) {
       const data = JSON.parse(e.target.result);
       try {
         if (typeof pbClientIdentityV22ApplyImported === 'function') pbClientIdentityV22ApplyImported(data, 'loadTournament-before-apply');
+      } catch(e) {}
+      try {
+        if (typeof pbLicenseV23ApplyImported === 'function') pbLicenseV23ApplyImported(data, 'loadTournament-before-apply');
       } catch(e) {}
       try {
         if (typeof pbFixedPairsV19ApplyImported === 'function') pbFixedPairsV19ApplyImported(data, 'loadTournament-before-apply');
