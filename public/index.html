@@ -13072,6 +13072,4649 @@ function pbOrganizerApprovalEnsureHomeButtonV1() {
   }, true);
 })();
 
+
+/* PB_APPROVED_SCORE_LOCKING_V1 */
+function pbApprovedScoreLockTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbApprovedScoreLockToastV1(msg) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  alert(msg);
+}
+
+function pbApprovedScoreLockScoreV1(m) {
+  if(!m) return '';
+
+  const a =
+    m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+
+  const b =
+    m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbApprovedScoreLockMatchRowsV1() {
+  const rows = [];
+  const rounds = state.schedule || [];
+
+  rounds.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (mIdx + 1);
+
+      rows.push({
+        key: `r${rIdx}:m${mIdx}`,
+        roundIndex: rIdx,
+        matchIndex: mIdx,
+        round: rIdx + 1,
+        court,
+        score: pbApprovedScoreLockScoreV1(m),
+        complete: !!m?.complete,
+        organizerApproved: !!m?.organizerApproved,
+        organizerApprovedAt: m?.organizerApprovedAt || null,
+        organizerApprovedBy: m?.organizerApprovedBy || '',
+        acceptedByA: m?.acceptedByA || '',
+        acceptedByB: m?.acceptedByB || '',
+        acceptedAt: m?.acceptedAt || null,
+
+        // Full score-field snapshot for exact revert.
+        scoreA: m?.scoreA,
+        scoreB: m?.scoreB,
+        score1: m?.score1,
+        score2: m?.score2,
+        aScore: m?.aScore,
+        bScore: m?.bScore,
+        teamAScore: m?.teamAScore,
+        teamBScore: m?.teamBScore,
+        leftScore: m?.leftScore,
+        rightScore: m?.rightScore,
+        homeScore: m?.homeScore,
+        awayScore: m?.awayScore,
+        pointsA: m?.pointsA,
+        pointsB: m?.pointsB,
+        points1: m?.points1,
+        points2: m?.points2
+      });
+    });
+  });
+
+  return rows;
+}
+
+function pbApprovedScoreLockApplySnapshotV1(match, snap) {
+  if(!match || !snap) return;
+
+  [
+    'scoreA',
+    'scoreB',
+    'score1',
+    'score2',
+    'aScore',
+    'bScore',
+    'teamAScore',
+    'teamBScore',
+    'leftScore',
+    'rightScore',
+    'homeScore',
+    'awayScore',
+    'pointsA',
+    'pointsB',
+    'points1',
+    'points2'
+  ].forEach(k => {
+    if(snap[k] !== undefined || Object.prototype.hasOwnProperty.call(match, k)) {
+      match[k] = snap[k];
+    }
+  });
+
+  match.complete = snap.complete;
+  match.organizerApproved = snap.organizerApproved;
+  match.organizerApprovedAt = snap.organizerApprovedAt;
+  match.organizerApprovedBy = snap.organizerApprovedBy;
+  match.acceptedByA = snap.acceptedByA || '';
+  match.acceptedByB = snap.acceptedByB || '';
+  match.acceptedAt = snap.acceptedAt || null;
+}
+
+function pbApprovedScoreLockTeamLabelV1(row) {
+  try {
+    if(typeof pbOrganizerApprovalMatchesV1 === 'function') {
+      const found = pbOrganizerApprovalMatchesV1().find(r =>
+        r.roundIndex === row.roundIndex && r.matchIndex === row.matchIndex
+      );
+      if(found?.teams) return found.teams;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof pbScoreCorrectionMatchesV1 === 'function') {
+      const found = pbScoreCorrectionMatchesV1().find(r =>
+        r.roundIndex === row.roundIndex && r.matchIndex === row.matchIndex
+      );
+      if(found?.teams) return found.teams;
+    }
+  } catch(e) {}
+
+  return `Round ${row.round}, Court ${row.court}`;
+}
+
+function pbApprovedScoreLockPersistV1() {
+  const saveNames = [
+    'saveState',
+    'saveTournament',
+    'persistState',
+    'autoSave',
+    'saveLocal',
+    'saveToLocalStorage',
+    'saveData'
+  ];
+
+  saveNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+
+  const renderNames = [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ];
+
+  renderNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+function pbApprovedScoreLockRevertIllegalChangesV1(beforeRows, source) {
+  if(window.__PB_SCORE_CORRECTION_OVERRIDE_ACTIVE_V1__) return false;
+  if(window.__PB_APPROVED_SCORE_LOCK_BYPASS_V1__) return false;
+
+  const beforeMap = new Map((beforeRows || []).map(row => [row.key, row]));
+  const afterRows = pbApprovedScoreLockMatchRowsV1();
+
+  let blocked = [];
+
+  afterRows.forEach(after => {
+    const before = beforeMap.get(after.key);
+    if(!before) return;
+
+    // Only protect matches that were already organizer-approved before this action.
+    if(!before.organizerApproved) return;
+
+    const scoreChanged = before.score !== after.score;
+    const completeChanged = before.complete !== after.complete;
+
+    if(!scoreChanged && !completeChanged) return;
+
+    const match = state.schedule?.[after.roundIndex]?.[after.matchIndex];
+    if(!match) return;
+
+    pbApprovedScoreLockApplySnapshotV1(match, before);
+
+    blocked.push({
+      before,
+      after,
+      teams: pbApprovedScoreLockTeamLabelV1(before)
+    });
+  });
+
+  if(!blocked.length) return false;
+
+  blocked.forEach(item => {
+    try {
+      if(typeof pbScoreAuditAddV1 === 'function') {
+        pbScoreAuditAddV1({
+          action: 'Blocked edit to approved score',
+          source: source || 'Approved score lock',
+          round: item.before.round,
+          court: item.before.court,
+          matchIndex: item.before.matchIndex + 1,
+          teams: item.teams,
+          beforeScore: item.before.score || '—',
+          afterScore: item.after.score || '—',
+          reason: 'Organizer-approved scores must be changed through Score Corrections / Override',
+          acceptedByA: item.before.acceptedByA || '',
+          acceptedByB: item.before.acceptedByB || '',
+          acceptedAt: item.before.acceptedAt || null
+        });
+      }
+    } catch(e) {}
+  });
+
+  pbApprovedScoreLockPersistV1();
+
+  pbApprovedScoreLockToastV1(
+    blocked.length === 1
+      ? 'Approved score is locked. Use Score Corrections / Override to change it.'
+      : `${blocked.length} approved scores are locked. Use Score Corrections / Override to change them.`
+  );
+
+  return true;
+}
+
+function pbApprovedScoreLockWrapFunctionV1(name, source) {
+  const fn = window[name];
+
+  if(typeof fn !== 'function') return;
+  if(fn.__pbApprovedScoreLockWrappedV1) return;
+
+  const wrapped = function(...args) {
+    const before = pbApprovedScoreLockMatchRowsV1();
+
+    const result = fn.apply(this, args);
+
+    const finish = () => {
+      try {
+        pbApprovedScoreLockRevertIllegalChangesV1(before, source);
+      } catch(e) {
+        console.error('Approved score lock failed', e);
+      }
+    };
+
+    if(result && typeof result.then === 'function') {
+      result.finally(() => setTimeout(finish, 0));
+    } else {
+      setTimeout(finish, 0);
+    }
+
+    return result;
+  };
+
+  wrapped.__pbApprovedScoreLockWrappedV1 = true;
+  window[name] = wrapped;
+}
+
+function pbApprovedScoreLockPatchOverrideBypassV1() {
+  if(typeof pbScoreCorrectionOverrideV1 !== 'function') return;
+  if(pbScoreCorrectionOverrideV1.__pbApprovedScoreLockBypassWrappedV1) return;
+
+  const original = pbScoreCorrectionOverrideV1;
+
+  pbScoreCorrectionOverrideV1 = function(...args) {
+    window.__PB_SCORE_CORRECTION_OVERRIDE_ACTIVE_V1__ = true;
+
+    try {
+      return original.apply(this, args);
+    } finally {
+      setTimeout(() => {
+        window.__PB_SCORE_CORRECTION_OVERRIDE_ACTIVE_V1__ = false;
+      }, 0);
+    }
+  };
+
+  pbScoreCorrectionOverrideV1.__pbApprovedScoreLockBypassWrappedV1 = true;
+}
+
+function pbApprovedScoreLockEnsureBadgesV1() {
+  const rows = pbApprovedScoreLockMatchRowsV1().filter(r => r.organizerApproved);
+  if(!rows.length) return;
+
+  // Home court cards already show score status; the approval workflow modal shows detailed status.
+  // This lightweight function exists as a render hook for future badge placement without layout churn.
+}
+
+(function pbInstallApprovedScoreLockingV1(){
+  if(window.__PB_APPROVED_SCORE_LOCKING_V1_INSTALLED__) return;
+  window.__PB_APPROVED_SCORE_LOCKING_V1_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbApprovedScoreLockWrapFunctionV1('saveScore', 'Manual score save');
+      pbApprovedScoreLockWrapFunctionV1('saveScoreInline', 'Inline score save');
+      pbApprovedScoreLockWrapFunctionV1('msPullNow', 'Mobile score pull');
+      pbApprovedScoreLockPatchOverrideBypassV1();
+      pbApprovedScoreLockEnsureBadgesV1();
+    } catch(e) {}
+  };
+
+  install();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    install();
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
+
+/* PB_FINAL_RESULTS_CERTIFICATION_V1 */
+function pbFinalCertTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbFinalCertEscV1(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function pbFinalCertToastV1(msg) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  alert(msg);
+}
+
+function pbFinalCertTournamentNameV1() {
+  try {
+    if(typeof pbHomeStableTournamentNameV1 === 'function') {
+      const v = pbFinalCertTextV1(pbHomeStableTournamentNameV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof getTournamentName === 'function') {
+      const v = pbFinalCertTextV1(getTournamentName());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  return 'Pickleball Tournament';
+}
+
+function pbFinalCertDateLabelV1() {
+  try {
+    if(typeof pbHomeStableDateLabelV1 === 'function') {
+      const v = pbFinalCertTextV1(pbHomeStableDateLabelV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof pbCleanHomeTournamentDateLabelV1 === 'function') {
+      const v = pbFinalCertTextV1(pbCleanHomeTournamentDateLabelV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  return 'Date not set';
+}
+
+function pbFinalCertScoreV1(m) {
+  if(!m) return '';
+
+  const a =
+    m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+
+  const b =
+    m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbFinalCertTeamNameV1(team) {
+  if(!team) return '';
+
+  try {
+    if(Array.isArray(team) && typeof matchTeamName === 'function') {
+      return pbFinalCertTextV1(matchTeamName(team));
+    }
+  } catch(e) {}
+
+  try {
+    if(Array.isArray(team)) {
+      return team.map(idx => {
+        const p = state.players && state.players[idx];
+        return p ? (p.name || p.fullName || `Player ${idx + 1}`) : `Player ${idx + 1}`;
+      }).join(' / ');
+    }
+  } catch(e) {}
+
+  if(typeof team === 'string') return team;
+  return '';
+}
+
+function pbFinalCertTeamsV1(m) {
+  if(!m) return '';
+
+  const a = m.teamA || m.team1 || m.a || m.left || m.home || m.playersA || m.pairA || m.sideA;
+  const b = m.teamB || m.team2 || m.b || m.right || m.away || m.playersB || m.pairB || m.sideB;
+
+  const ta = pbFinalCertTeamNameV1(a);
+  const tb = pbFinalCertTeamNameV1(b);
+
+  if(ta && tb) return `${ta} vs ${tb}`;
+  if(ta) return ta;
+  if(tb) return tb;
+
+  return 'Match';
+}
+
+function pbFinalCertMatchesV1() {
+  const rows = [];
+  const rounds = state.schedule || [];
+
+  rounds.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (mIdx + 1);
+      const score = pbFinalCertScoreV1(m);
+
+      rows.push({
+        key: `r${rIdx}:m${mIdx}`,
+        roundIndex: rIdx,
+        matchIndex: mIdx,
+        round: rIdx + 1,
+        court,
+        teams: pbFinalCertTeamsV1(m),
+        score,
+        complete: !!m?.complete,
+        organizerApproved: !!m?.organizerApproved,
+        organizerApprovedAt: m?.organizerApprovedAt || null,
+        correctionPending: !!m?.correctionPending,
+        acceptedByA: m?.acceptedByA || '',
+        acceptedByB: m?.acceptedByB || '',
+        acceptedAt: m?.acceptedAt || null,
+
+        scoreA: m?.scoreA,
+        scoreB: m?.scoreB,
+        score1: m?.score1,
+        score2: m?.score2,
+        aScore: m?.aScore,
+        bScore: m?.bScore,
+        teamAScore: m?.teamAScore,
+        teamBScore: m?.teamBScore,
+        leftScore: m?.leftScore,
+        rightScore: m?.rightScore,
+        homeScore: m?.homeScore,
+        awayScore: m?.awayScore,
+        pointsA: m?.pointsA,
+        pointsB: m?.pointsB,
+        points1: m?.points1,
+        points2: m?.points2
+      });
+    });
+  });
+
+  return rows;
+}
+
+function pbFinalCertStatusV1() {
+  const matches = pbFinalCertMatchesV1();
+
+  const total = matches.length;
+  const complete = matches.filter(m => m.complete && m.score).length;
+  const approved = matches.filter(m => m.organizerApproved).length;
+  const corrections = matches.filter(m => m.correctionPending).length;
+
+  const ready =
+    total > 0 &&
+    complete === total &&
+    approved === total &&
+    corrections === 0;
+
+  return {
+    matches,
+    total,
+    complete,
+    approved,
+    corrections,
+    pendingScores: Math.max(0, total - complete),
+    pendingApprovals: Math.max(0, total - approved),
+    ready,
+    certified: !!state.finalResultsCertifiedV1,
+    certifiedInfo: state.finalResultsCertifiedV1 || null
+  };
+}
+
+function pbFinalCertPersistV1() {
+  const saveNames = [
+    'saveState',
+    'saveTournament',
+    'persistState',
+    'autoSave',
+    'saveLocal',
+    'saveToLocalStorage',
+    'saveData'
+  ];
+
+  saveNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+
+  const renderNames = [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ];
+
+  renderNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+function pbFinalCertFormatDateV1(iso) {
+  try {
+    const dt = new Date(iso);
+    if(isNaN(dt.getTime())) return iso || '';
+    return dt.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch(e) {
+    return iso || '';
+  }
+}
+
+function pbFinalCertifyV1() {
+  const status = pbFinalCertStatusV1();
+
+  if(!status.ready) {
+    alert(
+      `Tournament is not ready to certify yet.\n\n` +
+      `Missing scores: ${status.pendingScores}\n` +
+      `Pending approvals: ${status.pendingApprovals}\n` +
+      `Correction requests: ${status.corrections}`
+    );
+    return;
+  }
+
+  const ok = confirm(
+    'Certify final results?\n\n' +
+    'This marks the tournament results as official and locks normal score edits.'
+  );
+
+  if(!ok) return;
+
+  state.finalResultsCertifiedV1 = {
+    at: new Date().toISOString(),
+    by: 'Organizer',
+    tournament: pbFinalCertTournamentNameV1(),
+    tournamentDate: pbFinalCertDateLabelV1(),
+    totalMatches: status.total,
+    approvedMatches: status.approved
+  };
+
+  state.tournamentLockedV1 = true;
+
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action: 'Final results certified',
+        source: 'Final certification',
+        round: 'All',
+        court: 'All',
+        matchIndex: 'All',
+        teams: pbFinalCertTournamentNameV1(),
+        beforeScore: `${status.approved}/${status.total} approved`,
+        afterScore: 'Certified',
+        reason: 'Organizer certified final tournament results'
+      });
+    }
+  } catch(e) {}
+
+  pbFinalCertPersistV1();
+  pbFinalCertToastV1('Final results certified.');
+  pbFinalCertOpenModalV1();
+}
+
+function pbFinalCertRemoveV1() {
+  const ok = confirm(
+    'Remove final certification?\n\n' +
+    'Use this only if you need to correct results before certifying again.'
+  );
+
+  if(!ok) return;
+
+  const old = state.finalResultsCertifiedV1 || null;
+
+  state.finalResultsCertifiedV1 = null;
+  state.tournamentLockedV1 = false;
+
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action: 'Final certification removed',
+        source: 'Final certification',
+        round: 'All',
+        court: 'All',
+        matchIndex: 'All',
+        teams: pbFinalCertTournamentNameV1(),
+        beforeScore: old ? 'Certified' : '—',
+        afterScore: 'Uncertified',
+        reason: 'Organizer removed final certification'
+      });
+    }
+  } catch(e) {}
+
+  pbFinalCertPersistV1();
+  pbFinalCertToastV1('Final certification removed.');
+  pbFinalCertOpenModalV1();
+}
+
+function pbFinalCertExportV1() {
+  const status = pbFinalCertStatusV1();
+
+  let standings = null;
+  try {
+    if(typeof computeStandings === 'function') standings = computeStandings();
+  } catch(e) {}
+
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    tournament: pbFinalCertTournamentNameV1(),
+    tournamentDate: pbFinalCertDateLabelV1(),
+    certification: state.finalResultsCertifiedV1 || null,
+    summary: {
+      totalMatches: status.total,
+      completeMatches: status.complete,
+      approvedMatches: status.approved,
+      pendingScores: status.pendingScores,
+      pendingApprovals: status.pendingApprovals,
+      correctionRequests: status.corrections
+    },
+    matches: status.matches.map(m => ({
+      round: m.round,
+      court: m.court,
+      teams: m.teams,
+      score: m.score,
+      complete: m.complete,
+      organizerApproved: m.organizerApproved,
+      organizerApprovedAt: m.organizerApprovedAt,
+      acceptedByA: m.acceptedByA,
+      acceptedByB: m.acceptedByB,
+      acceptedAt: m.acceptedAt
+    })),
+    standings,
+    players: state.players || []
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const safeName = pbFinalCertTournamentNameV1()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || 'tournament';
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeName}-official-results-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function pbFinalCertApplySnapshotV1(match, snap) {
+  if(!match || !snap) return;
+
+  [
+    'scoreA',
+    'scoreB',
+    'score1',
+    'score2',
+    'aScore',
+    'bScore',
+    'teamAScore',
+    'teamBScore',
+    'leftScore',
+    'rightScore',
+    'homeScore',
+    'awayScore',
+    'pointsA',
+    'pointsB',
+    'points1',
+    'points2'
+  ].forEach(k => {
+    if(snap[k] !== undefined || Object.prototype.hasOwnProperty.call(match, k)) {
+      match[k] = snap[k];
+    }
+  });
+
+  match.complete = snap.complete;
+  match.organizerApproved = snap.organizerApproved;
+  match.organizerApprovedAt = snap.organizerApprovedAt;
+  match.acceptedByA = snap.acceptedByA || '';
+  match.acceptedByB = snap.acceptedByB || '';
+  match.acceptedAt = snap.acceptedAt || null;
+  match.correctionPending = snap.correctionPending || false;
+}
+
+function pbFinalCertRevertIfCertifiedChangedV1(beforeRows, source) {
+  if(!state.finalResultsCertifiedV1) return false;
+  if(window.__PB_FINAL_CERT_BYPASS_V1__) return false;
+
+  const beforeMap = new Map((beforeRows || []).map(row => [row.key, row]));
+  const afterRows = pbFinalCertMatchesV1();
+
+  const changed = [];
+
+  afterRows.forEach(after => {
+    const before = beforeMap.get(after.key);
+    if(!before) return;
+
+    const scoreChanged = before.score !== after.score;
+    const completeChanged = before.complete !== after.complete;
+    const approvalChanged = before.organizerApproved !== after.organizerApproved;
+
+    if(!scoreChanged && !completeChanged && !approvalChanged) return;
+
+    const match = state.schedule?.[after.roundIndex]?.[after.matchIndex];
+    if(!match) return;
+
+    pbFinalCertApplySnapshotV1(match, before);
+
+    changed.push({
+      before,
+      after
+    });
+  });
+
+  if(!changed.length) return false;
+
+  changed.forEach(item => {
+    try {
+      if(typeof pbScoreAuditAddV1 === 'function') {
+        pbScoreAuditAddV1({
+          action: 'Blocked edit to certified results',
+          source: source || 'Final certification lock',
+          round: item.before.round,
+          court: item.before.court,
+          matchIndex: item.before.matchIndex + 1,
+          teams: item.before.teams,
+          beforeScore: item.before.score || '—',
+          afterScore: item.after.score || '—',
+          reason: 'Final results are certified. Remove certification before changing scores.'
+        });
+      }
+    } catch(e) {}
+  });
+
+  pbFinalCertPersistV1();
+  pbFinalCertToastV1('Final results are certified. Remove certification before changing scores.');
+  return true;
+}
+
+function pbFinalCertWrapFunctionV1(name, source) {
+  const fn = window[name];
+
+  if(typeof fn !== 'function') return;
+  if(fn.__pbFinalCertWrappedV1) return;
+
+  const wrapped = function(...args) {
+    const before = pbFinalCertMatchesV1();
+    const result = fn.apply(this, args);
+
+    const finish = () => {
+      try {
+        pbFinalCertRevertIfCertifiedChangedV1(before, source);
+      } catch(e) {
+        console.error('Final certification lock failed', e);
+      }
+    };
+
+    if(result && typeof result.then === 'function') {
+      result.finally(() => setTimeout(finish, 0));
+    } else {
+      setTimeout(finish, 0);
+    }
+
+    return result;
+  };
+
+  wrapped.__pbFinalCertWrappedV1 = true;
+  window[name] = wrapped;
+}
+
+function pbFinalCertOpenModalV1() {
+  let modal = document.getElementById('pb-final-cert-modal-v1');
+
+  if(!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pb-final-cert-modal-v1';
+    modal.style.cssText = `
+      position:fixed;
+      inset:0;
+      z-index:99998;
+      background:rgba(0,0,0,0.62);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const status = pbFinalCertStatusV1();
+
+  const cards = [
+    ['Matches', `${status.complete}/${status.total}`, status.pendingScores ? 'Missing scores' : 'Complete'],
+    ['Approvals', `${status.approved}/${status.total}`, status.pendingApprovals ? 'Pending approval' : 'Approved'],
+    ['Corrections', `${status.corrections}`, status.corrections ? 'Open requests' : 'None'],
+    ['Certification', status.certified ? 'Certified' : 'Not certified', status.certifiedInfo?.at ? pbFinalCertFormatDateV1(status.certifiedInfo.at) : '']
+  ].map(([label, value, sub]) => `
+    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem">
+      <div style="color:var(--txt3);font-size:0.72rem;font-weight:900;text-transform:uppercase">${pbFinalCertEscV1(label)}</div>
+      <div style="font-size:1.35rem;font-weight:1000;color:var(--lime);margin-top:0.15rem">${pbFinalCertEscV1(value)}</div>
+      <div style="color:var(--txt3);font-size:0.78rem;margin-top:0.1rem">${pbFinalCertEscV1(sub)}</div>
+    </div>
+  `).join('');
+
+  const blockers = [];
+
+  if(!status.total) blockers.push('No scheduled matches yet.');
+  if(status.pendingScores) blockers.push(`${status.pendingScores} match score${status.pendingScores === 1 ? '' : 's'} still missing.`);
+  if(status.pendingApprovals) blockers.push(`${status.pendingApprovals} match${status.pendingApprovals === 1 ? '' : 'es'} still need organizer approval.`);
+  if(status.corrections) blockers.push(`${status.corrections} correction request${status.corrections === 1 ? '' : 's'} still open.`);
+
+  const blockerHtml = blockers.length ? `
+    <div style="border:1px solid rgba(255,193,7,0.24);border-radius:14px;background:rgba(255,193,7,0.08);padding:0.75rem;margin-top:0.8rem">
+      <div style="font-weight:1000;color:var(--warn);margin-bottom:0.35rem">Before certifying</div>
+      ${blockers.map(b => `<div style="color:var(--txt2);font-size:0.86rem">• ${pbFinalCertEscV1(b)}</div>`).join('')}
+    </div>
+  ` : `
+    <div style="border:1px solid rgba(76,175,80,0.24);border-radius:14px;background:rgba(76,175,80,0.08);padding:0.75rem;margin-top:0.8rem">
+      <div style="font-weight:1000;color:var(--success)">Ready to certify.</div>
+      <div style="color:var(--txt3);font-size:0.86rem;margin-top:0.25rem">All match scores are complete and organizer-approved.</div>
+    </div>
+  `;
+
+  const matchRows = status.matches.slice(0, 80).map(row => {
+    let statusLabel = 'Missing score';
+    let statusColor = 'var(--warn)';
+
+    if(row.organizerApproved) {
+      statusLabel = 'Approved';
+      statusColor = 'var(--success)';
+    } else if(row.complete && row.score) {
+      statusLabel = 'Needs approval';
+      statusColor = 'var(--ball)';
+    }
+
+    if(row.correctionPending) {
+      statusLabel = 'Correction pending';
+      statusColor = 'var(--warn)';
+    }
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;border-top:1px solid rgba(255,255,255,0.08);padding:0.48rem 0">
+        <div style="min-width:0">
+          <div style="font-weight:900;color:var(--txt);font-size:0.86rem">R${pbFinalCertEscV1(row.round)} · Court ${pbFinalCertEscV1(row.court)}</div>
+          <div style="color:var(--txt3);font-size:0.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px">${pbFinalCertEscV1(row.teams)}</div>
+        </div>
+        <div style="text-align:right;white-space:nowrap">
+          <div style="font-weight:1000;color:var(--lime);font-size:0.9rem">${pbFinalCertEscV1(row.score || '—')}</div>
+          <div style="font-weight:900;color:${statusColor};font-size:0.72rem">${pbFinalCertEscV1(statusLabel)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  modal.innerHTML = `
+    <div style="width:min(880px,96vw);max-height:88vh;overflow:auto;border:1px solid rgba(198,255,0,0.28);border-radius:20px;background:var(--panel,#111);box-shadow:0 24px 80px rgba(0,0,0,0.45);padding:1rem">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem">
+        <div>
+          <div style="font-family:'Anton','Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;color:var(--txt)">Final Results Certification</div>
+          <div style="color:var(--txt3);font-size:0.85rem;margin-top:0.25rem">
+            ${pbFinalCertEscV1(pbFinalCertTournamentNameV1())} · ${pbFinalCertEscV1(pbFinalCertDateLabelV1())}
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="pbFinalCertCloseModalV1()">Close</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.6rem">
+        ${cards}
+      </div>
+
+      ${blockerHtml}
+
+      <div style="display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.8rem">
+        ${
+          status.certified
+            ? `<button class="btn btn-secondary btn-sm" onclick="pbFinalCertRemoveV1()">Remove Certification</button>`
+            : `<button class="btn btn-primary btn-sm" onclick="pbFinalCertifyV1()">🏁 Certify Results</button>`
+        }
+        <button class="btn btn-secondary btn-sm" onclick="pbFinalCertExportV1()">Export Official JSON</button>
+        ${
+          typeof pbOrganizerApprovalOpenModalV1 === 'function'
+            ? `<button class="btn btn-secondary btn-sm" onclick="pbFinalCertCloseModalV1(); pbOrganizerApprovalOpenModalV1();">Open Approvals</button>`
+            : ''
+        }
+        <button class="btn btn-secondary btn-sm" onclick="showTab('schedule'); pbFinalCertCloseModalV1();">Open Schedule</button>
+      </div>
+
+      <div style="border:1px solid rgba(255,255,255,0.1);border-radius:14px;background:rgba(0,0,0,0.12);padding:0.75rem;margin-top:0.9rem">
+        <div style="font-weight:1000;color:var(--lime);margin-bottom:0.25rem">Match Checklist</div>
+        ${matchRows || '<div style="color:var(--txt3);font-size:0.84rem">No matches yet.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function pbFinalCertCloseModalV1() {
+  document.getElementById('pb-final-cert-modal-v1')?.remove();
+}
+
+function pbFinalCertEnsureHomeButtonV1() {
+  const panel = document.getElementById('pb-clean-home-command-center-v1');
+  if(!panel) return;
+
+  if(document.getElementById('pb-final-cert-home-btn-v1')) return;
+
+  const buttonRows = Array.from(panel.querySelectorAll('div')).filter(div => {
+    const txt = pbFinalCertTextV1(div.textContent || '');
+    return txt.includes('Players') && txt.includes('Schedule') && txt.includes('Mobile Sync');
+  });
+
+  const row = buttonRows[buttonRows.length - 1];
+  if(!row) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'pb-final-cert-home-btn-v1';
+  btn.className = 'btn btn-secondary btn-sm';
+  btn.textContent = '🏁 Certify Results';
+  btn.onclick = pbFinalCertOpenModalV1;
+
+  row.appendChild(btn);
+}
+
+(function pbInstallFinalResultsCertificationV1(){
+  if(window.__PB_FINAL_RESULTS_CERTIFICATION_V1_INSTALLED__) return;
+  window.__PB_FINAL_RESULTS_CERTIFICATION_V1_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbFinalCertWrapFunctionV1('saveScore', 'Manual score save');
+      pbFinalCertWrapFunctionV1('saveScoreInline', 'Inline score save');
+      pbFinalCertWrapFunctionV1('msPullNow', 'Mobile score pull');
+      pbFinalCertEnsureHomeButtonV1();
+    } catch(e) {}
+  };
+
+  install();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    install();
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
+
+/* PB_APPROVE_ALL_READY_SCORES_V2 */
+function pbApprovalReadyRowsV2() {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') return [];
+
+  return pbOrganizerApprovalMatchesV1().filter(row =>
+    (row.score || row.complete) &&
+    row.bothAccepted &&
+    !row.organizerApproved &&
+    !row.correctionPending
+  );
+}
+
+function pbApprovalApproveRowCoreV2(row, options) {
+  options = options || {};
+
+  const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+  if(!match) return false;
+
+  if(!row.score && !match.complete) {
+    if(!options.silent) alert('This match does not have a score yet.');
+    return false;
+  }
+
+  if(row.correctionPending && !options.allowCorrectionPending) {
+    if(!options.silent) alert('A correction is pending for this match.');
+    return false;
+  }
+
+  if(!row.bothAccepted && !options.allowWithoutBothAccepted) {
+    if(!options.silent) {
+      const ok = confirm('Both teams have not accepted this score yet. Approve anyway?');
+      if(!ok) return false;
+    } else {
+      return false;
+    }
+  }
+
+  match.organizerApproved = true;
+  match.organizerApprovedAt = new Date().toISOString();
+  match.organizerApprovedBy = 'Organizer';
+  match.correctionPending = false;
+
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action: options.bulk ? 'Organizer bulk-approved score' : 'Organizer approved score',
+        source: options.bulk ? 'Organizer bulk approval' : 'Organizer approval',
+        round: row.round,
+        court: row.court,
+        matchIndex: row.matchIndex + 1,
+        teams: row.teams,
+        beforeScore: row.score || '—',
+        afterScore: row.score || '—',
+        acceptedByA: row.acceptedByA || '',
+        acceptedByB: row.acceptedByB || '',
+        acceptedAt: row.acceptedAt || null
+      });
+    }
+  } catch(e) {}
+
+  return true;
+}
+
+// Override the one-by-one approve so it does not create an awkward popup/reopen flow.
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') {
+    alert('Organizer approval is not installed.');
+    return;
+  }
+
+  const row = pbOrganizerApprovalMatchesV1().find(r =>
+    r.roundIndex === roundIndex && r.matchIndex === matchIndex
+  );
+
+  if(!row) {
+    alert('Match not found.');
+    return;
+  }
+
+  if(row.correctionPending) {
+    const ok = confirm('A correction is pending for this match. Approve anyway?');
+    if(!ok) return;
+    row.correctionPending = false;
+  }
+
+  const approved = pbApprovalApproveRowCoreV2(row, {
+    silent: false,
+    allowWithoutBothAccepted: false,
+    allowCorrectionPending: true
+  });
+
+  if(!approved) return;
+
+  try {
+    if(typeof pbOrganizerApprovalPersistV1 === 'function') pbOrganizerApprovalPersistV1();
+  } catch(e) {}
+
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') pbOrganizerApprovalToastV1('Score approved.');
+  } catch(e) {}
+
+  // Refresh the existing modal only if it is already open.
+  setTimeout(function() {
+    try {
+      if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+        pbOrganizerApprovalOpenModalV1();
+        pbApprovalInjectApproveAllButtonV2();
+      }
+    } catch(e) {}
+  }, 0);
+}
+
+function pbApprovalApproveAllReadyV2() {
+  const ready = pbApprovalReadyRowsV2();
+
+  if(!ready.length) {
+    alert('No ready scores to approve. Scores need to be entered and accepted by both teams first.');
+    return;
+  }
+
+  const ok = confirm(`Approve all ${ready.length} ready score${ready.length === 1 ? '' : 's'}?`);
+  if(!ok) return;
+
+  let approvedCount = 0;
+
+  ready.forEach(row => {
+    const approved = pbApprovalApproveRowCoreV2(row, {
+      silent: true,
+      bulk: true,
+      allowWithoutBothAccepted: false,
+      allowCorrectionPending: false
+    });
+
+    if(approved) approvedCount += 1;
+  });
+
+  try {
+    if(typeof pbOrganizerApprovalPersistV1 === 'function') pbOrganizerApprovalPersistV1();
+  } catch(e) {}
+
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') {
+      pbOrganizerApprovalToastV1(`Approved ${approvedCount} ready score${approvedCount === 1 ? '' : 's'}.`);
+    }
+  } catch(e) {}
+
+  setTimeout(function() {
+    try {
+      if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+        pbOrganizerApprovalOpenModalV1();
+        pbApprovalInjectApproveAllButtonV2();
+      }
+    } catch(e) {}
+  }, 0);
+}
+
+function pbApprovalInjectApproveAllButtonV2() {
+  const modal = document.getElementById('pb-organizer-approval-modal-v1');
+  if(!modal) return;
+
+  if(document.getElementById('pb-approve-all-ready-scores-btn-v2')) return;
+
+  const closeBtn = Array.from(modal.querySelectorAll('button')).find(btn =>
+    String(btn.textContent || '').replace(/\s+/g, ' ').trim() === 'Close'
+  );
+
+  const readyCount = pbApprovalReadyRowsV2().length;
+
+  const btn = document.createElement('button');
+  btn.id = 'pb-approve-all-ready-scores-btn-v2';
+  btn.className = 'btn btn-primary btn-sm';
+  btn.textContent = `✅ Approve All Ready${readyCount ? ` (${readyCount})` : ''}`;
+  btn.onclick = pbApprovalApproveAllReadyV2;
+
+  if(closeBtn && closeBtn.parentElement) {
+    closeBtn.parentElement.insertBefore(btn, closeBtn);
+  } else {
+    const top = modal.querySelector('div');
+    if(top) top.insertBefore(btn, top.firstChild);
+  }
+}
+
+(function pbInstallApproveAllReadyScoresV2(){
+  if(window.__PB_APPROVE_ALL_READY_SCORES_V2_INSTALLED__) return;
+  window.__PB_APPROVE_ALL_READY_SCORES_V2_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbApprovalInjectApproveAllButtonV2();
+    } catch(e) {}
+  };
+
+  // Wrap modal open so the Approve All button appears every time.
+  if(typeof pbOrganizerApprovalOpenModalV1 === 'function' && !pbOrganizerApprovalOpenModalV1.__pbApproveAllWrappedV2) {
+    const originalOpen = pbOrganizerApprovalOpenModalV1;
+
+    pbOrganizerApprovalOpenModalV1 = function() {
+      const result = originalOpen.apply(this, arguments);
+      setTimeout(pbApprovalInjectApproveAllButtonV2, 0);
+      setTimeout(pbApprovalInjectApproveAllButtonV2, 150);
+      return result;
+    };
+
+    pbOrganizerApprovalOpenModalV1.__pbApproveAllWrappedV2 = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
+
+/* PB_REMOVE_ALL_APPROVALS_V1 */
+function pbRemoveAllApprovalsRowsV1() {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') return [];
+
+  return pbOrganizerApprovalMatchesV1().filter(row => row.organizerApproved);
+}
+
+function pbRemoveAllApprovalsV1() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before removing approvals.');
+    return;
+  }
+
+  const approvedRows = pbRemoveAllApprovalsRowsV1();
+
+  if(!approvedRows.length) {
+    alert('There are no organizer approvals to remove.');
+    return;
+  }
+
+  const ok = confirm(
+    `Remove all ${approvedRows.length} organizer approval${approvedRows.length === 1 ? '' : 's'}?\n\n` +
+    'Scores and team acceptances will stay. Only organizer approvals will be removed.'
+  );
+
+  if(!ok) return;
+
+  let removed = 0;
+
+  approvedRows.forEach(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    if(!match) return;
+
+    match.organizerApproved = false;
+    match.organizerApprovedAt = null;
+    match.organizerApprovedBy = '';
+
+    removed += 1;
+
+    try {
+      if(typeof pbScoreAuditAddV1 === 'function') {
+        pbScoreAuditAddV1({
+          action: 'Organizer approval removed',
+          source: 'Bulk remove approvals',
+          round: row.round,
+          court: row.court,
+          matchIndex: row.matchIndex + 1,
+          teams: row.teams,
+          beforeScore: row.score || '—',
+          afterScore: row.score || '—',
+          reason: 'Organizer removed all approvals',
+          acceptedByA: row.acceptedByA || '',
+          acceptedByB: row.acceptedByB || '',
+          acceptedAt: row.acceptedAt || null
+        });
+      }
+    } catch(e) {}
+  });
+
+  try {
+    if(typeof pbOrganizerApprovalPersistV1 === 'function') pbOrganizerApprovalPersistV1();
+  } catch(e) {}
+
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') {
+      pbOrganizerApprovalToastV1(`Removed ${removed} organizer approval${removed === 1 ? '' : 's'}.`);
+    }
+  } catch(e) {}
+
+  setTimeout(function() {
+    try {
+      if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+        pbOrganizerApprovalOpenModalV1();
+        pbRemoveAllApprovalsInjectButtonV1();
+        if(typeof pbApprovalInjectApproveAllButtonV2 === 'function') pbApprovalInjectApproveAllButtonV2();
+      }
+    } catch(e) {}
+  }, 0);
+}
+
+function pbRemoveAllApprovalsInjectButtonV1() {
+  const modal = document.getElementById('pb-organizer-approval-modal-v1');
+  if(!modal) return;
+
+  if(document.getElementById('pb-remove-all-approvals-btn-v1')) return;
+
+  const approvedCount = pbRemoveAllApprovalsRowsV1().length;
+
+  const btn = document.createElement('button');
+  btn.id = 'pb-remove-all-approvals-btn-v1';
+  btn.className = 'btn btn-secondary btn-sm';
+  btn.textContent = `🧹 Remove All Approvals${approvedCount ? ` (${approvedCount})` : ''}`;
+  btn.onclick = pbRemoveAllApprovalsV1;
+
+  const approveAllBtn = document.getElementById('pb-approve-all-ready-scores-btn-v2');
+
+  if(approveAllBtn && approveAllBtn.parentElement) {
+    approveAllBtn.insertAdjacentElement('afterend', btn);
+    return;
+  }
+
+  const closeBtn = Array.from(modal.querySelectorAll('button')).find(button =>
+    String(button.textContent || '').replace(/\s+/g, ' ').trim() === 'Close'
+  );
+
+  if(closeBtn && closeBtn.parentElement) {
+    closeBtn.parentElement.insertBefore(btn, closeBtn);
+    return;
+  }
+
+  const firstBox = modal.querySelector('div');
+  if(firstBox) firstBox.insertBefore(btn, firstBox.firstChild);
+}
+
+(function pbInstallRemoveAllApprovalsV1(){
+  if(window.__PB_REMOVE_ALL_APPROVALS_V1_INSTALLED__) return;
+  window.__PB_REMOVE_ALL_APPROVALS_V1_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbRemoveAllApprovalsInjectButtonV1();
+    } catch(e) {}
+  };
+
+  if(typeof pbOrganizerApprovalOpenModalV1 === 'function' && !pbOrganizerApprovalOpenModalV1.__pbRemoveAllApprovalsWrappedV1) {
+    const originalOpen = pbOrganizerApprovalOpenModalV1;
+
+    pbOrganizerApprovalOpenModalV1 = function() {
+      const result = originalOpen.apply(this, arguments);
+      setTimeout(pbRemoveAllApprovalsInjectButtonV1, 0);
+      setTimeout(pbRemoveAllApprovalsInjectButtonV1, 150);
+      return result;
+    };
+
+    pbOrganizerApprovalOpenModalV1.__pbRemoveAllApprovalsWrappedV1 = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+})();
+
+
+/* PB_APPROVE_ALL_SCORED_GAMES_FIX_V3 */
+function pbApprovalAllScoredRowsV3() {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') return [];
+
+  return pbOrganizerApprovalMatchesV1().filter(row =>
+    (row.score || row.complete) &&
+    !row.organizerApproved &&
+    !row.correctionPending
+  );
+}
+
+function pbApprovalAllAcceptedRowsV3() {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') return [];
+
+  return pbOrganizerApprovalMatchesV1().filter(row =>
+    (row.score || row.complete) &&
+    row.bothAccepted &&
+    !row.organizerApproved &&
+    !row.correctionPending
+  );
+}
+
+function pbApprovalApproveRowCoreV3(row, options) {
+  options = options || {};
+
+  const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+  if(!match) return false;
+
+  if(!(row.score || row.complete)) return false;
+  if(row.correctionPending) return false;
+  if(match.organizerApproved) return false;
+
+  match.organizerApproved = true;
+  match.organizerApprovedAt = new Date().toISOString();
+  match.organizerApprovedBy = 'Organizer';
+  match.correctionPending = false;
+
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action: options.bulk ? 'Organizer bulk-approved score' : 'Organizer approved score',
+        source: options.source || 'Organizer approval',
+        round: row.round,
+        court: row.court,
+        matchIndex: row.matchIndex + 1,
+        teams: row.teams,
+        beforeScore: row.score || '—',
+        afterScore: row.score || '—',
+        acceptedByA: row.acceptedByA || '',
+        acceptedByB: row.acceptedByB || '',
+        acceptedAt: row.acceptedAt || null,
+        reason: options.reason || ''
+      });
+    }
+  } catch(e) {}
+
+  return true;
+}
+
+function pbApprovalPersistAndRefreshV3(message) {
+  try {
+    if(typeof pbOrganizerApprovalPersistV1 === 'function') pbOrganizerApprovalPersistV1();
+  } catch(e) {}
+
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') pbOrganizerApprovalToastV1(message);
+    else if(typeof showToast === 'function') showToast(message);
+    else console.log(message);
+  } catch(e) {}
+
+  setTimeout(function() {
+    try {
+      if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+        pbOrganizerApprovalOpenModalV1();
+        pbApprovalInjectApproveAllScoredButtonV3();
+        if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') pbRemoveAllApprovalsInjectButtonV1();
+      }
+    } catch(e) {}
+  }, 0);
+}
+
+function pbApprovalApproveAllScoredV3() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  const rows = pbApprovalAllScoredRowsV3();
+
+  if(!rows.length) {
+    alert('No scored games need approval.');
+    return;
+  }
+
+  const acceptedCount = rows.filter(r => r.bothAccepted).length;
+  const notAcceptedCount = rows.length - acceptedCount;
+
+  let message =
+    `Approve all ${rows.length} scored game${rows.length === 1 ? '' : 's'}?`;
+
+  if(notAcceptedCount > 0) {
+    message +=
+      `\n\nNote: ${notAcceptedCount} scored game${notAcceptedCount === 1 ? '' : 's'} ` +
+      `do not have both team acceptances yet.`;
+  }
+
+  const ok = confirm(message);
+  if(!ok) return;
+
+  let approvedCount = 0;
+
+  rows.forEach(row => {
+    if(pbApprovalApproveRowCoreV3(row, {
+      bulk: true,
+      source: 'Approve all scored games',
+      reason: notAcceptedCount > 0 ? 'Bulk organizer approval; some games may not have both team acceptances' : 'Bulk organizer approval'
+    })) {
+      approvedCount += 1;
+    }
+  });
+
+  pbApprovalPersistAndRefreshV3(
+    `Approved ${approvedCount} scored game${approvedCount === 1 ? '' : 's'}.`
+  );
+}
+
+// Keep the old button/function name working, but make it approve all scored games now.
+function pbApprovalApproveAllReadyV2() {
+  return pbApprovalApproveAllScoredV3();
+}
+
+// Also smooth one-by-one approval.
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') {
+    alert('Organizer approval is not installed.');
+    return;
+  }
+
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  const row = pbOrganizerApprovalMatchesV1().find(r =>
+    r.roundIndex === roundIndex && r.matchIndex === matchIndex
+  );
+
+  if(!row) {
+    alert('Match not found.');
+    return;
+  }
+
+  if(row.correctionPending) {
+    alert('A correction is pending for this match. Resolve the correction before approving.');
+    return;
+  }
+
+  if(!(row.score || row.complete)) {
+    alert('This match does not have a score yet.');
+    return;
+  }
+
+  if(!row.bothAccepted) {
+    const ok = confirm('Both teams have not accepted this score yet. Approve anyway?');
+    if(!ok) return;
+  }
+
+  const approved = pbApprovalApproveRowCoreV3(row, {
+    bulk: false,
+    source: 'Organizer approval',
+    reason: row.bothAccepted ? '' : 'Organizer approved before both team acceptances'
+  });
+
+  if(!approved) return;
+
+  pbApprovalPersistAndRefreshV3('Score approved.');
+}
+
+function pbApprovalInjectApproveAllScoredButtonV3() {
+  const modal = document.getElementById('pb-organizer-approval-modal-v1');
+  if(!modal) return;
+
+  // Remove the previous broken/older approve-all button if it exists.
+  const oldBtn = document.getElementById('pb-approve-all-ready-scores-btn-v2');
+  if(oldBtn) oldBtn.remove();
+
+  let btn = document.getElementById('pb-approve-all-scored-games-btn-v3');
+
+  const scoredCount = pbApprovalAllScoredRowsV3().length;
+  const acceptedCount = pbApprovalAllAcceptedRowsV3().length;
+
+  if(!btn) {
+    btn = document.createElement('button');
+    btn.id = 'pb-approve-all-scored-games-btn-v3';
+    btn.className = 'btn btn-primary btn-sm';
+    btn.onclick = pbApprovalApproveAllScoredV3;
+  }
+
+  btn.textContent = `✅ Approve All Scored${scoredCount ? ` (${scoredCount})` : ''}`;
+
+  const closeBtn = Array.from(modal.querySelectorAll('button')).find(button =>
+    String(button.textContent || '').replace(/\s+/g, ' ').trim() === 'Close'
+  );
+
+  if(closeBtn && closeBtn.parentElement && !btn.parentElement) {
+    closeBtn.parentElement.insertBefore(btn, closeBtn);
+  } else if(!btn.parentElement) {
+    const top = modal.querySelector('div');
+    if(top) top.insertBefore(btn, top.firstChild);
+  }
+
+  // Add a small note under the modal header so the meaning is clear.
+  if(!document.getElementById('pb-approve-all-scored-note-v3')) {
+    const note = document.createElement('div');
+    note.id = 'pb-approve-all-scored-note-v3';
+    note.style.cssText = 'color:var(--txt3);font-size:0.78rem;margin:0.35rem 0 0.7rem';
+    note.textContent = `${acceptedCount} fully team-accepted · ${scoredCount} scored games available for approval`;
+
+    const header = Array.from(modal.querySelectorAll('div')).find(div =>
+      String(div.textContent || '').includes('Organizer Approvals')
+    );
+
+    if(header && header.parentElement) {
+      header.parentElement.insertAdjacentElement('afterend', note);
+    }
+  }
+}
+
+(function pbInstallApproveAllScoredGamesFixV3(){
+  if(window.__PB_APPROVE_ALL_SCORED_GAMES_FIX_V3_INSTALLED__) return;
+  window.__PB_APPROVE_ALL_SCORED_GAMES_FIX_V3_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      pbApprovalInjectApproveAllScoredButtonV3();
+      if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') pbRemoveAllApprovalsInjectButtonV1();
+    } catch(e) {}
+  };
+
+  if(typeof pbOrganizerApprovalOpenModalV1 === 'function' && !pbOrganizerApprovalOpenModalV1.__pbApproveAllScoredWrappedV3) {
+    const originalOpen = pbOrganizerApprovalOpenModalV1;
+
+    pbOrganizerApprovalOpenModalV1 = function() {
+      const result = originalOpen.apply(this, arguments);
+      setTimeout(install, 0);
+      setTimeout(install, 150);
+      return result;
+    };
+
+    pbOrganizerApprovalOpenModalV1.__pbApproveAllScoredWrappedV3 = true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+
+  setTimeout(install, 0);
+  setTimeout(install, 300);
+})();
+
+
+/* PB_LIGHT_APPROVAL_AUDIT_V4 */
+function pbLightApprovalAuditToastV4(msg) {
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') return pbOrganizerApprovalToastV1(msg);
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbLightApprovalAuditSummaryV4(action, source, count, reason) {
+  try {
+    if(typeof pbScoreAuditAddV1 === 'function') {
+      pbScoreAuditAddV1({
+        action,
+        source,
+        round: 'All',
+        court: 'All',
+        matchIndex: 'Multiple',
+        teams: `${count} match${count === 1 ? '' : 'es'}`,
+        beforeScore: '—',
+        afterScore: '—',
+        reason: reason || ''
+      });
+    }
+  } catch(e) {}
+}
+
+function pbLightApprovalPersistRefreshV4(message) {
+  try {
+    if(typeof pbOrganizerApprovalPersistV1 === 'function') pbOrganizerApprovalPersistV1();
+  } catch(e) {}
+
+  pbLightApprovalAuditToastV4(message);
+
+  setTimeout(function() {
+    try {
+      if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+        pbOrganizerApprovalOpenModalV1();
+
+        if(typeof pbApprovalInjectApproveAllScoredButtonV3 === 'function') {
+          pbApprovalInjectApproveAllScoredButtonV3();
+        }
+
+        if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') {
+          pbRemoveAllApprovalsInjectButtonV1();
+        }
+      }
+    } catch(e) {}
+  }, 0);
+}
+
+// Override the row approval core so regular approvals do NOT create one audit entry per match.
+function pbApprovalApproveRowCoreV3(row, options) {
+  options = options || {};
+
+  const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+  if(!match) return false;
+
+  if(!(row.score || row.complete)) return false;
+  if(row.correctionPending) return false;
+  if(match.organizerApproved) return false;
+
+  match.organizerApproved = true;
+  match.organizerApprovedAt = new Date().toISOString();
+  match.organizerApprovedBy = 'Organizer';
+  match.correctionPending = false;
+
+  // Intentionally no per-game audit here.
+  return true;
+}
+
+// Override one-by-one approval: approve quietly, no audit entry.
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') {
+    alert('Organizer approval is not installed.');
+    return;
+  }
+
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  const row = pbOrganizerApprovalMatchesV1().find(r =>
+    r.roundIndex === roundIndex && r.matchIndex === matchIndex
+  );
+
+  if(!row) {
+    alert('Match not found.');
+    return;
+  }
+
+  if(row.correctionPending) {
+    alert('A correction is pending for this match. Resolve the correction before approving.');
+    return;
+  }
+
+  if(!(row.score || row.complete)) {
+    alert('This match does not have a score yet.');
+    return;
+  }
+
+  if(!row.bothAccepted) {
+    const ok = confirm('Both teams have not accepted this score yet. Approve anyway?');
+    if(!ok) return;
+  }
+
+  const approved = pbApprovalApproveRowCoreV3(row, {
+    bulk: false,
+    source: 'Organizer approval'
+  });
+
+  if(!approved) return;
+
+  pbLightApprovalPersistRefreshV4('Score approved.');
+}
+
+// Override approve-all: approve all scored games, one summary audit entry only.
+function pbApprovalApproveAllScoredV3() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  if(typeof pbApprovalAllScoredRowsV3 !== 'function') {
+    alert('Approve All is not installed yet.');
+    return;
+  }
+
+  const rows = pbApprovalAllScoredRowsV3();
+
+  if(!rows.length) {
+    alert('No scored games need approval.');
+    return;
+  }
+
+  const acceptedCount = rows.filter(r => r.bothAccepted).length;
+  const notAcceptedCount = rows.length - acceptedCount;
+
+  let message =
+    `Approve all ${rows.length} scored game${rows.length === 1 ? '' : 's'}?`;
+
+  if(notAcceptedCount > 0) {
+    message +=
+      `\n\nNote: ${notAcceptedCount} scored game${notAcceptedCount === 1 ? '' : 's'} ` +
+      `do not have both team acceptances yet.`;
+  }
+
+  const ok = confirm(message);
+  if(!ok) return;
+
+  let approvedCount = 0;
+
+  rows.forEach(row => {
+    if(pbApprovalApproveRowCoreV3(row, {
+      bulk: true,
+      source: 'Approve all scored games'
+    })) {
+      approvedCount += 1;
+    }
+  });
+
+  if(approvedCount > 0) {
+    pbLightApprovalAuditSummaryV4(
+      'Organizer bulk-approved scores',
+      'Approve all scored games',
+      approvedCount,
+      notAcceptedCount > 0
+        ? `${notAcceptedCount} score${notAcceptedCount === 1 ? '' : 's'} did not have both team acceptances.`
+        : 'All approved scores were scored games.'
+    );
+  }
+
+  pbLightApprovalPersistRefreshV4(
+    `Approved ${approvedCount} scored game${approvedCount === 1 ? '' : 's'}.`
+  );
+}
+
+// Keep old button name working.
+function pbApprovalApproveAllReadyV2() {
+  return pbApprovalApproveAllScoredV3();
+}
+
+// Override remove-all approvals: one summary audit entry only.
+function pbRemoveAllApprovalsV1() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before removing approvals.');
+    return;
+  }
+
+  if(typeof pbRemoveAllApprovalsRowsV1 !== 'function') {
+    alert('Remove All Approvals is not installed yet.');
+    return;
+  }
+
+  const approvedRows = pbRemoveAllApprovalsRowsV1();
+
+  if(!approvedRows.length) {
+    alert('There are no organizer approvals to remove.');
+    return;
+  }
+
+  const ok = confirm(
+    `Remove all ${approvedRows.length} organizer approval${approvedRows.length === 1 ? '' : 's'}?\n\n` +
+    'Scores and team acceptances will stay. Only organizer approvals will be removed.'
+  );
+
+  if(!ok) return;
+
+  let removed = 0;
+
+  approvedRows.forEach(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    if(!match) return;
+
+    match.organizerApproved = false;
+    match.organizerApprovedAt = null;
+    match.organizerApprovedBy = '';
+
+    removed += 1;
+  });
+
+  if(removed > 0) {
+    pbLightApprovalAuditSummaryV4(
+      'Organizer bulk-removed approvals',
+      'Remove all approvals',
+      removed,
+      'Organizer removed approvals in bulk. Scores and team acceptances were preserved.'
+    );
+  }
+
+  pbLightApprovalPersistRefreshV4(
+    `Removed ${removed} organizer approval${removed === 1 ? '' : 's'}.`
+  );
+}
+
+(function pbInstallLightApprovalAuditV4(){
+  if(window.__PB_LIGHT_APPROVAL_AUDIT_V4_INSTALLED__) return;
+  window.__PB_LIGHT_APPROVAL_AUDIT_V4_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      if(typeof pbApprovalInjectApproveAllScoredButtonV3 === 'function') pbApprovalInjectApproveAllScoredButtonV3();
+      if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') pbRemoveAllApprovalsInjectButtonV1();
+    } catch(e) {}
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+
+  setTimeout(install, 0);
+  setTimeout(install, 300);
+})();
+
+
+/* PB_APPROVAL_NO_AUTO_POPUP_V5 */
+function pbApprovalNoAutoPopupToastV5(msg) {
+  try {
+    if(typeof pbOrganizerApprovalToastV1 === 'function') return pbOrganizerApprovalToastV1(msg);
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbApprovalNoAutoPopupPersistV5(message) {
+  const saveNames = [
+    'saveState',
+    'saveTournament',
+    'persistState',
+    'autoSave',
+    'saveLocal',
+    'saveToLocalStorage',
+    'saveData'
+  ];
+
+  saveNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+
+  const renderNames = [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ];
+
+  renderNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+
+  pbApprovalNoAutoPopupToastV5(message || 'Saved.');
+
+  // Important:
+  // Do NOT call pbOrganizerApprovalOpenModalV1() here.
+  // That was causing the approval modal/backup-looking window to reopen after every change.
+}
+
+// Override older refresh functions so approval changes stop reopening the modal.
+function pbLightApprovalPersistRefreshV4(message) {
+  return pbApprovalNoAutoPopupPersistV5(message);
+}
+
+function pbApprovalPersistAndRefreshV3(message) {
+  return pbApprovalNoAutoPopupPersistV5(message);
+}
+
+// Keep single approval quiet.
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  if(typeof pbOrganizerApprovalMatchesV1 !== 'function') {
+    alert('Organizer approval is not installed.');
+    return;
+  }
+
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  const row = pbOrganizerApprovalMatchesV1().find(r =>
+    r.roundIndex === roundIndex && r.matchIndex === matchIndex
+  );
+
+  if(!row) {
+    alert('Match not found.');
+    return;
+  }
+
+  if(row.correctionPending) {
+    alert('A correction is pending for this match. Resolve the correction before approving.');
+    return;
+  }
+
+  if(!(row.score || row.complete)) {
+    alert('This match does not have a score yet.');
+    return;
+  }
+
+  if(!row.bothAccepted) {
+    const ok = confirm('Both teams have not accepted this score yet. Approve anyway?');
+    if(!ok) return;
+  }
+
+  const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+  if(!match) return;
+
+  match.organizerApproved = true;
+  match.organizerApprovedAt = new Date().toISOString();
+  match.organizerApprovedBy = 'Organizer';
+  match.correctionPending = false;
+
+  pbApprovalNoAutoPopupPersistV5('Score approved.');
+}
+
+// Keep approve-all quiet. One summary audit entry only if audit exists.
+function pbApprovalApproveAllScoredV3() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before changing approvals.');
+    return;
+  }
+
+  if(typeof pbApprovalAllScoredRowsV3 !== 'function') {
+    alert('Approve All is not installed yet.');
+    return;
+  }
+
+  const rows = pbApprovalAllScoredRowsV3();
+
+  if(!rows.length) {
+    alert('No scored games need approval.');
+    return;
+  }
+
+  const acceptedCount = rows.filter(r => r.bothAccepted).length;
+  const notAcceptedCount = rows.length - acceptedCount;
+
+  let message = `Approve all ${rows.length} scored game${rows.length === 1 ? '' : 's'}?`;
+
+  if(notAcceptedCount > 0) {
+    message += `\n\nNote: ${notAcceptedCount} scored game${notAcceptedCount === 1 ? '' : 's'} do not have both team acceptances yet.`;
+  }
+
+  const ok = confirm(message);
+  if(!ok) return;
+
+  let approvedCount = 0;
+
+  rows.forEach(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    if(!match) return;
+
+    if(!(row.score || row.complete)) return;
+    if(row.correctionPending) return;
+    if(match.organizerApproved) return;
+
+    match.organizerApproved = true;
+    match.organizerApprovedAt = new Date().toISOString();
+    match.organizerApprovedBy = 'Organizer';
+    match.correctionPending = false;
+
+    approvedCount += 1;
+  });
+
+  try {
+    if(approvedCount > 0 && typeof pbLightApprovalAuditSummaryV4 === 'function') {
+      pbLightApprovalAuditSummaryV4(
+        'Organizer bulk-approved scores',
+        'Approve all scored games',
+        approvedCount,
+        notAcceptedCount > 0
+          ? `${notAcceptedCount} score${notAcceptedCount === 1 ? '' : 's'} did not have both team acceptances.`
+          : 'All approved scores were scored games.'
+      );
+    }
+  } catch(e) {}
+
+  pbApprovalNoAutoPopupPersistV5(
+    `Approved ${approvedCount} scored game${approvedCount === 1 ? '' : 's'}.`
+  );
+}
+
+function pbApprovalApproveAllReadyV2() {
+  return pbApprovalApproveAllScoredV3();
+}
+
+// Keep remove-all quiet. One summary audit entry only if audit exists.
+function pbRemoveAllApprovalsV1() {
+  if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+    alert('Final results are certified. Remove final certification before removing approvals.');
+    return;
+  }
+
+  if(typeof pbRemoveAllApprovalsRowsV1 !== 'function') {
+    alert('Remove All Approvals is not installed yet.');
+    return;
+  }
+
+  const approvedRows = pbRemoveAllApprovalsRowsV1();
+
+  if(!approvedRows.length) {
+    alert('There are no organizer approvals to remove.');
+    return;
+  }
+
+  const ok = confirm(
+    `Remove all ${approvedRows.length} organizer approval${approvedRows.length === 1 ? '' : 's'}?\n\n` +
+    'Scores and team acceptances will stay. Only organizer approvals will be removed.'
+  );
+
+  if(!ok) return;
+
+  let removed = 0;
+
+  approvedRows.forEach(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    if(!match) return;
+
+    match.organizerApproved = false;
+    match.organizerApprovedAt = null;
+    match.organizerApprovedBy = '';
+
+    removed += 1;
+  });
+
+  try {
+    if(removed > 0 && typeof pbLightApprovalAuditSummaryV4 === 'function') {
+      pbLightApprovalAuditSummaryV4(
+        'Organizer bulk-removed approvals',
+        'Remove all approvals',
+        removed,
+        'Organizer removed approvals in bulk. Scores and team acceptances were preserved.'
+      );
+    }
+  } catch(e) {}
+
+  pbApprovalNoAutoPopupPersistV5(
+    `Removed ${removed} organizer approval${removed === 1 ? '' : 's'}.`
+  );
+}
+
+(function pbInstallApprovalNoAutoPopupV5(){
+  if(window.__PB_APPROVAL_NO_AUTO_POPUP_V5_INSTALLED__) return;
+  window.__PB_APPROVAL_NO_AUTO_POPUP_V5_INSTALLED__ = true;
+
+  const install = () => {
+    try {
+      if(typeof pbApprovalInjectApproveAllScoredButtonV3 === 'function') pbApprovalInjectApproveAllScoredButtonV3();
+      if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') pbRemoveAllApprovalsInjectButtonV1();
+    } catch(e) {}
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+
+  setTimeout(install, 0);
+  setTimeout(install, 300);
+})();
+
+
+/* PB_QUIET_APPROVAL_SAVE_V6 */
+function pbQuietApprovalIsBackupMessageV6(msg) {
+  const txt = String(msg == null ? '' : msg).replace(/\s+/g, ' ').trim().toLowerCase();
+
+  return (
+    txt.includes('backup') ||
+    txt.includes('back up') ||
+    txt.includes('autosave') ||
+    txt.includes('auto-save') ||
+    txt.includes('saved backup') ||
+    txt.includes('restore point') ||
+    txt.includes('snapshot')
+  );
+}
+
+function pbQuietApprovalInstallPopupSuppressorV6() {
+  if(window.__PB_QUIET_APPROVAL_POPUP_SUPPRESSOR_V6_INSTALLED__) return;
+  window.__PB_QUIET_APPROVAL_POPUP_SUPPRESSOR_V6_INSTALLED__ = true;
+
+  const names = [
+    'showToast',
+    'toast',
+    'notify',
+    'showNotification',
+    'showMessage',
+    'showPopup',
+    'showAlert'
+  ];
+
+  names.forEach(name => {
+    const fn = window[name];
+    if(typeof fn !== 'function') return;
+    if(fn.__pbQuietApprovalWrappedV6) return;
+
+    const wrapped = function(...args) {
+      if(window.__PB_QUIET_APPROVAL_SAVE_ACTIVE_V6__) {
+        const combined = args.map(a => {
+          if(typeof a === 'string') return a;
+          if(a && typeof a === 'object') return JSON.stringify(a);
+          return String(a);
+        }).join(' ');
+
+        if(pbQuietApprovalIsBackupMessageV6(combined)) {
+          console.log('Suppressed backup popup during approval save:', combined);
+          return;
+        }
+      }
+
+      return fn.apply(this, args);
+    };
+
+    wrapped.__pbQuietApprovalWrappedV6 = true;
+    window[name] = wrapped;
+  });
+
+  const originalAlert = window.alert;
+  if(typeof originalAlert === 'function' && !originalAlert.__pbQuietApprovalWrappedV6) {
+    const wrappedAlert = function(msg) {
+      if(window.__PB_QUIET_APPROVAL_SAVE_ACTIVE_V6__ && pbQuietApprovalIsBackupMessageV6(msg)) {
+        console.log('Suppressed backup alert during approval save:', msg);
+        return;
+      }
+
+      return originalAlert.apply(this, arguments);
+    };
+
+    wrappedAlert.__pbQuietApprovalWrappedV6 = true;
+    window.alert = wrappedAlert;
+  }
+}
+
+function pbQuietApprovalSaveDirectV6() {
+  /*
+    Save approvals without intentionally opening backup UI.
+    We try the normal persistence hooks, but with backup/toast suppression active.
+  */
+  window.__PB_QUIET_APPROVAL_SAVE_ACTIVE_V6__ = true;
+  pbQuietApprovalInstallPopupSuppressorV6();
+
+  try {
+    const saveNames = [
+      'saveState',
+      'persistState',
+      'autoSave',
+      'saveLocal',
+      'saveToLocalStorage',
+      'saveData'
+    ];
+
+    saveNames.forEach(name => {
+      try {
+        if(typeof window[name] === 'function') window[name]();
+      } catch(e) {}
+    });
+
+    // Avoid saveTournament here because in many builds it opens the backup/export UI.
+  } finally {
+    setTimeout(() => {
+      window.__PB_QUIET_APPROVAL_SAVE_ACTIVE_V6__ = false;
+    }, 750);
+  }
+
+  const renderNames = [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ];
+
+  renderNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+function pbQuietApprovalToastV6(msg) {
+  // Delay the approval toast until after backup suppression ends.
+  setTimeout(() => {
+    try {
+      if(typeof showToast === 'function') return showToast(msg);
+      if(typeof notify === 'function') return notify(msg);
+      if(typeof showMessage === 'function') return showMessage(msg);
+    } catch(e) {}
+
+    console.log(msg);
+  }, 850);
+}
+
+function pbApprovalNoAutoPopupPersistV5(message) {
+  pbQuietApprovalSaveDirectV6();
+  pbQuietApprovalToastV6(message || 'Saved.');
+}
+
+function pbLightApprovalPersistRefreshV4(message) {
+  pbQuietApprovalSaveDirectV6();
+  pbQuietApprovalToastV6(message || 'Saved.');
+}
+
+function pbApprovalPersistAndRefreshV3(message) {
+  pbQuietApprovalSaveDirectV6();
+  pbQuietApprovalToastV6(message || 'Saved.');
+}
+
+(function pbInstallQuietApprovalSaveV6(){
+  if(window.__PB_QUIET_APPROVAL_SAVE_V6_INSTALLED__) return;
+  window.__PB_QUIET_APPROVAL_SAVE_V6_INSTALLED__ = true;
+
+  pbQuietApprovalInstallPopupSuppressorV6();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    pbQuietApprovalInstallPopupSuppressorV6();
+  });
+})();
+
+
+/* PB_STABLE_APPROVAL_CONTROLLER_V8 */
+function pbApprovalV8Text(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbApprovalV8Toast(msg) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+    if(typeof pbOrganizerApprovalToastV1 === 'function') return pbOrganizerApprovalToastV1(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbApprovalV8IsBackupText(msg) {
+  const txt = pbApprovalV8Text(msg).toLowerCase();
+
+  return (
+    txt.includes('backup') ||
+    txt.includes('back up') ||
+    txt.includes('restore point') ||
+    txt.includes('snapshot') ||
+    txt.includes('download backup') ||
+    txt.includes('backup saved') ||
+    txt.includes('autosave backup')
+  );
+}
+
+function pbApprovalV8InstallBackupSuppressor() {
+  if(window.__PB_APPROVAL_V8_BACKUP_SUPPRESSOR_INSTALLED__) return;
+  window.__PB_APPROVAL_V8_BACKUP_SUPPRESSOR_INSTALLED__ = true;
+
+  const wrapMessageFn = (name) => {
+    const fn = window[name];
+    if(typeof fn !== 'function') return;
+    if(fn.__pbApprovalV8Wrapped) return;
+
+    const wrapped = function(...args) {
+      if(window.__PB_APPROVAL_V8_QUIET__) {
+        const txt = args.map(a => {
+          try {
+            if(typeof a === 'string') return a;
+            if(a && typeof a === 'object') return JSON.stringify(a);
+            return String(a);
+          } catch(e) {
+            return '';
+          }
+        }).join(' ');
+
+        if(pbApprovalV8IsBackupText(txt)) {
+          console.log('Suppressed backup message during approval:', txt);
+          return;
+        }
+      }
+
+      return fn.apply(this, args);
+    };
+
+    wrapped.__pbApprovalV8Wrapped = true;
+    window[name] = wrapped;
+  };
+
+  [
+    'showToast',
+    'toast',
+    'notify',
+    'showNotification',
+    'showMessage',
+    'showPopup',
+    'showAlert'
+  ].forEach(wrapMessageFn);
+
+  const originalAlert = window.alert;
+  if(typeof originalAlert === 'function' && !originalAlert.__pbApprovalV8Wrapped) {
+    const wrappedAlert = function(msg) {
+      if(window.__PB_APPROVAL_V8_QUIET__ && pbApprovalV8IsBackupText(msg)) {
+        console.log('Suppressed backup alert during approval:', msg);
+        return;
+      }
+
+      return originalAlert.apply(this, arguments);
+    };
+
+    wrappedAlert.__pbApprovalV8Wrapped = true;
+    window.alert = wrappedAlert;
+  }
+
+  const originalOpen = window.open;
+  if(typeof originalOpen === 'function' && !originalOpen.__pbApprovalV8Wrapped) {
+    const wrappedOpen = function(...args) {
+      if(window.__PB_APPROVAL_V8_QUIET__) {
+        const txt = args.map(a => String(a || '')).join(' ');
+        if(pbApprovalV8IsBackupText(txt)) {
+          console.log('Suppressed backup window during approval:', txt);
+          return null;
+        }
+      }
+
+      return originalOpen.apply(this, args);
+    };
+
+    wrappedOpen.__pbApprovalV8Wrapped = true;
+    window.open = wrappedOpen;
+  }
+
+  const originalAnchorClick = HTMLAnchorElement.prototype.click;
+  if(typeof originalAnchorClick === 'function' && !originalAnchorClick.__pbApprovalV8Wrapped) {
+    const wrappedAnchorClick = function() {
+      if(window.__PB_APPROVAL_V8_QUIET__) {
+        const dl = this.getAttribute('download') || '';
+        const href = this.getAttribute('href') || '';
+        const txt = `${dl} ${href}`;
+
+        if(pbApprovalV8IsBackupText(txt)) {
+          console.log('Suppressed backup download during approval:', txt);
+          return;
+        }
+      }
+
+      return originalAnchorClick.apply(this, arguments);
+    };
+
+    wrappedAnchorClick.__pbApprovalV8Wrapped = true;
+    HTMLAnchorElement.prototype.click = wrappedAnchorClick;
+  }
+
+  const observer = new MutationObserver(function() {
+    if(!window.__PB_APPROVAL_V8_QUIET__) return;
+
+    try {
+      Array.from(document.body.querySelectorAll('div,section,article,dialog,[role="dialog"],.modal,.toast,.notification,.popup-message'))
+        .forEach(el => {
+          if(el.id === 'pb-organizer-approval-modal-v1') return;
+
+          const txt = pbApprovalV8Text(el.textContent || '');
+          if(txt && txt.length < 600 && pbApprovalV8IsBackupText(txt)) {
+            el.remove();
+          }
+        });
+    } catch(e) {}
+  });
+
+  try {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } catch(e) {}
+}
+
+function pbApprovalV8Quiet(fn) {
+  pbApprovalV8InstallBackupSuppressor();
+
+  window.__PB_APPROVAL_V8_QUIET__ = true;
+
+  try {
+    return fn();
+  } finally {
+    setTimeout(() => {
+      window.__PB_APPROVAL_V8_QUIET__ = false;
+    }, 1200);
+  }
+}
+
+function pbApprovalV8Rows() {
+  if(typeof pbOrganizerApprovalMatchesV1 === 'function') {
+    return pbOrganizerApprovalMatchesV1();
+  }
+
+  const rows = [];
+  const rounds = state.schedule || [];
+
+  rounds.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      const court = m?.court ?? m?.courtNum ?? m?.courtNumber ?? m?.courtId ?? (mIdx + 1);
+
+      const a =
+        m?.scoreA ?? m?.score1 ?? m?.aScore ?? m?.teamAScore ?? m?.leftScore ?? m?.homeScore ?? m?.pointsA ?? m?.points1;
+
+      const b =
+        m?.scoreB ?? m?.score2 ?? m?.bScore ?? m?.teamBScore ?? m?.rightScore ?? m?.awayScore ?? m?.pointsB ?? m?.points2;
+
+      const score = a !== undefined && a !== null && a !== '' && b !== undefined && b !== null && b !== ''
+        ? `${a}–${b}`
+        : '';
+
+      rows.push({
+        roundIndex: rIdx,
+        matchIndex: mIdx,
+        round: rIdx + 1,
+        court,
+        score,
+        complete: !!m?.complete,
+        bothAccepted: !!(m?.acceptedByA && m?.acceptedByB),
+        organizerApproved: !!m?.organizerApproved,
+        correctionPending: !!m?.correctionPending,
+        acceptedByA: m?.acceptedByA || '',
+        acceptedByB: m?.acceptedByB || '',
+        acceptedAt: m?.acceptedAt || null,
+        teams: `Round ${rIdx + 1}, Court ${court}`
+      });
+    });
+  });
+
+  return rows;
+}
+
+function pbApprovalV8ScoredRows() {
+  return pbApprovalV8Rows().filter(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+
+    return (
+      match &&
+      (row.score || row.complete) &&
+      !match.organizerApproved &&
+      !row.correctionPending
+    );
+  });
+}
+
+function pbApprovalV8ApprovedRows() {
+  return pbApprovalV8Rows().filter(row => {
+    const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+    return match && !!match.organizerApproved;
+  });
+}
+
+function pbApprovalV8SilentPersist() {
+  /*
+    Do NOT call saveTournament/saveState here.
+    Those are what trigger the backup popup in this build.
+    Instead, update existing localStorage state records that already contain schedule data.
+  */
+  try {
+    const keys = Object.keys(localStorage || {});
+    let wrote = 0;
+
+    keys.forEach(key => {
+      try {
+        const raw = localStorage.getItem(key);
+        if(!raw || raw[0] !== '{') return;
+
+        const obj = JSON.parse(raw);
+        if(!obj || typeof obj !== 'object') return;
+
+        let changed = false;
+
+        if(Array.isArray(obj.schedule)) {
+          obj.schedule = state.schedule || [];
+          changed = true;
+        }
+
+        if(obj.state && typeof obj.state === 'object' && Array.isArray(obj.state.schedule)) {
+          obj.state.schedule = state.schedule || [];
+          changed = true;
+        }
+
+        if(Array.isArray(obj.players) && Array.isArray(state.players)) {
+          obj.players = state.players;
+          changed = true;
+        }
+
+        if(obj.state && typeof obj.state === 'object' && Array.isArray(obj.state.players) && Array.isArray(state.players)) {
+          obj.state.players = state.players;
+          changed = true;
+        }
+
+        if(changed) {
+          localStorage.setItem(key, JSON.stringify(obj));
+          wrote += 1;
+        }
+      } catch(e) {}
+    });
+
+    // Safety record for approval state in case the app has a non-JSON custom state key.
+    localStorage.setItem('pbApprovalStateV8', JSON.stringify({
+      savedAt: new Date().toISOString(),
+      schedule: state.schedule || []
+    }));
+
+    return wrote;
+  } catch(e) {
+    console.error('Approval silent persist failed', e);
+    return 0;
+  }
+}
+
+function pbApprovalV8RenderLight() {
+  [
+    'renderDashboard',
+    'pbRenderHomeStableNoTwitchV1',
+    'pbHomeEnsureCourtStatusPanelV1',
+    'renderSchedule',
+    'renderStandings',
+    'renderReport',
+    'renderFairness'
+  ].forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+function pbApprovalV8RefreshModalButtons() {
+  try {
+    if(document.getElementById('pb-organizer-approval-modal-v1')) {
+      pbApprovalV8InjectButtons();
+    }
+  } catch(e) {}
+}
+
+function pbApprovalV8ApproveAllScored() {
+  pbApprovalV8Quiet(function() {
+    if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+      alert('Final results are certified. Remove final certification before changing approvals.');
+      return;
+    }
+
+    const rows = pbApprovalV8ScoredRows();
+
+    if(!rows.length) {
+      alert('No scored games need approval.');
+      return;
+    }
+
+    const acceptedCount = rows.filter(r => r.bothAccepted).length;
+    const notAcceptedCount = rows.length - acceptedCount;
+
+    let msg = `Approve all ${rows.length} scored game${rows.length === 1 ? '' : 's'}?`;
+
+    if(notAcceptedCount > 0) {
+      msg += `\n\nNote: ${notAcceptedCount} scored game${notAcceptedCount === 1 ? '' : 's'} do not have both team acceptances yet.`;
+    }
+
+    if(!confirm(msg)) return;
+
+    let approved = 0;
+    const at = new Date().toISOString();
+
+    rows.forEach(row => {
+      const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+      if(!match) return;
+      if(match.organizerApproved) return;
+      if(row.correctionPending) return;
+      if(!(row.score || row.complete)) return;
+
+      match.organizerApproved = true;
+      match.organizerApprovedAt = at;
+      match.organizerApprovedBy = 'Organizer';
+      match.correctionPending = false;
+      approved += 1;
+    });
+
+    try {
+      if(approved > 0 && typeof pbScoreAuditAddV1 === 'function') {
+        pbScoreAuditAddV1({
+          action: 'Organizer bulk-approved scores',
+          source: 'Approve all scored games',
+          round: 'All',
+          court: 'All',
+          matchIndex: 'Multiple',
+          teams: `${approved} matches`,
+          beforeScore: '—',
+          afterScore: 'Approved',
+          reason: notAcceptedCount > 0
+            ? `${notAcceptedCount} score${notAcceptedCount === 1 ? '' : 's'} did not have both team acceptances.`
+            : 'Bulk approved scored games.'
+        });
+      }
+    } catch(e) {}
+
+    pbApprovalV8SilentPersist();
+    pbApprovalV8RenderLight();
+    pbApprovalV8RefreshModalButtons();
+
+    setTimeout(() => pbApprovalV8Toast(`Approved ${approved} scored game${approved === 1 ? '' : 's'}.`), 1300);
+  });
+}
+
+function pbApprovalV8RemoveAllApprovals() {
+  pbApprovalV8Quiet(function() {
+    if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+      alert('Final results are certified. Remove final certification before removing approvals.');
+      return;
+    }
+
+    const rows = pbApprovalV8ApprovedRows();
+
+    if(!rows.length) {
+      alert('There are no organizer approvals to remove.');
+      return;
+    }
+
+    if(!confirm(
+      `Remove all ${rows.length} organizer approval${rows.length === 1 ? '' : 's'}?\n\n` +
+      'Scores and team acceptances will stay. Only organizer approvals will be removed.'
+    )) return;
+
+    let removed = 0;
+
+    rows.forEach(row => {
+      const match = state.schedule?.[row.roundIndex]?.[row.matchIndex];
+      if(!match) return;
+
+      match.organizerApproved = false;
+      match.organizerApprovedAt = null;
+      match.organizerApprovedBy = '';
+      removed += 1;
+    });
+
+    try {
+      if(removed > 0 && typeof pbScoreAuditAddV1 === 'function') {
+        pbScoreAuditAddV1({
+          action: 'Organizer bulk-removed approvals',
+          source: 'Remove all approvals',
+          round: 'All',
+          court: 'All',
+          matchIndex: 'Multiple',
+          teams: `${removed} matches`,
+          beforeScore: 'Approved',
+          afterScore: 'Unapproved',
+          reason: 'Organizer removed approvals in bulk. Scores and team acceptances were preserved.'
+        });
+      }
+    } catch(e) {}
+
+    pbApprovalV8SilentPersist();
+    pbApprovalV8RenderLight();
+    pbApprovalV8RefreshModalButtons();
+
+    setTimeout(() => pbApprovalV8Toast(`Removed ${removed} organizer approval${removed === 1 ? '' : 's'}.`), 1300);
+  });
+}
+
+function pbApprovalV8ApproveOne(roundIndex, matchIndex) {
+  pbApprovalV8Quiet(function() {
+    if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+      alert('Final results are certified. Remove final certification before changing approvals.');
+      return;
+    }
+
+    const rows = pbApprovalV8Rows();
+    const row = rows.find(r => r.roundIndex === roundIndex && r.matchIndex === matchIndex);
+    const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+    if(!row || !match) {
+      alert('Match not found.');
+      return;
+    }
+
+    if(row.correctionPending) {
+      alert('A correction is pending for this match. Resolve it before approving.');
+      return;
+    }
+
+    if(!(row.score || row.complete)) {
+      alert('This match does not have a score yet.');
+      return;
+    }
+
+    if(!row.bothAccepted) {
+      if(!confirm('Both teams have not accepted this score yet. Approve anyway?')) return;
+    }
+
+    match.organizerApproved = true;
+    match.organizerApprovedAt = new Date().toISOString();
+    match.organizerApprovedBy = 'Organizer';
+    match.correctionPending = false;
+
+    pbApprovalV8SilentPersist();
+    pbApprovalV8RenderLight();
+    pbApprovalV8RefreshModalButtons();
+
+    setTimeout(() => pbApprovalV8Toast('Score approved.'), 1300);
+  });
+}
+
+function pbApprovalV8RemoveOne(roundIndex, matchIndex) {
+  pbApprovalV8Quiet(function() {
+    if(state.finalResultsCertifiedV1 || state.tournamentLockedV1) {
+      alert('Final results are certified. Remove final certification before changing approvals.');
+      return;
+    }
+
+    const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+    if(!match) {
+      alert('Match not found.');
+      return;
+    }
+
+    if(!confirm('Remove organizer approval for this score?')) return;
+
+    match.organizerApproved = false;
+    match.organizerApprovedAt = null;
+    match.organizerApprovedBy = '';
+
+    pbApprovalV8SilentPersist();
+    pbApprovalV8RenderLight();
+    pbApprovalV8RefreshModalButtons();
+
+    setTimeout(() => pbApprovalV8Toast('Approval removed.'), 1300);
+  });
+}
+
+// Force older functions to use the stable controller.
+function pbApprovalApproveAllScoredV3() { return pbApprovalV8ApproveAllScored(); }
+function pbApprovalApproveAllReadyV2() { return pbApprovalV8ApproveAllScored(); }
+function pbRemoveAllApprovalsV1() { return pbApprovalV8RemoveAllApprovals(); }
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) { return pbApprovalV8ApproveOne(roundIndex, matchIndex); }
+function pbOrganizerApprovalUnapproveV1(roundIndex, matchIndex) { return pbApprovalV8RemoveOne(roundIndex, matchIndex); }
+
+function pbApprovalV8InjectButtons() {
+  const modal = document.getElementById('pb-organizer-approval-modal-v1');
+  if(!modal) return;
+
+  // Remove older broken bulk buttons so only the stable controls remain.
+  [
+    'pb-approve-all-ready-scores-btn-v2',
+    'pb-approve-all-scored-games-btn-v3',
+    'pb-remove-all-approvals-btn-v1'
+  ].forEach(id => document.getElementById(id)?.remove());
+
+  let row = Array.from(modal.querySelectorAll('div')).find(div => {
+    const txt = pbApprovalV8Text(div.textContent || '');
+    return txt.includes('Organizer Approvals') && txt.includes('Close');
+  });
+
+  const closeBtn = Array.from(modal.querySelectorAll('button')).find(button =>
+    pbApprovalV8Text(button.textContent) === 'Close'
+  );
+
+  if(closeBtn && closeBtn.parentElement) {
+    row = closeBtn.parentElement;
+  }
+
+  if(!row) return;
+
+  const scoredCount = pbApprovalV8ScoredRows().length;
+  const approvedCount = pbApprovalV8ApprovedRows().length;
+
+  const approveBtn = document.createElement('button');
+  approveBtn.id = 'pb-approval-v8-approve-all';
+  approveBtn.className = 'btn btn-primary btn-sm';
+  approveBtn.textContent = `✅ Approve All Scored${scoredCount ? ` (${scoredCount})` : ''}`;
+  approveBtn.onclick = pbApprovalV8ApproveAllScored;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.id = 'pb-approval-v8-remove-all';
+  removeBtn.className = 'btn btn-secondary btn-sm';
+  removeBtn.textContent = `🧹 Remove All Approvals${approvedCount ? ` (${approvedCount})` : ''}`;
+  removeBtn.onclick = pbApprovalV8RemoveAllApprovals;
+
+  if(!document.getElementById('pb-approval-v8-approve-all')) {
+    if(closeBtn) row.insertBefore(approveBtn, closeBtn);
+    else row.appendChild(approveBtn);
+  }
+
+  if(!document.getElementById('pb-approval-v8-remove-all')) {
+    if(closeBtn) row.insertBefore(removeBtn, closeBtn);
+    else row.appendChild(removeBtn);
+  }
+
+  // Replace any card-level approve/remove buttons with stable handlers.
+  Array.from(modal.querySelectorAll('button')).forEach(btn => {
+    const txt = pbApprovalV8Text(btn.textContent || '');
+
+    const onclick = String(btn.getAttribute('onclick') || '');
+    const match = onclick.match(/pbOrganizerApproval(Approve|Unapprove)V1\((\d+),\s*(\d+)\)/);
+
+    if(!match) return;
+
+    const action = match[1];
+    const r = Number(match[2]);
+    const m = Number(match[3]);
+
+    btn.removeAttribute('onclick');
+
+    if(action === 'Approve') {
+      btn.onclick = () => pbApprovalV8ApproveOne(r, m);
+    } else {
+      btn.onclick = () => pbApprovalV8RemoveOne(r, m);
+    }
+  });
+
+  let note = document.getElementById('pb-approval-v8-note');
+  if(!note) {
+    note = document.createElement('div');
+    note.id = 'pb-approval-v8-note';
+    note.style.cssText = 'color:var(--txt3);font-size:0.78rem;margin:0.35rem 0 0.7rem';
+    const header = Array.from(modal.querySelectorAll('div')).find(div =>
+      pbApprovalV8Text(div.textContent || '').includes('Organizer Approvals')
+    );
+
+    if(header && header.parentElement) {
+      header.parentElement.insertAdjacentElement('afterend', note);
+    }
+  }
+
+  note.textContent = `${scoredCount} scored games need approval · ${approvedCount} currently approved`;
+}
+
+(function pbInstallStableApprovalControllerV8(){
+  if(window.__PB_STABLE_APPROVAL_CONTROLLER_V8_INSTALLED__) return;
+  window.__PB_STABLE_APPROVAL_CONTROLLER_V8_INSTALLED__ = true;
+
+  pbApprovalV8InstallBackupSuppressor();
+
+  const install = () => {
+    try {
+      pbApprovalV8InjectButtons();
+    } catch(e) {
+      console.error('Stable approval controller install failed', e);
+    }
+  };
+
+  // Wrap the approval modal open so the stable buttons always appear.
+  if(typeof pbOrganizerApprovalOpenModalV1 === 'function' && !pbOrganizerApprovalOpenModalV1.__pbStableApprovalV8Wrapped) {
+    const originalOpen = pbOrganizerApprovalOpenModalV1;
+
+    pbOrganizerApprovalOpenModalV1 = function() {
+      const result = originalOpen.apply(this, arguments);
+      setTimeout(install, 0);
+      setTimeout(install, 150);
+      return result;
+    };
+
+    pbOrganizerApprovalOpenModalV1.__pbStableApprovalV8Wrapped = true;
+  }
+
+  document.addEventListener('click', function(e) {
+    const target = e.target;
+
+    if(target && target.id === 'pb-approval-v8-approve-all') {
+      e.preventDefault();
+      e.stopPropagation();
+      pbApprovalV8ApproveAllScored();
+      return;
+    }
+
+    if(target && target.id === 'pb-approval-v8-remove-all') {
+      e.preventDefault();
+      e.stopPropagation();
+      pbApprovalV8RemoveAllApprovals();
+      return;
+    }
+
+    setTimeout(install, 0);
+    setTimeout(install, 250);
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  setTimeout(install, 0);
+  setTimeout(install, 300);
+})();
+
+
+/* PB_APPROVAL_PANEL_LIVE_REFRESH_V9 */
+function pbApprovalV9RefreshModalLive() {
+  const modal = document.getElementById('pb-organizer-approval-modal-v1');
+  if(!modal) return;
+
+  if(window.__PB_APPROVAL_V9_REFRESHING_MODAL__) return;
+
+  window.__PB_APPROVAL_V9_REFRESHING_MODAL__ = true;
+
+  try {
+    /*
+      Re-render the existing Approvals modal content in place.
+      This does NOT save, export, or open backup. It only rebuilds the modal UI.
+    */
+    if(typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+      pbOrganizerApprovalOpenModalV1();
+    }
+
+    if(typeof pbApprovalV8InjectButtons === 'function') {
+      pbApprovalV8InjectButtons();
+    }
+
+    if(typeof pbApprovalInjectApproveAllScoredButtonV3 === 'function') {
+      pbApprovalInjectApproveAllScoredButtonV3();
+    }
+
+    if(typeof pbRemoveAllApprovalsInjectButtonV1 === 'function') {
+      pbRemoveAllApprovalsInjectButtonV1();
+    }
+  } catch(e) {
+    console.error('Approval live modal refresh failed', e);
+  } finally {
+    setTimeout(() => {
+      window.__PB_APPROVAL_V9_REFRESHING_MODAL__ = false;
+    }, 50);
+  }
+}
+
+// Override the older refresh hook: update the open panel instead of doing nothing.
+function pbApprovalV8RefreshModalButtons() {
+  pbApprovalV9RefreshModalLive();
+}
+
+// Override quiet persist so approval changes save quietly AND refresh the open approval panel.
+function pbApprovalNoAutoPopupPersistV5(message) {
+  if(typeof pbQuietApprovalSaveDirectV6 === 'function') {
+    pbQuietApprovalSaveDirectV6();
+  } else if(typeof pbApprovalV8SilentPersist === 'function') {
+    pbApprovalV8SilentPersist();
+  }
+
+  if(typeof pbApprovalV8RenderLight === 'function') {
+    pbApprovalV8RenderLight();
+  }
+
+  pbApprovalV9RefreshModalLive();
+
+  if(typeof pbQuietApprovalToastV6 === 'function') {
+    pbQuietApprovalToastV6(message || 'Saved.');
+  } else if(typeof pbApprovalV8Toast === 'function') {
+    setTimeout(() => pbApprovalV8Toast(message || 'Saved.'), 300);
+  }
+}
+
+function pbLightApprovalPersistRefreshV4(message) {
+  return pbApprovalNoAutoPopupPersistV5(message);
+}
+
+function pbApprovalPersistAndRefreshV3(message) {
+  return pbApprovalNoAutoPopupPersistV5(message);
+}
+
+/*
+  Override V8 action functions just enough to force a live modal refresh after they finish.
+  This keeps the modal visible and current.
+*/
+if(typeof pbApprovalV8ApproveAllScored === 'function' && !pbApprovalV8ApproveAllScored.__pbLiveRefreshWrappedV9) {
+  const originalApproveAllV9 = pbApprovalV8ApproveAllScored;
+
+  pbApprovalV8ApproveAllScored = function() {
+    const result = originalApproveAllV9.apply(this, arguments);
+    setTimeout(pbApprovalV9RefreshModalLive, 100);
+    setTimeout(pbApprovalV9RefreshModalLive, 400);
+    return result;
+  };
+
+  pbApprovalV8ApproveAllScored.__pbLiveRefreshWrappedV9 = true;
+}
+
+if(typeof pbApprovalV8RemoveAllApprovals === 'function' && !pbApprovalV8RemoveAllApprovals.__pbLiveRefreshWrappedV9) {
+  const originalRemoveAllV9 = pbApprovalV8RemoveAllApprovals;
+
+  pbApprovalV8RemoveAllApprovals = function() {
+    const result = originalRemoveAllV9.apply(this, arguments);
+    setTimeout(pbApprovalV9RefreshModalLive, 100);
+    setTimeout(pbApprovalV9RefreshModalLive, 400);
+    return result;
+  };
+
+  pbApprovalV8RemoveAllApprovals.__pbLiveRefreshWrappedV9 = true;
+}
+
+if(typeof pbApprovalV8ApproveOne === 'function' && !pbApprovalV8ApproveOne.__pbLiveRefreshWrappedV9) {
+  const originalApproveOneV9 = pbApprovalV8ApproveOne;
+
+  pbApprovalV8ApproveOne = function() {
+    const result = originalApproveOneV9.apply(this, arguments);
+    setTimeout(pbApprovalV9RefreshModalLive, 100);
+    setTimeout(pbApprovalV9RefreshModalLive, 400);
+    return result;
+  };
+
+  pbApprovalV8ApproveOne.__pbLiveRefreshWrappedV9 = true;
+}
+
+if(typeof pbApprovalV8RemoveOne === 'function' && !pbApprovalV8RemoveOne.__pbLiveRefreshWrappedV9) {
+  const originalRemoveOneV9 = pbApprovalV8RemoveOne;
+
+  pbApprovalV8RemoveOne = function() {
+    const result = originalRemoveOneV9.apply(this, arguments);
+    setTimeout(pbApprovalV9RefreshModalLive, 100);
+    setTimeout(pbApprovalV9RefreshModalLive, 400);
+    return result;
+  };
+
+  pbApprovalV8RemoveOne.__pbLiveRefreshWrappedV9 = true;
+}
+
+// Repoint public button functions to the refreshed V8 actions.
+function pbApprovalApproveAllScoredV3() {
+  return pbApprovalV8ApproveAllScored();
+}
+
+function pbApprovalApproveAllReadyV2() {
+  return pbApprovalV8ApproveAllScored();
+}
+
+function pbRemoveAllApprovalsV1() {
+  return pbApprovalV8RemoveAllApprovals();
+}
+
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  return pbApprovalV8ApproveOne(roundIndex, matchIndex);
+}
+
+function pbOrganizerApprovalUnapproveV1(roundIndex, matchIndex) {
+  return pbApprovalV8RemoveOne(roundIndex, matchIndex);
+}
+
+(function pbInstallApprovalPanelLiveRefreshV9(){
+  if(window.__PB_APPROVAL_PANEL_LIVE_REFRESH_V9_INSTALLED__) return;
+  window.__PB_APPROVAL_PANEL_LIVE_REFRESH_V9_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const txt = String(e.target?.textContent || '').replace(/\s+/g, ' ').trim();
+
+      if(
+        txt.includes('Approve') ||
+        txt.includes('Remove Approval') ||
+        txt.includes('Remove All Approvals')
+      ) {
+        setTimeout(pbApprovalV9RefreshModalLive, 250);
+        setTimeout(pbApprovalV9RefreshModalLive, 650);
+      }
+    } catch(err) {}
+  }, true);
+})();
+
+
+/* PB_CORRECTION_SMS_TO_SCORER_V1 */
+function pbCorrectionSmsTextV1(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionSmsToastV1(msg, err) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg, err ? 'err' : undefined);
+    if(typeof toast === 'function') return toast(msg, err ? 'err' : undefined);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbCorrectionSmsPlayerNameKeyV1(v) {
+  return pbCorrectionSmsTextV1(v).toLowerCase();
+}
+
+function pbCorrectionSmsTournamentNameV1() {
+  try {
+    if(typeof pbHomeStableTournamentNameV1 === 'function') {
+      const v = pbCorrectionSmsTextV1(pbHomeStableTournamentNameV1());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof getTournamentName === 'function') {
+      const v = pbCorrectionSmsTextV1(getTournamentName());
+      if(v) return v;
+    }
+  } catch(e) {}
+
+  return 'Pickleball Tournament';
+}
+
+function pbCorrectionSmsScoreV1(match) {
+  if(!match) return '';
+
+  const a =
+    match.scoreA ?? match.score1 ?? match.aScore ?? match.teamAScore ?? match.leftScore ?? match.homeScore ?? match.pointsA ?? match.points1;
+
+  const b =
+    match.scoreB ?? match.score2 ?? match.bScore ?? match.teamBScore ?? match.rightScore ?? match.awayScore ?? match.pointsB ?? match.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbCorrectionSmsTeamPlayersV1(match, side) {
+  const team = side === 'B'
+    ? (match.teamB || match.team2 || match.b || match.right || match.away || match.playersB || match.pairB || match.sideB)
+    : (match.teamA || match.team1 || match.a || match.left || match.home || match.playersA || match.pairA || match.sideA);
+
+  if(!Array.isArray(team)) return [];
+
+  return team
+    .map(idx => state.players && state.players[idx])
+    .filter(p => p && p.phone && pbCorrectionSmsTextV1(p.phone));
+}
+
+function pbCorrectionSmsFindAcceptedScorerV1(row, side) {
+  const acceptedName = side === 'B' ? row.acceptedByB : row.acceptedByA;
+  const key = pbCorrectionSmsPlayerNameKeyV1(acceptedName);
+
+  if(!key) return null;
+
+  const players = state.players || [];
+
+  return players.find(p =>
+    p &&
+    p.phone &&
+    pbCorrectionSmsTextV1(p.phone) &&
+    pbCorrectionSmsPlayerNameKeyV1(p.name) === key
+  ) || players.find(p =>
+    p &&
+    p.phone &&
+    pbCorrectionSmsTextV1(p.phone) &&
+    (
+      pbCorrectionSmsPlayerNameKeyV1(p.name).includes(key) ||
+      key.includes(pbCorrectionSmsPlayerNameKeyV1(p.name))
+    )
+  ) || null;
+}
+
+function pbCorrectionSmsRecipientsForSideV1(row, match, side) {
+  const recipients = [];
+
+  const acceptedScorer = pbCorrectionSmsFindAcceptedScorerV1(row, side);
+  if(acceptedScorer) recipients.push(acceptedScorer);
+
+  // Fallback: if we do not know exactly who scored/accepted, text players on that team with phones.
+  if(!recipients.length) {
+    recipients.push(...pbCorrectionSmsTeamPlayersV1(match, side));
+  }
+
+  const seen = new Set();
+
+  return recipients.filter(p => {
+    const phone = pbCorrectionSmsTextV1(p.phone);
+    if(!phone) return false;
+    const key = phone.replace(/[^\d+]/g, '');
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function pbCorrectionSmsRecipientsV1(row, match, target) {
+  target = pbCorrectionSmsTextV1(target).toUpperCase();
+
+  if(target === 'A') return pbCorrectionSmsRecipientsForSideV1(row, match, 'A');
+  if(target === 'B') return pbCorrectionSmsRecipientsForSideV1(row, match, 'B');
+
+  if(target === 'BOTH' || target === 'ALL') {
+    const combined = [
+      ...pbCorrectionSmsRecipientsForSideV1(row, match, 'A'),
+      ...pbCorrectionSmsRecipientsForSideV1(row, match, 'B')
+    ];
+
+    const seen = new Set();
+
+    return combined.filter(p => {
+      const key = pbCorrectionSmsTextV1(p.phone).replace(/[^\d+]/g, '');
+      if(!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  return [];
+}
+
+function pbCorrectionSmsMobileLinkV1(row) {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+    if(typeof msSaveConfig === 'function') msSaveConfig();
+  } catch(e) {}
+
+  const workerUrl =
+    (typeof msState !== 'undefined' && msState && msState.workerUrl) ||
+    document.getElementById('ms-worker-url')?.value ||
+    '';
+
+  const code =
+    (typeof msState !== 'undefined' && msState && msState.code) ||
+    document.getElementById('ms-code')?.value ||
+    '';
+
+  if(!workerUrl || !code) return '';
+
+  let link = `${String(workerUrl).replace(/\/+$/, '')}/?code=${encodeURIComponent(code)}&court=${encodeURIComponent(row.court)}`;
+
+  try {
+    if(typeof msPinsCache !== 'undefined' && msPinsCache && msPinsCache[row.court]) {
+      link += `&pin=${encodeURIComponent(msPinsCache[row.court])}`;
+    }
+  } catch(e) {}
+
+  return link;
+}
+
+function pbCorrectionSmsMessageV1(row, match, reason) {
+  const tournament = pbCorrectionSmsTournamentNameV1();
+  const score = pbCorrectionSmsScoreV1(match) || row.score || 'not recorded';
+  const link = pbCorrectionSmsMobileLinkV1(row);
+
+  const lines = [
+    `🏓 ${tournament}`,
+    `Score correction requested`,
+    `Round ${row.round} · Court ${row.court}`,
+    `Current score: ${score}`,
+    reason ? `Reason: ${reason}` : '',
+    link ? `Please review/resubmit here: ${link}` : '',
+    link && typeof msState !== 'undefined' && msState?.code ? `Code: ${msState.code}` : ''
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
+async function pbCorrectionSmsSendV1(row, match, target, reason) {
+  target = pbCorrectionSmsTextV1(target).toUpperCase();
+
+  if(!target || target === 'NONE' || target === 'NO') {
+    return { sent: 0, failed: 0, skipped: true };
+  }
+
+  const recipients = pbCorrectionSmsRecipientsV1(row, match, target);
+
+  if(!recipients.length) {
+    pbCorrectionSmsToastV1(`Correction logged, but no phone number found for Team ${target}.`, true);
+    return { sent: 0, failed: 0, noRecipients: true };
+  }
+
+  if(typeof twCallRelay !== 'function') {
+    pbCorrectionSmsToastV1('Correction logged, but SMS relay is not available.', true);
+    return { sent: 0, failed: recipients.length, noRelay: true };
+  }
+
+  const message = pbCorrectionSmsMessageV1(row, match, reason);
+
+  let sent = 0;
+  let failed = 0;
+
+  for(let i = 0; i < recipients.length; i++) {
+    const p = recipients[i];
+
+    try {
+      const phone = typeof normalizePhone === 'function'
+        ? normalizePhone(p.phone)
+        : pbCorrectionSmsTextV1(p.phone).replace(/[^\d+]/g, '');
+
+      const result = await twCallRelay(phone, message, typeof twGetCfg === 'function' ? twGetCfg() : null);
+
+      if(result && result.ok) sent++;
+      else failed++;
+
+      try {
+        if(typeof smsLog !== 'undefined' && Array.isArray(smsLog)) {
+          smsLog.unshift({
+            ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            name: p.name,
+            phone: p.phone,
+            msg: message,
+            via: 'Twilio',
+            ok: !!(result && result.ok)
+          });
+
+          if(typeof smsRenderLog === 'function') smsRenderLog();
+        }
+      } catch(e) {}
+
+      if(result && result.unreachable) {
+        failed += recipients.length - i - 1;
+        break;
+      }
+    } catch(e) {
+      failed++;
+    }
+
+    if(i < recipients.length - 1) {
+      if(typeof sleep === 'function') await sleep(350);
+      else await new Promise(resolve => setTimeout(resolve, 350));
+    }
+  }
+
+  pbCorrectionSmsToastV1(
+    `Correction SMS: ${sent} sent${failed ? `, ${failed} failed` : ''}`,
+    failed > 0 && sent === 0
+  );
+
+  return { sent, failed };
+}
+
+async function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = typeof pbScoreCorrectionMatchesV1 === 'function'
+    ? pbScoreCorrectionMatchesV1().find(r => r.roundIndex === roundIndex && r.matchIndex === matchIndex)
+    : {
+        roundIndex,
+        matchIndex,
+        round: roundIndex + 1,
+        court: match.court || matchIndex + 1,
+        score: pbCorrectionSmsScoreV1(match),
+        teams: typeof pbScoreCorrectionTeamsV1 === 'function' ? pbScoreCorrectionTeamsV1(match) : 'Match',
+        acceptedByA: match.acceptedByA || '',
+        acceptedByB: match.acceptedByB || '',
+        acceptedAt: match.acceptedAt || null
+      };
+
+  const reason = prompt('Reason for correction request?', 'Score reported incorrectly');
+
+  if(reason === null) return;
+
+  const target = prompt(
+    'Send correction SMS to which scorer?\n\n' +
+    'A = Team A scorer\n' +
+    'B = Team B scorer\n' +
+    'BOTH = both team scorers\n' +
+    'NONE = log correction only',
+    'A'
+  );
+
+  if(target === null) return;
+
+  const normalizedTarget = pbCorrectionSmsTextV1(target).toUpperCase() || 'NONE';
+
+  match.correctionPending = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = normalizedTarget;
+
+  if(typeof pbScoreCorrectionAddLogV1 === 'function') {
+    pbScoreCorrectionAddLogV1({
+      action: 'Correction requested',
+      status: 'Open',
+      round: row?.round || roundIndex + 1,
+      court: row?.court || matchIndex + 1,
+      matchIndex: matchIndex + 1,
+      teams: row?.teams || 'Match',
+      beforeScore: row?.score || pbCorrectionSmsScoreV1(match) || '—',
+      afterScore: row?.score || pbCorrectionSmsScoreV1(match) || '—',
+      reason: reason || 'Correction requested',
+      smsTarget: normalizedTarget,
+      acceptedByA: row?.acceptedByA || '',
+      acceptedByB: row?.acceptedByB || '',
+      acceptedAt: row?.acceptedAt || null
+    });
+  }
+
+  if(typeof pbScoreCorrectionPersistV1 === 'function') {
+    pbScoreCorrectionPersistV1();
+  }
+
+  pbCorrectionSmsToastV1('Correction request logged.');
+
+  if(normalizedTarget !== 'NONE' && normalizedTarget !== 'NO') {
+    await pbCorrectionSmsSendV1(row, match, normalizedTarget, reason || 'Correction requested');
+  }
+
+  if(typeof pbScoreCorrectionOpenModalV1 === 'function') {
+    pbScoreCorrectionOpenModalV1();
+  }
+}
+
+(function pbInstallCorrectionSmsToScorerV1(){
+  if(window.__PB_CORRECTION_SMS_TO_SCORER_V1_INSTALLED__) return;
+  window.__PB_CORRECTION_SMS_TO_SCORER_V1_INSTALLED__ = true;
+
+  // No interval. The override above is enough.
+})();
+
+
+/* PB_CORRECTION_SMS_PROMPT_FIX_V2 */
+function pbCorrectionSmsPromptTextV2(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionSmsPromptToastV2(msg, err) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg, err ? 'err' : undefined);
+    if(typeof toast === 'function') return toast(msg, err ? 'err' : undefined);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbCorrectionSmsPromptScoreV2(match) {
+  if(!match) return '';
+
+  const a =
+    match.scoreA ?? match.score1 ?? match.aScore ?? match.teamAScore ?? match.leftScore ?? match.homeScore ?? match.pointsA ?? match.points1;
+
+  const b =
+    match.scoreB ?? match.score2 ?? match.bScore ?? match.teamBScore ?? match.rightScore ?? match.awayScore ?? match.pointsB ?? match.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbCorrectionSmsPromptRowV2(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) return null;
+
+  if(typeof pbScoreCorrectionMatchesV1 === 'function') {
+    const found = pbScoreCorrectionMatchesV1().find(r =>
+      r.roundIndex === roundIndex && r.matchIndex === matchIndex
+    );
+
+    if(found) return found;
+  }
+
+  return {
+    roundIndex,
+    matchIndex,
+    round: roundIndex + 1,
+    court: match.court || match.courtNum || match.courtNumber || match.courtId || matchIndex + 1,
+    score: pbCorrectionSmsPromptScoreV2(match),
+    teams: typeof pbScoreCorrectionTeamsV1 === 'function' ? pbScoreCorrectionTeamsV1(match) : 'Match',
+    acceptedByA: match.acceptedByA || '',
+    acceptedByB: match.acceptedByB || '',
+    acceptedAt: match.acceptedAt || null
+  };
+}
+
+async function pbCorrectionSmsPromptSendV2(row, match, target, reason) {
+  if(typeof pbCorrectionSmsSendV1 === 'function') {
+    return await pbCorrectionSmsSendV1(row, match, target, reason);
+  }
+
+  pbCorrectionSmsPromptToastV2('Correction logged, but SMS sender is not installed yet.', true);
+  return { sent: 0, failed: 0, noSender: true };
+}
+
+async function pbCorrectionSmsRequestPromptV2(roundIndex, matchIndex, presetTarget) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = pbCorrectionSmsPromptRowV2(roundIndex, matchIndex);
+
+  const reason = prompt(
+    'Reason for correction request?',
+    match.correctionReason || 'Score reported incorrectly'
+  );
+
+  if(reason === null) return;
+
+  let target = presetTarget;
+
+  if(!target) {
+    target = prompt(
+      'Send correction SMS to which scorer?\n\n' +
+      'A = Team A scorer\n' +
+      'B = Team B scorer\n' +
+      'BOTH = both team scorers\n' +
+      'NONE = log correction only',
+      'A'
+    );
+  }
+
+  if(target === null) return;
+
+  target = pbCorrectionSmsPromptTextV2(target).toUpperCase();
+
+  if(!['A', 'B', 'BOTH', 'ALL', 'NONE', 'NO'].includes(target)) {
+    alert('Please enter A, B, BOTH, or NONE.');
+    return;
+  }
+
+  if(target === 'ALL') target = 'BOTH';
+  if(target === 'NO') target = 'NONE';
+
+  match.correctionPending = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = target;
+
+  if(typeof pbScoreCorrectionAddLogV1 === 'function') {
+    pbScoreCorrectionAddLogV1({
+      action: 'Correction requested',
+      status: 'Open',
+      round: row?.round || roundIndex + 1,
+      court: row?.court || matchIndex + 1,
+      matchIndex: matchIndex + 1,
+      teams: row?.teams || 'Match',
+      beforeScore: row?.score || pbCorrectionSmsPromptScoreV2(match) || '—',
+      afterScore: row?.score || pbCorrectionSmsPromptScoreV2(match) || '—',
+      reason: reason || 'Correction requested',
+      smsTarget: target,
+      acceptedByA: row?.acceptedByA || '',
+      acceptedByB: row?.acceptedByB || '',
+      acceptedAt: row?.acceptedAt || null
+    });
+  }
+
+  if(typeof pbScoreCorrectionPersistV1 === 'function') {
+    pbScoreCorrectionPersistV1();
+  }
+
+  pbCorrectionSmsPromptToastV2('Correction request logged.');
+
+  if(target !== 'NONE') {
+    await pbCorrectionSmsPromptSendV2(row, match, target, reason || 'Correction requested');
+  }
+
+  if(typeof pbScoreCorrectionOpenModalV1 === 'function') {
+    pbScoreCorrectionOpenModalV1();
+  }
+}
+
+// Force the public Request Correction function to use the SMS prompt flow.
+function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  return pbCorrectionSmsRequestPromptV2(roundIndex, matchIndex);
+}
+
+window.pbScoreCorrectionRequestV1 = pbScoreCorrectionRequestV1;
+
+// Capture old inline Request Correction buttons before the old handler can run.
+(function pbInstallCorrectionSmsPromptFixV2(){
+  if(window.__PB_CORRECTION_SMS_PROMPT_FIX_V2_INSTALLED__) return;
+  window.__PB_CORRECTION_SMS_PROMPT_FIX_V2_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const btn = e.target?.closest?.('button');
+      if(!btn) return;
+
+      const txt = pbCorrectionSmsPromptTextV2(btn.textContent || '');
+      const raw = String(btn.getAttribute('onclick') || '');
+
+      if(!txt.includes('Request Correction')) return;
+      if(!raw.includes('pbScoreCorrectionRequestV1')) return;
+
+      const m = raw.match(/pbScoreCorrectionRequestV1\((\d+)\s*,\s*(\d+)\)/);
+      if(!m) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      pbCorrectionSmsRequestPromptV2(Number(m[1]), Number(m[2]));
+    } catch(err) {
+      console.error('Correction SMS prompt intercept failed', err);
+    }
+  }, true);
+})();
+
+
+/* PB_CORRECTION_RESUBMIT_UNLOCK_V3 */
+function pbCorrectionUnlockTextV3(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionUnlockToastV3(msg, err) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg, err ? 'err' : undefined);
+    if(typeof toast === 'function') return toast(msg, err ? 'err' : undefined);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbCorrectionUnlockScoreV3(match) {
+  if(!match) return '';
+
+  const a =
+    match.scoreA ?? match.score1 ?? match.aScore ?? match.teamAScore ?? match.leftScore ?? match.homeScore ?? match.pointsA ?? match.points1;
+
+  const b =
+    match.scoreB ?? match.score2 ?? match.bScore ?? match.teamBScore ?? match.rightScore ?? match.awayScore ?? match.pointsB ?? match.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbCorrectionUnlockRowV3(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) return null;
+
+  if(typeof pbScoreCorrectionMatchesV1 === 'function') {
+    const found = pbScoreCorrectionMatchesV1().find(r =>
+      r.roundIndex === roundIndex && r.matchIndex === matchIndex
+    );
+
+    if(found) return found;
+  }
+
+  return {
+    roundIndex,
+    matchIndex,
+    round: roundIndex + 1,
+    court: match.court || match.courtNum || match.courtNumber || match.courtId || matchIndex + 1,
+    score: pbCorrectionUnlockScoreV3(match),
+    teams: typeof pbScoreCorrectionTeamsV1 === 'function' ? pbScoreCorrectionTeamsV1(match) : 'Match',
+    acceptedByA: match.acceptedByA || '',
+    acceptedByB: match.acceptedByB || '',
+    acceptedAt: match.acceptedAt || null
+  };
+}
+
+function pbCorrectionUnlockForResubmitV3(match, reason, target) {
+  if(!match) return;
+
+  const previousScore = pbCorrectionUnlockScoreV3(match);
+
+  match.correctionPending = true;
+  match.correctionNeedsRescore = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = target || 'NONE';
+  match.correctionOriginalScore = previousScore || match.correctionOriginalScore || '';
+
+  /*
+    Important unlock behavior:
+    The scorer mobile flow often blocks games that are complete/accepted/approved.
+    For a correction, the match must be reopened so the scorer can submit the corrected score.
+  */
+  match.complete = false;
+
+  match.organizerApproved = false;
+  match.organizerApprovedAt = null;
+  match.organizerApprovedBy = '';
+
+  match.acceptedByA = '';
+  match.acceptedByB = '';
+  match.acceptedAt = null;
+
+  match.mobileCorrectionOpen = true;
+  match.mobileResubmitAllowed = true;
+}
+
+async function pbCorrectionUnlockPushMobileV3() {
+  try {
+    if(typeof msPushNow === 'function') {
+      await msPushNow();
+      return true;
+    }
+  } catch(e) {
+    console.warn('Correction mobile push failed:', e);
+    return false;
+  }
+
+  return false;
+}
+
+async function pbCorrectionUnlockSaveV3() {
+  try {
+    if(typeof pbScoreCorrectionPersistV1 === 'function') {
+      pbScoreCorrectionPersistV1();
+      return;
+    }
+  } catch(e) {}
+
+  const saveNames = [
+    'saveState',
+    'persistState',
+    'autoSave',
+    'saveLocal',
+    'saveToLocalStorage',
+    'saveData'
+  ];
+
+  saveNames.forEach(name => {
+    try {
+      if(typeof window[name] === 'function') window[name]();
+    } catch(e) {}
+  });
+}
+
+async function pbCorrectionUnlockRequestV3(roundIndex, matchIndex, presetTarget) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = pbCorrectionUnlockRowV3(roundIndex, matchIndex);
+
+  const reason = prompt(
+    'Reason for correction request?',
+    match.correctionReason || 'Score reported incorrectly'
+  );
+
+  if(reason === null) return;
+
+  let target = presetTarget;
+
+  if(!target) {
+    target = prompt(
+      'Send correction SMS to which scorer?\n\n' +
+      'A = Team A scorer\n' +
+      'B = Team B scorer\n' +
+      'BOTH = both team scorers\n' +
+      'NONE = log correction only',
+      'A'
+    );
+  }
+
+  if(target === null) return;
+
+  target = pbCorrectionUnlockTextV3(target).toUpperCase();
+
+  if(!['A', 'B', 'BOTH', 'ALL', 'NONE', 'NO'].includes(target)) {
+    alert('Please enter A, B, BOTH, or NONE.');
+    return;
+  }
+
+  if(target === 'ALL') target = 'BOTH';
+  if(target === 'NO') target = 'NONE';
+
+  const beforeScore = row?.score || pbCorrectionUnlockScoreV3(match) || '—';
+
+  pbCorrectionUnlockForResubmitV3(match, reason, target);
+
+  if(typeof pbScoreCorrectionAddLogV1 === 'function') {
+    pbScoreCorrectionAddLogV1({
+      action: 'Correction requested',
+      status: 'Open',
+      round: row?.round || roundIndex + 1,
+      court: row?.court || matchIndex + 1,
+      matchIndex: matchIndex + 1,
+      teams: row?.teams || 'Match',
+      beforeScore,
+      afterScore: beforeScore,
+      reason: reason || 'Correction requested',
+      smsTarget: target,
+      acceptedByA: row?.acceptedByA || '',
+      acceptedByB: row?.acceptedByB || '',
+      acceptedAt: row?.acceptedAt || null
+    });
+  }
+
+  await pbCorrectionUnlockSaveV3();
+
+  const pushed = await pbCorrectionUnlockPushMobileV3();
+
+  if(!pushed) {
+    pbCorrectionUnlockToastV3('Correction logged and match reopened. Mobile push did not confirm; use Mobile Sync → Push now.', true);
+  } else {
+    pbCorrectionUnlockToastV3('Correction logged, match reopened, and mobile updated.');
+  }
+
+  if(target !== 'NONE') {
+    if(typeof pbCorrectionSmsSendV1 === 'function') {
+      await pbCorrectionSmsSendV1(row, match, target, reason || 'Correction requested');
+    } else if(typeof pbCorrectionSmsPromptSendV2 === 'function') {
+      await pbCorrectionSmsPromptSendV2(row, match, target, reason || 'Correction requested');
+    } else {
+      pbCorrectionUnlockToastV3('Correction logged, but SMS sender is not installed.', true);
+    }
+  }
+
+  if(typeof pbScoreCorrectionOpenModalV1 === 'function') {
+    pbScoreCorrectionOpenModalV1();
+  }
+
+  try {
+    if(typeof renderSchedule === 'function') renderSchedule();
+    if(typeof pbHomeEnsureCourtStatusPanelV1 === 'function') pbHomeEnsureCourtStatusPanelV1();
+    if(typeof pbOrganizerApprovalOpenModalV1 === 'function' && document.getElementById('pb-organizer-approval-modal-v1')) {
+      pbOrganizerApprovalOpenModalV1();
+    }
+  } catch(e) {}
+}
+
+// Force all correction request paths to use the unlock/resubmit flow.
+function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  return pbCorrectionUnlockRequestV3(roundIndex, matchIndex);
+}
+
+window.pbScoreCorrectionRequestV1 = pbScoreCorrectionRequestV1;
+
+(function pbInstallCorrectionResubmitUnlockV3(){
+  if(window.__PB_CORRECTION_RESUBMIT_UNLOCK_V3_INSTALLED__) return;
+  window.__PB_CORRECTION_RESUBMIT_UNLOCK_V3_INSTALLED__ = true;
+
+  document.addEventListener('click', function(e) {
+    try {
+      const btn = e.target?.closest?.('button');
+      if(!btn) return;
+
+      const txt = pbCorrectionUnlockTextV3(btn.textContent || '');
+      const raw = String(btn.getAttribute('onclick') || '');
+
+      if(!txt.includes('Request Correction')) return;
+      if(!raw.includes('pbScoreCorrectionRequestV1')) return;
+
+      const m = raw.match(/pbScoreCorrectionRequestV1\((\d+)\s*,\s*(\d+)\)/);
+      if(!m) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      pbCorrectionUnlockRequestV3(Number(m[1]), Number(m[2]));
+    } catch(err) {
+      console.error('Correction unlock intercept failed', err);
+    }
+  }, true);
+})();
+
+
+/* PB_CORRECTION_CLEAR_SCORE_FOR_MOBILE_V4 */
+function pbCorrectionClearScoreFieldsForMobileV4(match) {
+  if(!match) return '';
+
+  const previousScore =
+    (typeof pbCorrectionUnlockScoreV3 === 'function' && pbCorrectionUnlockScoreV3(match)) ||
+    (typeof pbCorrectionSmsScoreV1 === 'function' && pbCorrectionSmsScoreV1(match)) ||
+    '';
+
+  const scoreKeys = [
+    'scoreA',
+    'scoreB',
+    'score1',
+    'score2',
+    'aScore',
+    'bScore',
+    'teamAScore',
+    'teamBScore',
+    'leftScore',
+    'rightScore',
+    'homeScore',
+    'awayScore',
+    'pointsA',
+    'pointsB',
+    'points1',
+    'points2'
+  ];
+
+  scoreKeys.forEach(k => {
+    if(Object.prototype.hasOwnProperty.call(match, k)) {
+      match[k] = '';
+    }
+  });
+
+  // Ensure the most common score fields exist as blank values.
+  match.scoreA = '';
+  match.scoreB = '';
+
+  return previousScore;
+}
+
+// Override correction unlock helper with a hard mobile unlock.
+// This later definition wins over the earlier V3 function.
+function pbCorrectionUnlockForResubmitV3(match, reason, target) {
+  if(!match) return;
+
+  const previousScore = pbCorrectionClearScoreFieldsForMobileV4(match);
+
+  match.correctionPending = true;
+  match.correctionNeedsRescore = true;
+  match.correctionClearScore = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = target || 'NONE';
+  match.correctionOriginalScore = previousScore || match.correctionOriginalScore || '';
+
+  // Reopen the match for scoring.
+  match.complete = false;
+  match.consumed = false;
+
+  // Clear approvals and acceptance so mobile cannot treat it as locked.
+  match.organizerApproved = false;
+  match.organizerApprovedAt = null;
+  match.organizerApprovedBy = '';
+
+  match.acceptedByA = '';
+  match.acceptedByB = '';
+  match.acceptedAt = null;
+
+  // Explicit mobile unlock flags.
+  match.mobileCorrectionOpen = true;
+  match.mobileResubmitAllowed = true;
+  match.mobileLocked = false;
+  match.scoreLocked = false;
+  match.approvalLocked = false;
+}
+
+// Override SMS link so correction scorer opens mobile in correction mode.
+function pbCorrectionSmsMobileLinkV1(row) {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+    if(typeof msSaveConfig === 'function') msSaveConfig();
+  } catch(e) {}
+
+  const workerUrl =
+    (typeof msState !== 'undefined' && msState && msState.workerUrl) ||
+    document.getElementById('ms-worker-url')?.value ||
+    '';
+
+  const code =
+    (typeof msState !== 'undefined' && msState && msState.code) ||
+    document.getElementById('ms-code')?.value ||
+    '';
+
+  if(!workerUrl || !code) return '';
+
+  let link =
+    `${String(workerUrl).replace(/\/+$/, '')}/?code=${encodeURIComponent(code)}` +
+    `&court=${encodeURIComponent(row.court)}` +
+    `&correction=1` +
+    `&resubmit=1`;
+
+  try {
+    if(typeof msPinsCache !== 'undefined' && msPinsCache && msPinsCache[row.court]) {
+      link += `&pin=${encodeURIComponent(msPinsCache[row.court])}`;
+    }
+  } catch(e) {}
+
+  return link;
+}
+
+
+/* PB_CORRECTION_FORCE_SMS_LINK_V6 */
+function pbCorrectionForceTextV6(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionForceMobileLinkV6(row) {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+    if(typeof msSaveConfig === 'function') msSaveConfig();
+  } catch(e) {}
+
+  const workerUrl =
+    (typeof msState !== 'undefined' && msState && msState.workerUrl) ||
+    document.getElementById('ms-worker-url')?.value ||
+    '';
+
+  const code =
+    (typeof msState !== 'undefined' && msState && msState.code) ||
+    document.getElementById('ms-code')?.value ||
+    '';
+
+  if(!workerUrl || !code) return '';
+
+  const court = row?.court || row?.courtNumber || row?.courtNum || '';
+
+  let link =
+    `${String(workerUrl).replace(/\/+$/, '')}/?code=${encodeURIComponent(code)}` +
+    `&court=${encodeURIComponent(court)}` +
+    `&correction=1` +
+    `&resubmit=1` +
+    `&forceCorrection=1` +
+    `&v=correction-force-unlock-v6-${Date.now()}`;
+
+  try {
+    if(typeof msPinsCache !== 'undefined' && msPinsCache && msPinsCache[court]) {
+      link += `&pin=${encodeURIComponent(msPinsCache[court])}`;
+    }
+  } catch(e) {}
+
+  return link;
+}
+
+// Override all correction SMS link builders.
+function pbCorrectionSmsMobileLinkV1(row) {
+  return pbCorrectionForceMobileLinkV6(row);
+}
+
+window.pbCorrectionSmsMobileLinkV1 = pbCorrectionSmsMobileLinkV1;
+
+function pbCorrectionForceUnlockMatchV6(match, reason, target) {
+  if(!match) return;
+
+  const previousScore =
+    (typeof pbCorrectionUnlockScoreV3 === 'function' && pbCorrectionUnlockScoreV3(match)) ||
+    (typeof pbCorrectionSmsScoreV1 === 'function' && pbCorrectionSmsScoreV1(match)) ||
+    match.correctionOriginalScore ||
+    '';
+
+  match.correctionPending = true;
+  match.correctionNeedsRescore = true;
+  match.correctionClearScore = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = target || 'NONE';
+  match.correctionOriginalScore = previousScore;
+
+  // Reopen the game.
+  match.complete = false;
+  match.consumed = false;
+
+  // Clear approval and acceptance locks.
+  match.organizerApproved = false;
+  match.organizerApprovedAt = null;
+  match.organizerApprovedBy = '';
+
+  match.acceptedByA = '';
+  match.acceptedByB = '';
+  match.acceptedAt = null;
+
+  // Explicit mobile bypass flags.
+  match.mobileCorrectionOpen = true;
+  match.mobileResubmitAllowed = true;
+  match.forceCorrection = true;
+  match.correctionResubmit = true;
+  match.mobileLocked = false;
+  match.scoreLocked = false;
+  match.approvalLocked = false;
+}
+
+// Override existing helper if present.
+function pbCorrectionUnlockForResubmitV3(match, reason, target) {
+  return pbCorrectionForceUnlockMatchV6(match, reason, target);
+}
+
+window.pbCorrectionUnlockForResubmitV3 = pbCorrectionUnlockForResubmitV3;
+
+
+/* PB_CORRECTION_SMS_PIN_LINK_V7 */
+function pbCorrectionPinTextV7(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionFindCourtPinV7(court) {
+  const courtKey = pbCorrectionPinTextV7(court);
+
+  try {
+    if(typeof msPinsCache !== 'undefined' && msPinsCache) {
+      if(msPinsCache[courtKey]) return pbCorrectionPinTextV7(msPinsCache[courtKey]);
+      if(msPinsCache[Number(courtKey)]) return pbCorrectionPinTextV7(msPinsCache[Number(courtKey)]);
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof msState !== 'undefined' && msState) {
+      const buckets = [
+        msState.pins,
+        msState.courtPins,
+        msState.courtPinMap,
+        msState.pinMap
+      ];
+
+      for(const bucket of buckets) {
+        if(bucket && bucket[courtKey]) return pbCorrectionPinTextV7(bucket[courtKey]);
+        if(bucket && bucket[Number(courtKey)]) return pbCorrectionPinTextV7(bucket[Number(courtKey)]);
+      }
+    }
+  } catch(e) {}
+
+  // Fallback: search localStorage for a JSON object containing pins.
+  try {
+    for(const key of Object.keys(localStorage || {})) {
+      const raw = localStorage.getItem(key);
+      if(!raw || raw[0] !== '{') continue;
+
+      let obj;
+      try { obj = JSON.parse(raw); } catch(e) { continue; }
+
+      const buckets = [
+        obj.pins,
+        obj.courtPins,
+        obj.courtPinMap,
+        obj.pinMap,
+        obj.msPinsCache,
+        obj.state && obj.state.pins,
+        obj.state && obj.state.courtPins
+      ];
+
+      for(const bucket of buckets) {
+        if(bucket && bucket[courtKey]) return pbCorrectionPinTextV7(bucket[courtKey]);
+        if(bucket && bucket[Number(courtKey)]) return pbCorrectionPinTextV7(bucket[Number(courtKey)]);
+      }
+    }
+  } catch(e) {}
+
+  return '';
+}
+
+function pbCorrectionMobileWorkerUrlV7() {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+  } catch(e) {}
+
+  return (
+    (typeof msState !== 'undefined' && msState && msState.workerUrl) ||
+    document.getElementById('ms-worker-url')?.value ||
+    ''
+  );
+}
+
+function pbCorrectionMobileCodeV7() {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+  } catch(e) {}
+
+  return (
+    (typeof msState !== 'undefined' && msState && msState.code) ||
+    document.getElementById('ms-code')?.value ||
+    ''
+  );
+}
+
+function pbCorrectionSmsMobileLinkV1(row) {
+  const workerUrl = pbCorrectionMobileWorkerUrlV7();
+  const code = pbCorrectionMobileCodeV7();
+
+  if(!workerUrl || !code) return '';
+
+  const court = row?.court || row?.courtNumber || row?.courtNum || '';
+  const pin = pbCorrectionFindCourtPinV7(court);
+
+  const params = new URLSearchParams();
+  params.set('code', code);
+  params.set('court', court);
+  params.set('correction', '1');
+  params.set('resubmit', '1');
+  params.set('forceCorrection', '1');
+  params.set('v', `correction-banner-pin-v7-${Date.now()}`);
+
+  if(pin) {
+    params.set('pin', pin);
+  }
+
+  return `${String(workerUrl).replace(/\/+$/, '')}/?${params.toString()}`;
+}
+
+window.pbCorrectionSmsMobileLinkV1 = pbCorrectionSmsMobileLinkV1;
+
+// Override message so if a PIN exists, it is also visible in the SMS as backup.
+function pbCorrectionSmsMessageV1(row, match, reason) {
+  const tournament =
+    (typeof pbCorrectionSmsTournamentNameV1 === 'function' && pbCorrectionSmsTournamentNameV1()) ||
+    'Pickleball Tournament';
+
+  const score =
+    (typeof pbCorrectionSmsScoreV1 === 'function' && pbCorrectionSmsScoreV1(match)) ||
+    row?.score ||
+    'not recorded';
+
+  const link = pbCorrectionSmsMobileLinkV1(row);
+  const pin = pbCorrectionFindCourtPinV7(row?.court);
+
+  const lines = [
+    `🏓 ${tournament}`,
+    `Score correction requested`,
+    `Round ${row?.round || ''} · Court ${row?.court || ''}`,
+    `Current score: ${score}`,
+    reason ? `Reason: ${reason}` : '',
+    link ? `Please review/resubmit here: ${link}` : '',
+    pin ? `PIN: ${pin}` : ''
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
+window.pbCorrectionSmsMessageV1 = pbCorrectionSmsMessageV1;
+
+
+/* PB_EXACT_CORRECTION_MATCH_PUSH_V11 */
+function pbCorrectionV11Text(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCorrectionV11Toast(msg, err) {
+  try {
+    if(typeof showToast === 'function') return showToast(msg, err ? 'err' : undefined);
+    if(typeof toast === 'function') return toast(msg, err ? 'err' : undefined);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbCorrectionV11Score(match) {
+  if(!match) return '';
+
+  const a = match.scoreA ?? match.score1 ?? match.aScore ?? match.teamAScore ?? match.leftScore ?? match.homeScore ?? match.pointsA ?? match.points1;
+  const b = match.scoreB ?? match.score2 ?? match.bScore ?? match.teamBScore ?? match.rightScore ?? match.awayScore ?? match.pointsB ?? match.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbCorrectionV11Row(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+  if(!match) return null;
+
+  return {
+    roundIndex,
+    matchIndex,
+    round: match.round || roundIndex + 1,
+    court: match.court || match.courtNum || match.courtNumber || match.courtId || matchIndex + 1,
+    score: pbCorrectionV11Score(match),
+    teams: typeof pbScoreCorrectionTeamsV1 === 'function' ? pbScoreCorrectionTeamsV1(match) : 'Match',
+    acceptedByA: match.acceptedByA || '',
+    acceptedByB: match.acceptedByB || '',
+    acceptedAt: match.acceptedAt || null
+  };
+}
+
+function pbCorrectionV11EnsurePin(court) {
+  const courtKey = pbCorrectionV11Text(court);
+
+  try {
+    if(typeof msPinsCache === 'undefined' || !msPinsCache) window.msPinsCache = {};
+  } catch(e) {}
+
+  try {
+    if(typeof msPinsCache !== 'undefined') {
+      const existing = pbCorrectionV11Text(msPinsCache[courtKey] || msPinsCache[Number(courtKey)]);
+      if(existing) return existing;
+
+      const pin = String(Math.floor(1000 + Math.random() * 9000));
+      msPinsCache[courtKey] = pin;
+      return pin;
+    }
+  } catch(e) {}
+
+  return '';
+}
+
+async function pbCorrectionV11SavePins() {
+  try {
+    if(typeof msSavePins === 'function') {
+      await msSavePins();
+      return true;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof msApi === 'function' && typeof msPinsCache !== 'undefined') {
+      const pins = {};
+      Object.keys(msPinsCache || {}).forEach(court => pins[court] = msPinsCache[court] || '');
+      await msApi('/setpins', { method:'POST', body: JSON.stringify({ pins }) });
+      return true;
+    }
+  } catch(e) {}
+
+  return false;
+}
+
+function pbCorrectionV11MobileLink(row) {
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+  } catch(e) {}
+
+  const workerUrl =
+    (typeof msState !== 'undefined' && msState && msState.workerUrl) ||
+    document.getElementById('ms-worker-url')?.value ||
+    '';
+
+  const code =
+    (typeof msState !== 'undefined' && msState && msState.code) ||
+    document.getElementById('ms-code')?.value ||
+    '';
+
+  if(!workerUrl || !code) return '';
+
+  const court = row?.court || '';
+  const pin = pbCorrectionV11EnsurePin(court);
+
+  const params = new URLSearchParams();
+  params.set('code', code);
+  params.set('court', court);
+  params.set('matchId', String(row?.matchId || ''));
+  params.set('round', String(row?.round || ''));
+  params.set('correction', '1');
+  params.set('resubmit', '1');
+  params.set('forceCorrection', '1');
+  params.set('v', 'exact-correction-v11-' + Date.now());
+
+  if(pin) params.set('pin', pin);
+
+  return `${String(workerUrl).replace(/\/+$/, '')}/?${params.toString()}`;
+}
+
+function pbCorrectionSmsMobileLinkV1(row) {
+  return pbCorrectionV11MobileLink(row);
+}
+
+window.pbCorrectionSmsMobileLinkV1 = pbCorrectionSmsMobileLinkV1;
+
+function pbCorrectionSmsMessageV1(row, match, reason) {
+  const tournament =
+    (typeof pbCorrectionSmsTournamentNameV1 === 'function' && pbCorrectionSmsTournamentNameV1()) ||
+    (typeof getTournamentName === 'function' && getTournamentName()) ||
+    'Pickleball Tournament';
+
+  const score = pbCorrectionV11Score(match) || row?.score || row?.previousScore || 'not recorded';
+  const link = pbCorrectionV11MobileLink(row);
+  const pin = pbCorrectionV11EnsurePin(row?.court);
+
+  return [
+    `🏓 ${tournament}`,
+    `Score correction requested`,
+    `Round ${row?.round || ''} · Court ${row?.court || ''}`,
+    `Previous score: ${score}`,
+    reason ? `Reason: ${reason}` : '',
+    link ? `Submit corrected score here: ${link}` : '',
+    pin ? `PIN: ${pin}` : ''
+  ].filter(Boolean).join('\n');
+}
+
+window.pbCorrectionSmsMessageV1 = pbCorrectionSmsMessageV1;
+
+function pbCorrectionV11Payload(row, match) {
+  return {
+    court: row.court,
+    matchId: match.id,
+    round: row.round,
+    teamA: (match.teamA || []).map(i => state.players[i]?.name || '?'),
+    teamB: (match.teamB || []).map(i => state.players[i]?.name || '?'),
+
+    // Blank score fields make mobile treat this as score-needed.
+    scoreA: '',
+    scoreB: '',
+    complete: false,
+    submittedBy: '',
+    submittedAt: null,
+
+    acceptedByA: '',
+    acceptedByB: '',
+    acceptedAt: null,
+
+    correctionPending: true,
+    correctionNeedsRescore: true,
+    correctionClearScore: true,
+    correctionResubmit: true,
+    forceCorrection: true,
+    mobileCorrectionOpen: true,
+    mobileResubmitAllowed: true,
+    allowInactiveCourtCorrection: true,
+    bypassActiveCourtCheck: true,
+
+    correctionOriginalScore: match.correctionOriginalScore || row.previousScore || pbCorrectionV11Score(match) || '',
+    correctionReason: match.correctionReason || ''
+  };
+}
+
+async function pbCorrectionV11PushExactMatch(row, match) {
+  if(typeof msApi !== 'function') {
+    throw new Error('Mobile Sync API is not available.');
+  }
+
+  try {
+    if(typeof msLoadConfig === 'function') msLoadConfig();
+    if(typeof msSaveConfig === 'function') msSaveConfig();
+  } catch(e) {}
+
+  pbCorrectionV11EnsurePin(row.court);
+  await pbCorrectionV11SavePins();
+
+  const courtPayload = pbCorrectionV11Payload(row, match);
+
+  await msApi('/push', {
+    method: 'POST',
+    body: JSON.stringify({
+      tournamentName: typeof getTournamentName === 'function' ? getTournamentName() : 'Pickleball Tournament',
+      round: row.round,
+      courts: [courtPayload],
+      byePlayers: [],
+      correctionOnly: true,
+      correctionMatchId: match.id,
+      correctionCourt: row.court
+    })
+  });
+
+  return courtPayload;
+}
+
+async function pbCorrectionV11Persist() {
+  try {
+    if(typeof pbScoreCorrectionPersistV1 === 'function') {
+      pbScoreCorrectionPersistV1();
+      return;
+    }
+  } catch(e) {}
+
+  try {
+    if(typeof autoSave === 'function') autoSave();
+  } catch(e) {}
+}
+
+async function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  const match = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!match) {
+    alert('Match not found.');
+    return;
+  }
+
+  const row = pbCorrectionV11Row(roundIndex, matchIndex);
+  if(!row) {
+    alert('Match not found.');
+    return;
+  }
+
+  const previousScore = pbCorrectionV11Score(match) || row.score || '';
+
+  const reason = prompt(
+    'Reason for correction request?',
+    match.correctionReason || 'Score reported incorrectly'
+  );
+
+  if(reason === null) return;
+
+  let target = prompt(
+    'Send correction SMS to which scorer?\n\n' +
+    'A = Team A scorer\n' +
+    'B = Team B scorer\n' +
+    'BOTH = both team scorers\n' +
+    'NONE = log correction only',
+    'A'
+  );
+
+  if(target === null) return;
+
+  target = pbCorrectionV11Text(target).toUpperCase();
+
+  if(target === 'ALL') target = 'BOTH';
+  if(target === 'NO') target = 'NONE';
+
+  if(!['A', 'B', 'BOTH', 'NONE'].includes(target)) {
+    alert('Please enter A, B, BOTH, or NONE.');
+    return;
+  }
+
+  row.previousScore = previousScore;
+  row.matchId = match.id;
+
+  match.correctionPending = true;
+  match.correctionNeedsRescore = true;
+  match.correctionClearScore = true;
+  match.correctionRequestedAt = new Date().toISOString();
+  match.correctionReason = reason || 'Correction requested';
+  match.correctionSmsTarget = target;
+  match.correctionOriginalScore = previousScore;
+
+  // Reopen local desktop match so pulled corrected score is not ignored as stale.
+  match.scoreA = '';
+  match.scoreB = '';
+  match.complete = false;
+  match.consumed = false;
+
+  match.organizerApproved = false;
+  match.organizerApprovedAt = null;
+  match.organizerApprovedBy = '';
+
+  match.acceptedByA = '';
+  match.acceptedByB = '';
+  match.acceptedAt = null;
+
+  match._submittedBy = '';
+  match._submittedAt = null;
+
+  match.forceCorrection = true;
+  match.correctionResubmit = true;
+  match.mobileCorrectionOpen = true;
+  match.mobileResubmitAllowed = true;
+  match.allowInactiveCourtCorrection = true;
+  match.bypassActiveCourtCheck = true;
+
+  if(typeof pbScoreCorrectionAddLogV1 === 'function') {
+    pbScoreCorrectionAddLogV1({
+      action: 'Correction requested',
+      status: 'Open',
+      round: row.round,
+      court: row.court,
+      matchIndex: matchIndex + 1,
+      teams: row.teams || 'Match',
+      beforeScore: previousScore || '—',
+      afterScore: 'Reopened for correction',
+      reason: reason || 'Correction requested',
+      smsTarget: target,
+      acceptedByA: row.acceptedByA || '',
+      acceptedByB: row.acceptedByB || '',
+      acceptedAt: row.acceptedAt || null
+    });
+  }
+
+  await pbCorrectionV11Persist();
+
+  try {
+    await pbCorrectionV11PushExactMatch(row, match);
+    pbCorrectionV11Toast('Correction match pushed to mobile.');
+  } catch(e) {
+    pbCorrectionV11Toast('Correction logged, but mobile push failed: ' + e.message, true);
+  }
+
+  if(target !== 'NONE') {
+    if(typeof pbCorrectionSmsSendV1 === 'function') {
+      await pbCorrectionSmsSendV1(row, match, target, reason || 'Correction requested');
+    } else {
+      pbCorrectionV11Toast('Correction logged, but SMS sender is not installed.', true);
+    }
+  }
+
+  try {
+    if(typeof renderSchedule === 'function') renderSchedule();
+    if(typeof updateProgress === 'function') updateProgress();
+    if(typeof updateStandings === 'function') updateStandings();
+    if(typeof pbHomeEnsureCourtStatusPanelV1 === 'function') pbHomeEnsureCourtStatusPanelV1();
+    if(typeof pbScoreCorrectionOpenModalV1 === 'function') pbScoreCorrectionOpenModalV1();
+  } catch(e) {}
+}
+
+window.pbScoreCorrectionRequestV1 = pbScoreCorrectionRequestV1;
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
