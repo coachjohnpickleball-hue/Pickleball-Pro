@@ -23844,6 +23844,1110 @@ function pbServerLicenseEnforcementUiV29Install() {
 
 pbServerLicenseEnforcementUiV29Install();
 
+
+
+/* PB_CLIENT_ONBOARDING_V31 */
+function pbClientOnboardingV31Slug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "client";
+}
+
+function pbClientOnboardingV31Title(value) {
+  value = String(value || "").replace(/[-_]+/g, " ").trim();
+  return value.replace(/\b\w/g, function(ch) { return ch.toUpperCase(); });
+}
+
+function pbClientOnboardingV31Defaults(level) {
+  level = String(level || "club").toLowerCase();
+
+  if (typeof pbPlanLimitsAdminSeatsV27Defaults === "function") {
+    try {
+      var d = pbPlanLimitsAdminSeatsV27Defaults(level);
+      if (d) return {
+        playerLimit: d.playerLimit,
+        adminSeats: d.adminSeats,
+        mobileScoring: level !== "trial",
+        officialResults: level !== "trial",
+        supportTier: level === "enterprise" ? "dedicated" : level === "pro" ? "priority" : level === "trial" ? "community" : "standard"
+      };
+    } catch (e) {}
+  }
+
+  if (level === "trial") return { playerLimit: 16, adminSeats: 1, mobileScoring: false, officialResults: false, supportTier: "community" };
+  if (level === "pro") return { playerLimit: 96, adminSeats: 5, mobileScoring: true, officialResults: true, supportTier: "priority" };
+  if (level === "enterprise") return { playerLimit: 250, adminSeats: 25, mobileScoring: true, officialResults: true, supportTier: "dedicated" };
+  return { playerLimit: 40, adminSeats: 2, mobileScoring: true, officialResults: true, supportTier: "standard" };
+}
+
+function pbClientOnboardingV31GetToken() {
+  var token = "";
+  try {
+    var el = document.getElementById("pb-v31-owner-token");
+    if (el) token = String(el.value || "").trim();
+  } catch (e) {}
+
+  if (!token) {
+    try { token = String(localStorage.getItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN") || "").trim(); } catch (e) {}
+  }
+
+  if (token) {
+    try { localStorage.setItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN", token); } catch (e) {}
+  }
+
+  return token;
+}
+
+function pbClientOnboardingV31SetStatus(msg, bad) {
+  try {
+    var el = document.getElementById("pb-v31-status");
+    if (!el) return;
+    el.textContent = msg || "";
+    el.style.color = bad ? "var(--red)" : "var(--txt2)";
+  } catch (e) {}
+}
+
+function pbClientOnboardingV31ReadForm() {
+  var name = "";
+  var clientId = "";
+  var level = "club";
+  var status = "active";
+
+  try { name = String(document.getElementById("pb-v31-client-name").value || "").trim(); } catch (e) {}
+  try { clientId = String(document.getElementById("pb-v31-client-id").value || "").trim(); } catch (e) {}
+  try { level = String(document.getElementById("pb-v31-license-level").value || "club").toLowerCase(); } catch (e) {}
+  try { status = String(document.getElementById("pb-v31-license-status").value || "active").toLowerCase(); } catch (e) {}
+
+  if (!clientId) clientId = pbClientOnboardingV31Slug(name || "client");
+  clientId = pbClientOnboardingV31Slug(clientId);
+
+  var defaults = pbClientOnboardingV31Defaults(level);
+
+  var playerLimit = defaults.playerLimit;
+  var adminSeats = defaults.adminSeats;
+
+  try {
+    var n = parseInt(document.getElementById("pb-v31-player-limit").value, 10);
+    if (Number.isFinite(n) && n >= 4) playerLimit = n;
+  } catch (e) {}
+
+  try {
+    var a = parseInt(document.getElementById("pb-v31-admin-seats").value, 10);
+    if (Number.isFinite(a) && a >= 1) adminSeats = a;
+  } catch (e) {}
+
+  var supportTier = defaults.supportTier;
+  try { supportTier = String(document.getElementById("pb-v31-support-tier").value || defaults.supportTier).trim(); } catch (e) {}
+
+  var mobileScoring = defaults.mobileScoring;
+  var officialResults = defaults.officialResults;
+
+  try { mobileScoring = !!document.getElementById("pb-v31-mobile-scoring").checked; } catch (e) {}
+  try { officialResults = !!document.getElementById("pb-v31-official-results").checked; } catch (e) {}
+
+  return {
+    clientId: clientId,
+    clientName: name || pbClientOnboardingV31Title(clientId),
+    licenseLevel: level,
+    licenseLabel: level.charAt(0).toUpperCase() + level.slice(1),
+    licenseStatus: status,
+    playerLimit: playerLimit,
+    adminSeats: adminSeats,
+    mobileScoring: mobileScoring,
+    officialResults: officialResults,
+    supportTier: supportTier,
+    source: "PB_CLIENT_ONBOARDING_V31",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function pbClientOnboardingV31FillForm(license) {
+  license = license || {};
+  var level = String(license.licenseLevel || "club").toLowerCase();
+  var defaults = pbClientOnboardingV31Defaults(level);
+
+  try { document.getElementById("pb-v31-client-name").value = license.clientName || ""; } catch (e) {}
+  try { document.getElementById("pb-v31-client-id").value = license.clientId || ""; } catch (e) {}
+  try { document.getElementById("pb-v31-license-level").value = level; } catch (e) {}
+  try { document.getElementById("pb-v31-license-status").value = String(license.licenseStatus || "active").toLowerCase(); } catch (e) {}
+  try { document.getElementById("pb-v31-player-limit").value = license.playerLimit || defaults.playerLimit; } catch (e) {}
+  try { document.getElementById("pb-v31-admin-seats").value = license.adminSeats || defaults.adminSeats; } catch (e) {}
+  try { document.getElementById("pb-v31-support-tier").value = license.supportTier || defaults.supportTier; } catch (e) {}
+  try { document.getElementById("pb-v31-mobile-scoring").checked = license.mobileScoring == null ? defaults.mobileScoring : !!license.mobileScoring; } catch (e) {}
+  try { document.getElementById("pb-v31-official-results").checked = license.officialResults == null ? defaults.officialResults : !!license.officialResults; } catch (e) {}
+
+  pbClientOnboardingV31UpdateLaunchUrl();
+}
+
+function pbClientOnboardingV31ApplyDefaults() {
+  var level = "club";
+  try { level = String(document.getElementById("pb-v31-license-level").value || "club").toLowerCase(); } catch (e) {}
+
+  var d = pbClientOnboardingV31Defaults(level);
+  try { document.getElementById("pb-v31-player-limit").value = d.playerLimit; } catch (e) {}
+  try { document.getElementById("pb-v31-admin-seats").value = d.adminSeats; } catch (e) {}
+  try { document.getElementById("pb-v31-support-tier").value = d.supportTier; } catch (e) {}
+  try { document.getElementById("pb-v31-mobile-scoring").checked = !!d.mobileScoring; } catch (e) {}
+  try { document.getElementById("pb-v31-official-results").checked = !!d.officialResults; } catch (e) {}
+
+  pbClientOnboardingV31UpdateLaunchUrl();
+}
+
+function pbClientOnboardingV31GenerateId() {
+  var name = "";
+  try { name = document.getElementById("pb-v31-client-name").value || ""; } catch (e) {}
+
+  var id = pbClientOnboardingV31Slug(name || "new-client");
+  try { document.getElementById("pb-v31-client-id").value = id; } catch (e) {}
+
+  pbClientOnboardingV31UpdateLaunchUrl();
+}
+
+function pbClientOnboardingV31LaunchUrl(clientId) {
+  clientId = pbClientOnboardingV31Slug(clientId || pbClientOnboardingV31ReadForm().clientId);
+  return location.origin + location.pathname + "?clientId=" + encodeURIComponent(clientId);
+}
+
+function pbClientOnboardingV31UpdateLaunchUrl() {
+  try {
+    var license = pbClientOnboardingV31ReadForm();
+    var el = document.getElementById("pb-v31-launch-url");
+    if (el) el.value = pbClientOnboardingV31LaunchUrl(license.clientId);
+  } catch (e) {}
+}
+
+async function pbClientOnboardingV31Save() {
+  try {
+    var token = pbClientOnboardingV31GetToken();
+    if (!token) {
+      pbClientOnboardingV31SetStatus("Owner admin token required.", true);
+      return;
+    }
+
+    var license = pbClientOnboardingV31ReadForm();
+    if (!license.clientId || license.clientId === "client") {
+      pbClientOnboardingV31SetStatus("Enter a real client/company name or client ID.", true);
+      return;
+    }
+
+    pbClientOnboardingV31SetStatus("Saving client license...", false);
+
+    var res = await fetch("/api/admin/client-license?clientId=" + encodeURIComponent(license.clientId), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-admin-license-token": token
+      },
+      cache: "no-store",
+      body: JSON.stringify(license)
+    });
+
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data) {
+      throw new Error((data && data.error) || ("Server returned " + res.status));
+    }
+
+    var saved = data.license || data.clientLicense || license;
+
+    try { localStorage.setItem("PB_CLIENT_ONBOARDING_V31_LAST", JSON.stringify(saved)); } catch (e) {}
+
+    pbClientOnboardingV31FillForm(saved);
+
+    pbClientOnboardingV31SetStatus(
+      "Saved: " + saved.clientName + " · " + String(saved.licenseLevel || "").toUpperCase() +
+      " · " + String(saved.licenseStatus || "").toUpperCase() +
+      " · " + saved.playerLimit + " players · " + saved.adminSeats + " admins",
+      false
+    );
+
+    try {
+      if (typeof toast === "function") toast("Client license saved.", "ok");
+    } catch (e) {}
+
+    return saved;
+  } catch (e) {
+    pbClientOnboardingV31SetStatus("Save failed: " + e.message, true);
+    try {
+      if (typeof toast === "function") toast("Client onboarding save failed.", "err");
+    } catch (err) {}
+    return null;
+  }
+}
+
+async function pbClientOnboardingV31Load() {
+  try {
+    var license = pbClientOnboardingV31ReadForm();
+    if (!license.clientId || license.clientId === "client") {
+      pbClientOnboardingV31SetStatus("Enter a client ID to load.", true);
+      return;
+    }
+
+    pbClientOnboardingV31SetStatus("Loading client license...", false);
+
+    var res = await fetch("/api/license-gate?clientId=" + encodeURIComponent(license.clientId) + "&v=" + Date.now(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
+    });
+
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.license) {
+      throw new Error((data && data.error) || ("Server returned " + res.status));
+    }
+
+    pbClientOnboardingV31FillForm(data.license);
+
+    pbClientOnboardingV31SetStatus(
+      "Loaded: " + data.license.clientName + " · " + String(data.license.licenseLevel || "").toUpperCase() +
+      " · " + String(data.license.licenseStatus || "").toUpperCase(),
+      data.blocked
+    );
+
+    return data.license;
+  } catch (e) {
+    pbClientOnboardingV31SetStatus("Load failed: " + e.message, true);
+    return null;
+  }
+}
+
+function pbClientOnboardingV31UseCurrentBrowserClient() {
+  try {
+    var license = pbClientOnboardingV31ReadForm();
+
+    var identity = {};
+    try {
+      identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}") || {};
+    } catch (e) {}
+
+    identity.clientId = license.clientId;
+    identity.clientName = license.clientName;
+    identity.licenseLevel = license.licenseLevel;
+    identity.licenseStatus = license.licenseStatus;
+    identity.playerLimit = license.playerLimit;
+    identity.adminSeats = license.adminSeats;
+    identity.updatedAt = new Date().toISOString();
+    identity.source = "PB_CLIENT_ONBOARDING_V31_CURRENT_BROWSER";
+
+    localStorage.setItem("PB_CLIENT_IDENTITY_V22", JSON.stringify(identity));
+    localStorage.setItem("PB_CLIENT_LICENSE_SERVER_V24", JSON.stringify(license));
+    localStorage.setItem("PB_CLIENT_LICENSE_SERVER_V24_LAST", JSON.stringify(license));
+
+    try {
+      if (typeof pbClientLicenseServerV24Apply === "function") {
+        pbClientLicenseServerV24Apply(license, "client-onboarding-v31-current-browser");
+      }
+      if (typeof pbLicenseGateV28RenderBanner === "function") pbLicenseGateV28RenderBanner();
+      if (typeof pbServerLicenseEnforcementUiV29Sync === "function") pbServerLicenseEnforcementUiV29Sync();
+      if (typeof pbClientIdentityV22RenderAdminCard === "function") pbClientIdentityV22RenderAdminCard();
+      if (typeof pbLicenseV23RenderAll === "function") pbLicenseV23RenderAll();
+    } catch (e) {}
+
+    pbClientOnboardingV31SetStatus("Current browser switched to client: " + license.clientId, false);
+
+    try {
+      if (typeof toast === "function") toast("Browser switched to " + license.clientId, "ok");
+    } catch (e) {}
+  } catch (e) {
+    pbClientOnboardingV31SetStatus("Switch failed: " + e.message, true);
+  }
+}
+
+function pbClientOnboardingV31ApplyClientIdFromUrl() {
+  try {
+    var params = new URLSearchParams(location.search || "");
+    var clientId = params.get("clientId");
+    if (!clientId) return;
+
+    clientId = pbClientOnboardingV31Slug(clientId);
+    if (!clientId || clientId === "client") return;
+
+    var identity = {};
+    try {
+      identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}") || {};
+    } catch (e) {}
+
+    if (identity.clientId === clientId && identity.source === "PB_CLIENT_ONBOARDING_V31_URL") return;
+
+    identity.clientId = clientId;
+    identity.clientName = identity.clientName || pbClientOnboardingV31Title(clientId);
+    identity.source = "PB_CLIENT_ONBOARDING_V31_URL";
+    identity.updatedAt = new Date().toISOString();
+
+    localStorage.setItem("PB_CLIENT_IDENTITY_V22", JSON.stringify(identity));
+
+    setTimeout(function() {
+      try {
+        if (typeof pbServerLicenseEnforcementUiV29Sync === "function") pbServerLicenseEnforcementUiV29Sync();
+      } catch (e) {}
+    }, 500);
+  } catch (e) {}
+}
+
+function pbClientOnboardingV31RenderCard() {
+  try {
+    var admin =
+      document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin) return false;
+
+    var card = document.getElementById("pb-client-onboarding-v31-card");
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-client-onboarding-v31-card";
+      card.className = "card";
+      card.style.marginTop = "1rem";
+      card.innerHTML =
+        '<h3>🚀 Client Onboarding</h3>' +
+        '<p style="color:var(--txt2)">Create or update a client license record using the owner admin token.</p>' +
+
+        '<div class="grid2" style="gap:.75rem">' +
+          '<label>Owner Admin Token<br><input id="pb-v31-owner-token" type="password" placeholder="Paste owner token"></label>' +
+          '<label>Client / Company Name<br><input id="pb-v31-client-name" type="text" placeholder="Example: Burloak Pickleball"></label>' +
+          '<label>Client ID<br><input id="pb-v31-client-id" type="text" placeholder="burloak-pickleball"></label>' +
+          '<label>Plan<br><select id="pb-v31-license-level">' +
+            '<option value="trial">Trial</option>' +
+            '<option value="club" selected>Club</option>' +
+            '<option value="pro">Pro</option>' +
+            '<option value="enterprise">Enterprise</option>' +
+          '</select></label>' +
+          '<label>Status<br><select id="pb-v31-license-status">' +
+            '<option value="active" selected>Active</option>' +
+            '<option value="trial">Trial</option>' +
+            '<option value="paused">Paused</option>' +
+            '<option value="expired">Expired</option>' +
+            '<option value="blocked">Blocked</option>' +
+          '</select></label>' +
+          '<label>Player Limit<br><input id="pb-v31-player-limit" type="number" min="4" value="40"></label>' +
+          '<label>Admin Seats<br><input id="pb-v31-admin-seats" type="number" min="1" value="2"></label>' +
+          '<label>Support Tier<br><input id="pb-v31-support-tier" type="text" value="standard"></label>' +
+        '</div>' +
+
+        '<label style="display:block;margin-top:.6rem"><input id="pb-v31-mobile-scoring" type="checkbox" checked> Mobile scoring enabled</label>' +
+        '<label style="display:block;margin-top:.25rem"><input id="pb-v31-official-results" type="checkbox" checked> Official results enabled</label>' +
+
+        '<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem">' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-generate-id">Generate Client ID</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-apply-defaults">Apply Plan Defaults</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" id="pb-v31-save">Create / Update Client</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-load">Load Client</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-use-current">Use as Current Browser Client</button>' +
+        '</div>' +
+
+        '<label style="display:block;margin-top:.75rem">Client Launch URL<br><input id="pb-v31-launch-url" type="text" readonly></label>' +
+        '<div id="pb-v31-status" style="font-weight:900;color:var(--txt2);margin-top:.5rem">Ready.</div>';
+
+      var enforcementCard = document.getElementById("pb-server-license-enforcement-v29-card");
+      var advancedCard = document.getElementById("pb-advanced-license-admin-card-v26b");
+
+      if (advancedCard && advancedCard.parentNode) {
+        advancedCard.parentNode.insertBefore(card, advancedCard.nextSibling);
+      } else if (enforcementCard && enforcementCard.parentNode) {
+        enforcementCard.parentNode.insertBefore(card, enforcementCard.nextSibling);
+      } else {
+        admin.appendChild(card);
+      }
+
+      try {
+        var token = localStorage.getItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN") || "";
+        document.getElementById("pb-v31-owner-token").value = token;
+      } catch (e) {}
+
+      var bind = function(id, event, fn) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(event, fn);
+      };
+
+      bind("pb-v31-generate-id", "click", pbClientOnboardingV31GenerateId);
+      bind("pb-v31-apply-defaults", "click", pbClientOnboardingV31ApplyDefaults);
+      bind("pb-v31-save", "click", pbClientOnboardingV31Save);
+      bind("pb-v31-load", "click", pbClientOnboardingV31Load);
+      bind("pb-v31-use-current", "click", pbClientOnboardingV31UseCurrentBrowserClient);
+
+      ["pb-v31-client-name", "pb-v31-client-id", "pb-v31-license-level", "pb-v31-license-status", "pb-v31-player-limit", "pb-v31-admin-seats"].forEach(function(id) {
+        bind(id, "input", pbClientOnboardingV31UpdateLaunchUrl);
+        bind(id, "change", function() {
+          if (id === "pb-v31-license-level") pbClientOnboardingV31ApplyDefaults();
+          pbClientOnboardingV31UpdateLaunchUrl();
+        });
+      });
+
+      pbClientOnboardingV31ApplyDefaults();
+      pbClientOnboardingV31UpdateLaunchUrl();
+    }
+
+    return true;
+  } catch (e) {
+    console.warn("PB_CLIENT_ONBOARDING_V31 render failed", e);
+    return false;
+  }
+}
+
+function pbClientOnboardingV31Install() {
+  if (window.__PB_CLIENT_ONBOARDING_V31_INSTALLED__) return;
+  window.__PB_CLIENT_ONBOARDING_V31_INSTALLED__ = true;
+
+  pbClientOnboardingV31ApplyClientIdFromUrl();
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbClientOnboardingV31Wrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin") {
+          setTimeout(pbClientOnboardingV31RenderCard, 0);
+          setTimeout(pbClientOnboardingV31RenderCard, 400);
+        }
+        return result;
+      };
+      window.showTab.__pbClientOnboardingV31Wrapped = true;
+    }
+  } catch (e) {}
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbClientOnboardingV31RenderCard, 800);
+      setTimeout(pbClientOnboardingV31RenderCard, 1800);
+    });
+  } else {
+    setTimeout(pbClientOnboardingV31RenderCard, 800);
+    setTimeout(pbClientOnboardingV31RenderCard, 1800);
+  }
+}
+
+pbClientOnboardingV31Install();
+
+
+/* PB_CLIENT_ONBOARDING_UI_POLISH_V31B */
+function pbClientOnboardingV31BInjectStyles() {
+  if (document.getElementById("pb-client-onboarding-v31b-style")) return;
+
+  var style = document.createElement("style");
+  style.id = "pb-client-onboarding-v31b-style";
+  style.textContent = `
+    #pb-client-onboarding-v31-card.pb-v31b-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1rem;
+      background: rgba(255,255,255,.035);
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-intro {
+      color: var(--txt2);
+      margin: .15rem 0 1rem;
+      line-height: 1.35;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: .8rem 1rem;
+      align-items: start;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-field {
+      display: flex;
+      flex-direction: column;
+      gap: .32rem;
+      min-width: 0;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-field.full {
+      grid-column: 1 / -1;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-label {
+      font-size: .78rem;
+      font-weight: 900;
+      color: var(--txt2);
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    #pb-client-onboarding-v31-card input,
+    #pb-client-onboarding-v31-card select {
+      width: 100%;
+      min-height: 42px;
+      box-sizing: border-box;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem 1rem;
+      margin-top: .85rem;
+      color: var(--txt2);
+      font-weight: 700;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-checks label {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-checks input {
+      width: 16px;
+      height: 16px;
+      min-height: 16px;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .55rem;
+      margin-top: 1rem;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-launch {
+      margin-top: 1rem;
+    }
+
+    #pb-client-onboarding-v31-card .pb-v31b-status {
+      font-weight: 900;
+      color: var(--txt2);
+      margin-top: .65rem;
+      padding: .55rem .7rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,.12);
+    }
+
+    @media (max-width: 760px) {
+      #pb-client-onboarding-v31-card .pb-v31b-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function pbClientOnboardingV31BValue(id) {
+  try {
+    var el = document.getElementById(id);
+    return el ? String(el.value || "") : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function pbClientOnboardingV31BEsc(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function pbClientOnboardingV31BLaunchUrl(clientId) {
+  clientId = pbClientOnboardingV31Slug(clientId || "");
+  if (!clientId || clientId === "client") return "";
+  return location.origin + location.pathname + "?clientId=" + encodeURIComponent(clientId);
+}
+
+function pbClientOnboardingV31BUpdateLaunchUrl() {
+  try {
+    var name = pbClientOnboardingV31BValue("pb-v31-client-name").trim();
+    var id = pbClientOnboardingV31BValue("pb-v31-client-id").trim();
+
+    if (!id && name) id = pbClientOnboardingV31Slug(name);
+
+    var el = document.getElementById("pb-v31-launch-url");
+    if (!el) return;
+
+    el.value = pbClientOnboardingV31BLaunchUrl(id);
+    el.placeholder = id ? "Client launch URL" : "Enter a client name or generate a client ID first";
+  } catch (e) {}
+}
+
+function pbClientOnboardingV31BField(label, inner, full) {
+  return '<div class="pb-v31b-field ' + (full ? "full" : "") + '">' +
+    '<div class="pb-v31b-label">' + label + '</div>' +
+    inner +
+  '</div>';
+}
+
+function pbClientOnboardingV31BRenderCard() {
+  try {
+    pbClientOnboardingV31BInjectStyles();
+
+    var admin =
+      document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin) return false;
+
+    var previous = {};
+    try {
+      previous = pbClientOnboardingV31ReadForm();
+    } catch (e) {
+      previous = {};
+    }
+
+    var token = "";
+    try {
+      token = pbClientOnboardingV31BValue("pb-v31-owner-token") ||
+        String(localStorage.getItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN") || "");
+    } catch (e) {}
+
+    var card = document.getElementById("pb-client-onboarding-v31-card");
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-client-onboarding-v31-card";
+
+      var advancedCard = document.getElementById("pb-advanced-license-admin-card-v26b");
+      var enforcementCard = document.getElementById("pb-server-license-enforcement-v29-card");
+
+      if (advancedCard && advancedCard.parentNode) {
+        advancedCard.parentNode.insertBefore(card, advancedCard.nextSibling);
+      } else if (enforcementCard && enforcementCard.parentNode) {
+        enforcementCard.parentNode.insertBefore(card, enforcementCard.nextSibling);
+      } else {
+        admin.appendChild(card);
+      }
+    }
+
+    card.className = "card pb-v31b-card";
+    card.dataset.pbV31b = "true";
+
+    var level = String(previous.licenseLevel || "club").toLowerCase();
+    var status = String(previous.licenseStatus || "active").toLowerCase();
+    var d = pbClientOnboardingV31Defaults(level);
+
+    var clientName = previous.clientName || "";
+    var clientId = previous.clientId && previous.clientId !== "client" ? previous.clientId : "";
+    var playerLimit = previous.playerLimit || d.playerLimit;
+    var adminSeats = previous.adminSeats || d.adminSeats;
+    var supportTier = previous.supportTier || d.supportTier;
+    var mobileScoring = previous.mobileScoring == null ? d.mobileScoring : !!previous.mobileScoring;
+    var officialResults = previous.officialResults == null ? d.officialResults : !!previous.officialResults;
+
+    card.innerHTML =
+      '<h3>🚀 Client Onboarding</h3>' +
+      '<div class="pb-v31b-intro">Create or update a client license record using the owner admin token.</div>' +
+
+      '<div class="pb-v31b-grid">' +
+        pbClientOnboardingV31BField(
+          "Owner Admin Token",
+          '<input id="pb-v31-owner-token" type="password" autocomplete="off" placeholder="Paste owner token" value="' + pbClientOnboardingV31BEsc(token) + '">',
+          true
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Client / Company Name",
+          '<input id="pb-v31-client-name" type="text" placeholder="Example: Burloak Pickleball" value="' + pbClientOnboardingV31BEsc(clientName) + '">',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Client ID",
+          '<input id="pb-v31-client-id" type="text" placeholder="burloak-pickleball" value="' + pbClientOnboardingV31BEsc(clientId) + '">',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Plan",
+          '<select id="pb-v31-license-level">' +
+            '<option value="trial"' + (level === "trial" ? " selected" : "") + '>Trial</option>' +
+            '<option value="club"' + (level === "club" ? " selected" : "") + '>Club</option>' +
+            '<option value="pro"' + (level === "pro" ? " selected" : "") + '>Pro</option>' +
+            '<option value="enterprise"' + (level === "enterprise" ? " selected" : "") + '>Enterprise</option>' +
+          '</select>',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Status",
+          '<select id="pb-v31-license-status">' +
+            '<option value="active"' + (status === "active" ? " selected" : "") + '>Active</option>' +
+            '<option value="trial"' + (status === "trial" ? " selected" : "") + '>Trial</option>' +
+            '<option value="paused"' + (status === "paused" ? " selected" : "") + '>Paused</option>' +
+            '<option value="expired"' + (status === "expired" ? " selected" : "") + '>Expired</option>' +
+            '<option value="blocked"' + (status === "blocked" ? " selected" : "") + '>Blocked</option>' +
+          '</select>',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Player Limit",
+          '<input id="pb-v31-player-limit" type="number" min="4" value="' + pbClientOnboardingV31BEsc(playerLimit) + '">',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Admin Seats",
+          '<input id="pb-v31-admin-seats" type="number" min="1" value="' + pbClientOnboardingV31BEsc(adminSeats) + '">',
+          false
+        ) +
+
+        pbClientOnboardingV31BField(
+          "Support Tier",
+          '<input id="pb-v31-support-tier" type="text" value="' + pbClientOnboardingV31BEsc(supportTier) + '">',
+          true
+        ) +
+      '</div>' +
+
+      '<div class="pb-v31b-checks">' +
+        '<label><input id="pb-v31-mobile-scoring" type="checkbox"' + (mobileScoring ? " checked" : "") + '> Mobile scoring enabled</label>' +
+        '<label><input id="pb-v31-official-results" type="checkbox"' + (officialResults ? " checked" : "") + '> Official results enabled</label>' +
+      '</div>' +
+
+      '<div class="pb-v31b-actions">' +
+        '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-generate-id">Generate Client ID</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-apply-defaults">Apply Plan Defaults</button>' +
+        '<button type="button" class="btn btn-primary btn-sm" id="pb-v31-save">Create / Update Client</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-load">Load Client</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" id="pb-v31-use-current">Use as Current Browser Client</button>' +
+      '</div>' +
+
+      '<div class="pb-v31b-launch">' +
+        pbClientOnboardingV31BField(
+          "Client Launch URL",
+          '<input id="pb-v31-launch-url" type="text" readonly placeholder="Enter a client name or generate a client ID first">',
+          true
+        ) +
+      '</div>' +
+
+      '<div id="pb-v31-status" class="pb-v31b-status">Ready.</div>';
+
+    var bind = function(id, event, fn) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener(event, fn);
+    };
+
+    bind("pb-v31-generate-id", "click", function() {
+      pbClientOnboardingV31GenerateId();
+      pbClientOnboardingV31BUpdateLaunchUrl();
+    });
+
+    bind("pb-v31-apply-defaults", "click", function() {
+      pbClientOnboardingV31ApplyDefaults();
+      pbClientOnboardingV31BUpdateLaunchUrl();
+    });
+
+    bind("pb-v31-save", "click", pbClientOnboardingV31Save);
+    bind("pb-v31-load", "click", pbClientOnboardingV31Load);
+    bind("pb-v31-use-current", "click", pbClientOnboardingV31UseCurrentBrowserClient);
+
+    ["pb-v31-client-name", "pb-v31-client-id", "pb-v31-license-level", "pb-v31-license-status", "pb-v31-player-limit", "pb-v31-admin-seats"].forEach(function(id) {
+      bind(id, "input", function() {
+        if (id === "pb-v31-client-name") {
+          var currentId = pbClientOnboardingV31BValue("pb-v31-client-id").trim();
+          if (!currentId) {
+            var name = pbClientOnboardingV31BValue("pb-v31-client-name");
+            var idEl = document.getElementById("pb-v31-client-id");
+            if (idEl && name.trim()) idEl.value = pbClientOnboardingV31Slug(name);
+          }
+        }
+        pbClientOnboardingV31BUpdateLaunchUrl();
+      });
+
+      bind(id, "change", function() {
+        if (id === "pb-v31-license-level") pbClientOnboardingV31ApplyDefaults();
+        pbClientOnboardingV31BUpdateLaunchUrl();
+      });
+    });
+
+    try {
+      pbClientOnboardingV31BUpdateLaunchUrl();
+    } catch (e) {}
+
+    return true;
+  } catch (e) {
+    console.warn("PB_CLIENT_ONBOARDING_UI_POLISH_V31B render failed", e);
+    return false;
+  }
+}
+
+function pbClientOnboardingV31BInstall() {
+  if (window.__PB_CLIENT_ONBOARDING_UI_POLISH_V31B_INSTALLED__) return;
+  window.__PB_CLIENT_ONBOARDING_UI_POLISH_V31B_INSTALLED__ = true;
+
+  try {
+    window.pbClientOnboardingV31RenderCard = pbClientOnboardingV31BRenderCard;
+    pbClientOnboardingV31RenderCard = pbClientOnboardingV31BRenderCard;
+  } catch (e) {}
+
+  try {
+    window.pbClientOnboardingV31UpdateLaunchUrl = pbClientOnboardingV31BUpdateLaunchUrl;
+    pbClientOnboardingV31UpdateLaunchUrl = pbClientOnboardingV31BUpdateLaunchUrl;
+  } catch (e) {}
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbClientOnboardingV31BWrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin") {
+          setTimeout(pbClientOnboardingV31BRenderCard, 0);
+          setTimeout(pbClientOnboardingV31BRenderCard, 400);
+        }
+        return result;
+      };
+      window.showTab.__pbClientOnboardingV31BWrapped = true;
+    }
+  } catch (e) {}
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbClientOnboardingV31BRenderCard, 500);
+      setTimeout(pbClientOnboardingV31BRenderCard, 1500);
+    });
+  } else {
+    setTimeout(pbClientOnboardingV31BRenderCard, 500);
+    setTimeout(pbClientOnboardingV31BRenderCard, 1500);
+  }
+}
+
+pbClientOnboardingV31BInstall();
+
+
+/* PB_CLIENT_ONBOARDING_DEFAULTS_FIX_V31C */
+function pbClientOnboardingV31CDefaults(level) {
+  level = String(level || "club").toLowerCase();
+
+  if (level === "trial") {
+    return {
+      playerLimit: 16,
+      adminSeats: 1,
+      supportTier: "community",
+      mobileScoring: false,
+      officialResults: false
+    };
+  }
+
+  if (level === "pro") {
+    return {
+      playerLimit: 96,
+      adminSeats: 5,
+      supportTier: "priority",
+      mobileScoring: true,
+      officialResults: true
+    };
+  }
+
+  if (level === "enterprise") {
+    return {
+      playerLimit: 250,
+      adminSeats: 25,
+      supportTier: "dedicated",
+      mobileScoring: true,
+      officialResults: true
+    };
+  }
+
+  return {
+    playerLimit: 40,
+    adminSeats: 2,
+    supportTier: "standard",
+    mobileScoring: true,
+    officialResults: true
+  };
+}
+
+function pbClientOnboardingV31CSetField(id, value) {
+  try {
+    var el = document.getElementById(id);
+    if (!el) return false;
+
+    if (el.type === "checkbox") {
+      el.checked = !!value;
+    } else {
+      el.value = value;
+    }
+
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function pbClientOnboardingV31CGetLevel() {
+  try {
+    var el = document.getElementById("pb-v31-license-level");
+    return String((el && el.value) || "club").toLowerCase();
+  } catch (e) {
+    return "club";
+  }
+}
+
+function pbClientOnboardingV31CApplyDefaults() {
+  try {
+    var level = pbClientOnboardingV31CGetLevel();
+    var d = pbClientOnboardingV31CDefaults(level);
+
+    pbClientOnboardingV31CSetField("pb-v31-player-limit", d.playerLimit);
+    pbClientOnboardingV31CSetField("pb-v31-admin-seats", d.adminSeats);
+    pbClientOnboardingV31CSetField("pb-v31-support-tier", d.supportTier);
+    pbClientOnboardingV31CSetField("pb-v31-mobile-scoring", d.mobileScoring);
+    pbClientOnboardingV31CSetField("pb-v31-official-results", d.officialResults);
+
+    try {
+      if (typeof pbClientOnboardingV31BUpdateLaunchUrl === "function") {
+        pbClientOnboardingV31BUpdateLaunchUrl();
+      } else if (typeof pbClientOnboardingV31UpdateLaunchUrl === "function") {
+        pbClientOnboardingV31UpdateLaunchUrl();
+      }
+    } catch (e) {}
+
+    try {
+      var status = document.getElementById("pb-v31-status");
+      if (status) {
+        status.textContent =
+          "Defaults applied: " +
+          level.toUpperCase() +
+          " · " +
+          d.playerLimit +
+          " players · " +
+          d.adminSeats +
+          " admin seat" +
+          (d.adminSeats === 1 ? "" : "s") +
+          " · " +
+          d.supportTier;
+        status.style.color = "var(--txt2)";
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof toast === "function") {
+        toast("Defaults applied for " + level.toUpperCase(), "ok");
+      }
+    } catch (e) {}
+
+    return d;
+  } catch (e) {
+    try {
+      var status = document.getElementById("pb-v31-status");
+      if (status) {
+        status.textContent = "Apply defaults failed: " + e.message;
+        status.style.color = "var(--red)";
+      }
+    } catch (err) {}
+    return null;
+  }
+}
+
+function pbClientOnboardingV31CBindDefaults() {
+  try {
+    var btn = document.getElementById("pb-v31-apply-defaults");
+    if (btn && !btn.__pbClientOnboardingV31CBound) {
+      btn.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        pbClientOnboardingV31CApplyDefaults();
+      });
+      btn.onclick = function(event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        pbClientOnboardingV31CApplyDefaults();
+        return false;
+      };
+      btn.__pbClientOnboardingV31CBound = true;
+    }
+
+    var plan = document.getElementById("pb-v31-license-level");
+    if (plan && !plan.__pbClientOnboardingV31CBound) {
+      plan.addEventListener("change", function() {
+        pbClientOnboardingV31CApplyDefaults();
+      });
+      plan.__pbClientOnboardingV31CBound = true;
+    }
+
+    var name = document.getElementById("pb-v31-client-name");
+    var id = document.getElementById("pb-v31-client-id");
+
+    if (name && !name.__pbClientOnboardingV31CBound) {
+      name.addEventListener("input", function() {
+        try {
+          var idEl = document.getElementById("pb-v31-client-id");
+          if (idEl && !String(idEl.value || "").trim() && typeof pbClientOnboardingV31Slug === "function") {
+            idEl.value = pbClientOnboardingV31Slug(name.value || "");
+          }
+          if (typeof pbClientOnboardingV31BUpdateLaunchUrl === "function") pbClientOnboardingV31BUpdateLaunchUrl();
+        } catch (e) {}
+      });
+      name.__pbClientOnboardingV31CBound = true;
+    }
+
+    if (id && !id.__pbClientOnboardingV31CBound) {
+      id.addEventListener("input", function() {
+        try {
+          if (typeof pbClientOnboardingV31BUpdateLaunchUrl === "function") pbClientOnboardingV31BUpdateLaunchUrl();
+        } catch (e) {}
+      });
+      id.__pbClientOnboardingV31CBound = true;
+    }
+  } catch (e) {}
+}
+
+function pbClientOnboardingV31CInstall() {
+  if (window.__PB_CLIENT_ONBOARDING_DEFAULTS_FIX_V31C_INSTALLED__) return;
+  window.__PB_CLIENT_ONBOARDING_DEFAULTS_FIX_V31C_INSTALLED__ = true;
+
+  try {
+    window.pbClientOnboardingV31ApplyDefaults = pbClientOnboardingV31CApplyDefaults;
+    pbClientOnboardingV31ApplyDefaults = pbClientOnboardingV31CApplyDefaults;
+  } catch (e) {}
+
+  try {
+    var oldRender = window.pbClientOnboardingV31RenderCard || pbClientOnboardingV31RenderCard;
+    if (typeof oldRender === "function" && !oldRender.__pbClientOnboardingV31CWrapped) {
+      var wrapped = function() {
+        var result = oldRender.apply(this, arguments);
+        setTimeout(pbClientOnboardingV31CBindDefaults, 0);
+        setTimeout(pbClientOnboardingV31CBindDefaults, 250);
+        return result;
+      };
+      wrapped.__pbClientOnboardingV31CWrapped = true;
+      window.pbClientOnboardingV31RenderCard = wrapped;
+      pbClientOnboardingV31RenderCard = wrapped;
+    }
+  } catch (e) {}
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbClientOnboardingV31CWrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin") {
+          setTimeout(pbClientOnboardingV31CBindDefaults, 0);
+          setTimeout(pbClientOnboardingV31CBindDefaults, 400);
+          setTimeout(pbClientOnboardingV31CBindDefaults, 1200);
+        }
+        return result;
+      };
+      window.showTab.__pbClientOnboardingV31CWrapped = true;
+    }
+  } catch (e) {}
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbClientOnboardingV31CBindDefaults, 700);
+      setTimeout(pbClientOnboardingV31CBindDefaults, 1800);
+    });
+  } else {
+    setTimeout(pbClientOnboardingV31CBindDefaults, 700);
+    setTimeout(pbClientOnboardingV31CBindDefaults, 1800);
+  }
+}
+
+pbClientOnboardingV31CInstall();
+
+
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
