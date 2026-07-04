@@ -17715,6 +17715,877 @@ async function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
 
 window.pbScoreCorrectionRequestV1 = pbScoreCorrectionRequestV1;
 
+
+/* PB_RESTORE_GOVERNANCE_TOOLS_V13 */
+function pbGovTextV13(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbGovToastV13(msg, err) {
+  try {
+    if(typeof toast === 'function') return toast(msg, err ? 'err' : undefined);
+    if(typeof showToast === 'function') return showToast(msg, err ? 'err' : undefined);
+    if(typeof notify === 'function') return notify(msg);
+    if(typeof showMessage === 'function') return showMessage(msg);
+  } catch(e) {}
+
+  console.log(msg);
+}
+
+function pbGovEnsureStateV13() {
+  if(!state.scoreAuditLogV1) state.scoreAuditLogV1 = [];
+  if(!state.scoreCorrectionLogV1) state.scoreCorrectionLogV1 = [];
+}
+
+function pbGovPersistV13() {
+  pbGovEnsureStateV13();
+
+  try {
+    if(typeof autoSave === 'function') autoSave();
+  } catch(e) {}
+
+  try {
+    if(typeof renderSchedule === 'function') renderSchedule();
+    if(typeof updateProgress === 'function') updateProgress();
+    if(typeof updateStandings === 'function') updateStandings();
+    if(typeof updateReportIfActive === 'function') updateReportIfActive();
+    if(typeof pbHomeEnsureCourtStatusPanelV1 === 'function') pbHomeEnsureCourtStatusPanelV1();
+  } catch(e) {}
+}
+
+function pbGovAllMatchesV13() {
+  const rows = [];
+  const schedule = state.schedule || [];
+
+  schedule.forEach((round, rIdx) => {
+    (round || []).forEach((m, mIdx) => {
+      rows.push({ match: m, roundIndex: rIdx, matchIndex: mIdx });
+    });
+  });
+
+  return rows;
+}
+
+function pbGovScoreV13(m) {
+  if(!m) return '';
+
+  const a = m.scoreA ?? m.score1 ?? m.aScore ?? m.teamAScore ?? m.leftScore ?? m.homeScore ?? m.pointsA ?? m.points1;
+  const b = m.scoreB ?? m.score2 ?? m.bScore ?? m.teamBScore ?? m.rightScore ?? m.awayScore ?? m.pointsB ?? m.points2;
+
+  if(a === undefined || a === null || a === '') return '';
+  if(b === undefined || b === null || b === '') return '';
+
+  return `${a}–${b}`;
+}
+
+function pbGovTeamNamesV13(team) {
+  if(!Array.isArray(team)) return '—';
+
+  return team
+    .map(i => state.players?.[i]?.name || '?')
+    .join(' / ');
+}
+
+function pbGovMatchTeamsV13(m) {
+  return `${pbGovTeamNamesV13(m?.teamA)} vs ${pbGovTeamNamesV13(m?.teamB)}`;
+}
+
+function pbGovCourtV13(m, fallback) {
+  return m?.court || m?.courtNum || m?.courtNumber || m?.courtId || fallback || '';
+}
+
+function pbGovRoundV13(m, rIdx) {
+  return m?.round || rIdx + 1;
+}
+
+function pbGovIsScoredV13(m) {
+  return !!(m && (m.complete || pbGovScoreV13(m)));
+}
+
+function pbGovModalV13(id, title, bodyHtml) {
+  document.getElementById(id)?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = id;
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  modal.innerHTML = `
+    <div style="width:min(1100px,96vw);max-height:88vh;overflow:auto;background:var(--bg2,#111827);color:var(--txt,#fff);border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.5);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.12);position:sticky;top:0;background:inherit;z-index:2;">
+        <div style="font-weight:1000;font-size:1.05rem;">${title}</div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('${id}')?.remove()">Close</button>
+      </div>
+      <div style="padding:14px 16px;">${bodyHtml}</div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+function pbGovTableStyleV13() {
+  return `
+    <style>
+      .pb-gov-table-v13{width:100%;border-collapse:collapse;font-size:.82rem}
+      .pb-gov-table-v13 th,.pb-gov-table-v13 td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.1);vertical-align:top;text-align:left}
+      .pb-gov-table-v13 th{color:var(--txt2,#cbd5e1);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+      .pb-gov-pill-v13{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.1);font-size:.72rem;font-weight:800}
+      .pb-gov-note-v13{margin:.4rem 0 .8rem;color:var(--txt3,#94a3b8);font-size:.82rem;line-height:1.45}
+      .pb-gov-actions-v13{display:flex;gap:8px;flex-wrap:wrap;margin:.5rem 0 1rem}
+    </style>
+  `;
+}
+
+/* ---------------- SCORE AUDIT ---------------- */
+function pbScoreAuditAddV1(entry) {
+  pbGovEnsureStateV13();
+
+  const item = {
+    id: `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    action: entry?.action || 'Audit event',
+    source: entry?.source || '',
+    round: entry?.round || '',
+    court: entry?.court || '',
+    matchIndex: entry?.matchIndex || '',
+    teams: entry?.teams || '',
+    beforeScore: entry?.beforeScore || '',
+    afterScore: entry?.afterScore || '',
+    reason: entry?.reason || ''
+  };
+
+  state.scoreAuditLogV1.unshift(item);
+
+  if(state.scoreAuditLogV1.length > 500) {
+    state.scoreAuditLogV1 = state.scoreAuditLogV1.slice(0, 500);
+  }
+
+  try {
+    if(typeof autoSave === 'function') autoSave();
+  } catch(e) {}
+
+  return item;
+}
+
+function pbScoreAuditRowsV13() {
+  pbGovEnsureStateV13();
+  return state.scoreAuditLogV1 || [];
+}
+
+function pbScoreAuditExportV13() {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    tournament: typeof getTournamentName === 'function' ? getTournamentName() : 'Pickleball Tournament',
+    audit: pbScoreAuditRowsV13()
+  };
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `score-audit-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function pbScoreAuditOpenModalV1() {
+  const rows = pbScoreAuditRowsV13();
+
+  const table = rows.length ? `
+    <table class="pb-gov-table-v13">
+      <thead>
+        <tr><th>Time</th><th>Action</th><th>Match</th><th>Score</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${new Date(r.at).toLocaleString()}</td>
+            <td><strong>${r.action}</strong><div style="color:var(--txt3,#94a3b8)">${r.source || ''}</div></td>
+            <td>R${r.round || '—'} · C${r.court || '—'}<div style="color:var(--txt3,#94a3b8)">${r.teams || ''}</div></td>
+            <td>${r.beforeScore || '—'} → <strong>${r.afterScore || '—'}</strong></td>
+            <td>${r.reason || '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `<div class="pb-gov-note-v13">No audit entries yet.</div>`;
+
+  pbGovModalV13(
+    'pb-score-audit-modal-v13',
+    '🧾 Score Audit',
+    `${pbGovTableStyleV13()}
+     <div class="pb-gov-actions-v13">
+       <button class="btn btn-secondary btn-sm" onclick="pbScoreAuditExportV13()">Export Audit JSON</button>
+     </div>
+     ${table}`
+  );
+}
+
+/* ---------------- SCORE CORRECTIONS ---------------- */
+function pbScoreCorrectionAddLogV1(entry) {
+  pbGovEnsureStateV13();
+
+  const item = {
+    id: `correction-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    at: new Date().toISOString(),
+    action: entry?.action || 'Correction event',
+    status: entry?.status || '',
+    round: entry?.round || '',
+    court: entry?.court || '',
+    matchIndex: entry?.matchIndex || '',
+    teams: entry?.teams || '',
+    beforeScore: entry?.beforeScore || '',
+    afterScore: entry?.afterScore || '',
+    reason: entry?.reason || '',
+    smsTarget: entry?.smsTarget || ''
+  };
+
+  state.scoreCorrectionLogV1.unshift(item);
+
+  if(state.scoreCorrectionLogV1.length > 500) {
+    state.scoreCorrectionLogV1 = state.scoreCorrectionLogV1.slice(0, 500);
+  }
+
+  pbScoreAuditAddV1({
+    action: item.action,
+    source: 'Score Corrections',
+    round: item.round,
+    court: item.court,
+    matchIndex: item.matchIndex,
+    teams: item.teams,
+    beforeScore: item.beforeScore,
+    afterScore: item.afterScore,
+    reason: item.reason
+  });
+
+  return item;
+}
+
+function pbScoreCorrectionMatchesV1() {
+  return pbGovAllMatchesV13()
+    .map(({ match:m, roundIndex, matchIndex }) => ({
+      roundIndex,
+      matchIndex,
+      round: pbGovRoundV13(m, roundIndex),
+      court: pbGovCourtV13(m, matchIndex + 1),
+      score: pbGovScoreV13(m),
+      teams: pbGovMatchTeamsV13(m),
+      complete: !!m.complete,
+      correctionPending: !!m.correctionPending,
+      organizerApproved: !!m.organizerApproved,
+      acceptedByA: m.acceptedByA || '',
+      acceptedByB: m.acceptedByB || '',
+      acceptedAt: m.acceptedAt || null
+    }))
+    .filter(r => r.score || r.complete || r.correctionPending);
+}
+
+function pbScoreCorrectionOpenModalV1() {
+  const rows = pbScoreCorrectionMatchesV1();
+  const openCount = rows.filter(r => r.correctionPending).length;
+
+  const table = rows.length ? `
+    <table class="pb-gov-table-v13">
+      <thead>
+        <tr><th>Match</th><th>Teams</th><th>Score</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>Round ${r.round}<br>Court ${r.court}</td>
+            <td>${r.teams}</td>
+            <td><strong>${r.score || '—'}</strong></td>
+            <td>
+              ${r.correctionPending ? '<span class="pb-gov-pill-v13">⚠️ Correction Pending</span>' : '<span class="pb-gov-pill-v13">OK</span>'}
+              ${r.organizerApproved ? '<span class="pb-gov-pill-v13">✅ Approved</span>' : ''}
+            </td>
+            <td>
+              <button class="btn btn-secondary btn-sm" onclick="pbScoreCorrectionRequestV1(${r.roundIndex},${r.matchIndex})">Request Correction</button>
+              <button class="btn btn-primary btn-sm" onclick="pbScoreCorrectionOverrideV1(${r.roundIndex},${r.matchIndex})">Override Score</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `<div class="pb-gov-note-v13">No scored matches yet.</div>`;
+
+  pbGovModalV13(
+    'pb-score-correction-modal-v1',
+    '🛠 Score Corrections',
+    `${pbGovTableStyleV13()}
+     <div class="pb-gov-note-v13">
+       Open corrections: <strong>${openCount}</strong>. SMS correction resubmit is paused. Use Override Score to correct a score safely.
+     </div>
+     ${table}`
+  );
+}
+
+function pbScoreCorrectionRequestV1(roundIndex, matchIndex) {
+  const m = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!m) {
+    alert('Match not found.');
+    return;
+  }
+
+  const beforeScore = pbGovScoreV13(m);
+  const reason = prompt('Reason for correction request?', m.correctionReason || 'Score needs organizer review');
+
+  if(reason === null) return;
+
+  m.correctionPending = true;
+  m.correctionRequestedAt = new Date().toISOString();
+  m.correctionReason = reason || 'Correction requested';
+  m.correctionOriginalScore = beforeScore || m.correctionOriginalScore || '';
+
+  // Preserve score and team acceptance. Clear organizer approval only.
+  m.organizerApproved = false;
+  m.organizerApprovedAt = null;
+  m.organizerApprovedBy = '';
+
+  pbScoreCorrectionAddLogV1({
+    action: 'Correction review requested',
+    status: 'Open',
+    round: pbGovRoundV13(m, roundIndex),
+    court: pbGovCourtV13(m, matchIndex + 1),
+    matchIndex: matchIndex + 1,
+    teams: pbGovMatchTeamsV13(m),
+    beforeScore: beforeScore || '—',
+    afterScore: beforeScore || '—',
+    reason: reason || 'Correction requested',
+    smsTarget: 'Paused — organizer override only'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13('Correction logged. Use Override Score to make the change.');
+  pbScoreCorrectionOpenModalV1();
+}
+
+function pbScoreCorrectionOverrideV1(roundIndex, matchIndex) {
+  const m = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!m) {
+    alert('Match not found.');
+    return;
+  }
+
+  const beforeScore = pbGovScoreV13(m);
+  const value = prompt('Enter corrected score as Team A-Team B, for example 11-7:', beforeScore || '');
+
+  if(value === null) return;
+
+  const cleaned = value.replace(/\s+/g, '');
+  const parts = cleaned.split(/[-–:]/).map(Number);
+
+  if(parts.length !== 2 || parts.some(n => !Number.isFinite(n) || n < 0)) {
+    alert('Enter score like 11-7.');
+    return;
+  }
+
+  const reason = prompt('Reason for override?', m.correctionReason || 'Organizer corrected score');
+
+  if(reason === null) return;
+
+  window.__PB_GOVERNANCE_OVERRIDE_ACTIVE_V13__ = true;
+
+  try {
+    m.scoreA = parts[0];
+    m.scoreB = parts[1];
+    m.complete = true;
+
+    m.correctionPending = false;
+    m.correctionResolvedAt = new Date().toISOString();
+    m.correctionResolvedBy = 'Organizer';
+    m.correctionReason = reason || 'Organizer corrected score';
+
+    // Corrected score must be reviewed/approved again.
+    m.acceptedByA = '';
+    m.acceptedByB = '';
+    m.acceptedAt = null;
+
+    m.organizerApproved = false;
+    m.organizerApprovedAt = null;
+    m.organizerApprovedBy = '';
+  } finally {
+    window.__PB_GOVERNANCE_OVERRIDE_ACTIVE_V13__ = false;
+  }
+
+  pbScoreCorrectionAddLogV1({
+    action: 'Organizer override score',
+    status: 'Resolved',
+    round: pbGovRoundV13(m, roundIndex),
+    court: pbGovCourtV13(m, matchIndex + 1),
+    matchIndex: matchIndex + 1,
+    teams: pbGovMatchTeamsV13(m),
+    beforeScore: beforeScore || '—',
+    afterScore: `${parts[0]}–${parts[1]}`,
+    reason: reason || 'Organizer corrected score'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13('Score corrected. Approval and team acceptance were cleared.');
+  pbScoreCorrectionOpenModalV1();
+}
+
+/* ---------------- ORGANIZER APPROVALS ---------------- */
+function pbOrganizerApprovalMatchesV1() {
+  return pbGovAllMatchesV13()
+    .map(({ match:m, roundIndex, matchIndex }) => ({
+      roundIndex,
+      matchIndex,
+      round: pbGovRoundV13(m, roundIndex),
+      court: pbGovCourtV13(m, matchIndex + 1),
+      score: pbGovScoreV13(m),
+      teams: pbGovMatchTeamsV13(m),
+      complete: !!m.complete,
+      bothAccepted: !!(m.acceptedByA && m.acceptedByB),
+      correctionPending: !!m.correctionPending,
+      organizerApproved: !!m.organizerApproved,
+      organizerApprovedAt: m.organizerApprovedAt || null
+    }))
+    .filter(r => r.score || r.complete);
+}
+
+function pbOrganizerApprovalApproveV1(roundIndex, matchIndex) {
+  const m = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!m) return;
+
+  if(m.correctionPending) {
+    alert('This match has a pending correction. Resolve it before approval.');
+    return;
+  }
+
+  if(!pbGovIsScoredV13(m)) {
+    alert('This match does not have a score yet.');
+    return;
+  }
+
+  if(!(m.acceptedByA && m.acceptedByB)) {
+    if(!confirm('Both teams have not accepted this score yet. Approve anyway?')) return;
+  }
+
+  m.organizerApproved = true;
+  m.organizerApprovedAt = new Date().toISOString();
+  m.organizerApprovedBy = 'Organizer';
+
+  pbGovPersistV13();
+  pbGovToastV13('Score approved.');
+  pbOrganizerApprovalOpenModalV1();
+}
+
+function pbOrganizerApprovalUnapproveV1(roundIndex, matchIndex) {
+  const m = state.schedule?.[roundIndex]?.[matchIndex];
+
+  if(!m) return;
+
+  m.organizerApproved = false;
+  m.organizerApprovedAt = null;
+  m.organizerApprovedBy = '';
+
+  pbScoreAuditAddV1({
+    action: 'Organizer removed approval',
+    source: 'Organizer Approvals',
+    round: pbGovRoundV13(m, roundIndex),
+    court: pbGovCourtV13(m, matchIndex + 1),
+    matchIndex: matchIndex + 1,
+    teams: pbGovMatchTeamsV13(m),
+    beforeScore: pbGovScoreV13(m),
+    afterScore: 'Unapproved',
+    reason: 'Approval removed'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13('Approval removed.');
+  pbOrganizerApprovalOpenModalV1();
+}
+
+function pbApprovalAllScoredRowsV3() {
+  return pbOrganizerApprovalMatchesV1().filter(r =>
+    (r.score || r.complete) &&
+    !r.organizerApproved &&
+    !r.correctionPending
+  );
+}
+
+function pbApprovalApproveAllScoredV3() {
+  const rows = pbApprovalAllScoredRowsV3();
+
+  if(!rows.length) {
+    alert('No scored games need approval.');
+    return;
+  }
+
+  const notAccepted = rows.filter(r => !r.bothAccepted).length;
+  let msg = `Approve all ${rows.length} scored game${rows.length === 1 ? '' : 's'}?`;
+
+  if(notAccepted) {
+    msg += `\n\n${notAccepted} game${notAccepted === 1 ? '' : 's'} do not have both team acceptances.`;
+  }
+
+  if(!confirm(msg)) return;
+
+  const at = new Date().toISOString();
+  let count = 0;
+
+  rows.forEach(r => {
+    const m = state.schedule?.[r.roundIndex]?.[r.matchIndex];
+    if(!m) return;
+
+    m.organizerApproved = true;
+    m.organizerApprovedAt = at;
+    m.organizerApprovedBy = 'Organizer';
+    count++;
+  });
+
+  pbScoreAuditAddV1({
+    action: 'Organizer bulk-approved scores',
+    source: 'Approve All Scored',
+    round: 'All',
+    court: 'All',
+    matchIndex: 'Multiple',
+    teams: `${count} matches`,
+    beforeScore: 'Pending approval',
+    afterScore: 'Approved',
+    reason: notAccepted ? `${notAccepted} games did not have both team acceptances.` : 'Bulk approved scored games.'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13(`Approved ${count} scored game${count === 1 ? '' : 's'}.`);
+  pbOrganizerApprovalOpenModalV1();
+}
+
+function pbApprovalApproveAllReadyV2() {
+  return pbApprovalApproveAllScoredV3();
+}
+
+function pbRemoveAllApprovalsRowsV1() {
+  return pbOrganizerApprovalMatchesV1().filter(r => r.organizerApproved);
+}
+
+function pbRemoveAllApprovalsV1() {
+  const rows = pbRemoveAllApprovalsRowsV1();
+
+  if(!rows.length) {
+    alert('There are no organizer approvals to remove.');
+    return;
+  }
+
+  if(!confirm(`Remove all ${rows.length} organizer approval${rows.length === 1 ? '' : 's'}?\n\nScores and team acceptances will stay.`)) return;
+
+  let count = 0;
+
+  rows.forEach(r => {
+    const m = state.schedule?.[r.roundIndex]?.[r.matchIndex];
+    if(!m) return;
+
+    m.organizerApproved = false;
+    m.organizerApprovedAt = null;
+    m.organizerApprovedBy = '';
+    count++;
+  });
+
+  pbScoreAuditAddV1({
+    action: 'Organizer bulk-removed approvals',
+    source: 'Remove All Approvals',
+    round: 'All',
+    court: 'All',
+    matchIndex: 'Multiple',
+    teams: `${count} matches`,
+    beforeScore: 'Approved',
+    afterScore: 'Unapproved',
+    reason: 'Scores and team acceptances were preserved.'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13(`Removed ${count} approval${count === 1 ? '' : 's'}.`);
+  pbOrganizerApprovalOpenModalV1();
+}
+
+function pbOrganizerApprovalOpenModalV1() {
+  const rows = pbOrganizerApprovalMatchesV1();
+  const approveCount = pbApprovalAllScoredRowsV3().length;
+  const approvedCount = pbRemoveAllApprovalsRowsV1().length;
+
+  const table = rows.length ? `
+    <table class="pb-gov-table-v13">
+      <thead>
+        <tr><th>Match</th><th>Teams</th><th>Score</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>Round ${r.round}<br>Court ${r.court}</td>
+            <td>${r.teams}</td>
+            <td><strong>${r.score || '—'}</strong></td>
+            <td>
+              ${r.organizerApproved ? '<span class="pb-gov-pill-v13">✅ Approved</span>' : '<span class="pb-gov-pill-v13">Pending</span>'}
+              ${r.bothAccepted ? '<span class="pb-gov-pill-v13">Teams Accepted</span>' : '<span class="pb-gov-pill-v13">Acceptance Missing</span>'}
+              ${r.correctionPending ? '<span class="pb-gov-pill-v13">⚠️ Correction</span>' : ''}
+            </td>
+            <td>
+              ${r.organizerApproved
+                ? `<button class="btn btn-secondary btn-sm" onclick="pbOrganizerApprovalUnapproveV1(${r.roundIndex},${r.matchIndex})">Remove Approval</button>`
+                : `<button class="btn btn-primary btn-sm" onclick="pbOrganizerApprovalApproveV1(${r.roundIndex},${r.matchIndex})">Approve</button>`
+              }
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : `<div class="pb-gov-note-v13">No scored matches yet.</div>`;
+
+  pbGovModalV13(
+    'pb-organizer-approval-modal-v1',
+    '✅ Organizer Approvals',
+    `${pbGovTableStyleV13()}
+     <div class="pb-gov-actions-v13">
+       <button class="btn btn-primary btn-sm" id="pb-approve-all-scored-games-btn-v3" onclick="pbApprovalApproveAllScoredV3()">✅ Approve All Scored${approveCount ? ` (${approveCount})` : ''}</button>
+       <button class="btn btn-secondary btn-sm" id="pb-remove-all-approvals-btn-v1" onclick="pbRemoveAllApprovalsV1()">🧹 Remove All Approvals${approvedCount ? ` (${approvedCount})` : ''}</button>
+     </div>
+     ${table}`
+  );
+}
+
+/* ---------------- FINAL CERTIFICATION ---------------- */
+function pbFinalCertStatsV13() {
+  const scored = pbOrganizerApprovalMatchesV1();
+  const unapproved = scored.filter(r => !r.organizerApproved);
+  const corrections = scored.filter(r => r.correctionPending);
+
+  return { scored, unapproved, corrections };
+}
+
+function pbFinalCertOpenModalV1() {
+  const stats = pbFinalCertStatsV13();
+
+  pbGovModalV13(
+    'pb-final-cert-modal-v1',
+    '🏁 Final Results Certification',
+    `${pbGovTableStyleV13()}
+     <div class="pb-gov-note-v13">
+       Scored matches: <strong>${stats.scored.length}</strong> ·
+       Unapproved: <strong>${stats.unapproved.length}</strong> ·
+       Open corrections: <strong>${stats.corrections.length}</strong>
+     </div>
+     <div class="pb-gov-actions-v13">
+       <button class="btn btn-primary btn-sm" onclick="pbFinalCertCertifyV13()">🏁 Certify Results</button>
+       <button class="btn btn-secondary btn-sm" onclick="pbFinalCertRemoveV13()">Remove Certification</button>
+     </div>
+     <div class="pb-gov-note-v13">
+       Current status: <strong>${state.finalResultsCertifiedV1 ? 'Certified' : 'Not certified'}</strong>
+       ${state.finalResultsCertifiedAt ? `<br>Certified at: ${new Date(state.finalResultsCertifiedAt).toLocaleString()}` : ''}
+     </div>`
+  );
+}
+
+function pbFinalCertCertifyV13() {
+  const stats = pbFinalCertStatsV13();
+
+  if(stats.corrections.length) {
+    alert('Cannot certify while corrections are open.');
+    return;
+  }
+
+  if(stats.unapproved.length) {
+    if(!confirm(`${stats.unapproved.length} scored match${stats.unapproved.length === 1 ? '' : 'es'} are not organizer-approved. Certify anyway?`)) return;
+  }
+
+  state.finalResultsCertifiedV1 = true;
+  state.finalResultsCertifiedAt = new Date().toISOString();
+  state.finalResultsCertifiedBy = 'Organizer';
+  state.tournamentLockedV1 = true;
+
+  pbScoreAuditAddV1({
+    action: 'Final results certified',
+    source: 'Final Certification',
+    round: 'All',
+    court: 'All',
+    matchIndex: 'All',
+    teams: `${stats.scored.length} scored matches`,
+    beforeScore: 'Uncertified',
+    afterScore: 'Certified',
+    reason: 'Organizer certified final tournament results.'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13('Final results certified.');
+  pbFinalCertOpenModalV1();
+}
+
+function pbFinalCertRemoveV13() {
+  if(!confirm('Remove final certification and unlock tournament?')) return;
+
+  state.finalResultsCertifiedV1 = false;
+  state.finalResultsCertifiedAt = null;
+  state.finalResultsCertifiedBy = '';
+  state.tournamentLockedV1 = false;
+
+  pbScoreAuditAddV1({
+    action: 'Final certification removed',
+    source: 'Final Certification',
+    round: 'All',
+    court: 'All',
+    matchIndex: 'All',
+    teams: 'Tournament',
+    beforeScore: 'Certified',
+    afterScore: 'Uncertified',
+    reason: 'Organizer removed final certification.'
+  });
+
+  pbGovPersistV13();
+  pbGovToastV13('Final certification removed.');
+  pbFinalCertOpenModalV1();
+}
+
+/* ---------------- APPROVED SCORE LOCKING ---------------- */
+function pbApprovedScoreLockSnapshotV13() {
+  const snap = new Map();
+
+  pbGovAllMatchesV13().forEach(({ match:m, roundIndex, matchIndex }) => {
+    if(!m?.organizerApproved) return;
+
+    const id = m.id || `${roundIndex}-${matchIndex}`;
+    snap.set(id, {
+      roundIndex,
+      matchIndex,
+      scoreA: m.scoreA,
+      scoreB: m.scoreB,
+      complete: m.complete,
+      score: pbGovScoreV13(m),
+      teams: pbGovMatchTeamsV13(m),
+      round: pbGovRoundV13(m, roundIndex),
+      court: pbGovCourtV13(m, matchIndex + 1)
+    });
+  });
+
+  return snap;
+}
+
+function pbApprovedScoreLockRevertV13(before, source) {
+  if(window.__PB_GOVERNANCE_OVERRIDE_ACTIVE_V13__) return;
+
+  let reverted = 0;
+
+  before.forEach((old, id) => {
+    const m = state.schedule?.[old.roundIndex]?.[old.matchIndex];
+    if(!m?.organizerApproved) return;
+
+    if(m.scoreA !== old.scoreA || m.scoreB !== old.scoreB || m.complete !== old.complete) {
+      m.scoreA = old.scoreA;
+      m.scoreB = old.scoreB;
+      m.complete = old.complete;
+      reverted++;
+
+      pbScoreAuditAddV1({
+        action: 'Blocked change to approved score',
+        source,
+        round: old.round,
+        court: old.court,
+        matchIndex: old.matchIndex + 1,
+        teams: old.teams,
+        beforeScore: pbGovScoreV13(m),
+        afterScore: old.score,
+        reason: 'Approved scores must be changed through Score Corrections → Override Score.'
+      });
+    }
+  });
+
+  if(reverted) {
+    pbGovToastV13(`Blocked ${reverted} change${reverted === 1 ? '' : 's'} to approved score. Use Override Score.`, true);
+    pbGovPersistV13();
+  }
+}
+
+function pbApprovedScoreLockWrapV13(name, source) {
+  const fn = window[name];
+
+  if(typeof fn !== 'function') return;
+  if(fn.__pbApprovedScoreLockWrappedV13) return;
+
+  const wrapped = function() {
+    const before = pbApprovedScoreLockSnapshotV13();
+    const result = fn.apply(this, arguments);
+
+    if(result && typeof result.then === 'function') {
+      return result.finally(() => pbApprovedScoreLockRevertV13(before, source));
+    }
+
+    pbApprovedScoreLockRevertV13(before, source);
+    return result;
+  };
+
+  wrapped.__pbApprovedScoreLockWrappedV13 = true;
+  window[name] = wrapped;
+}
+
+/* ---------------- HOME BUTTONS ---------------- */
+function pbGovernanceEnsureButtonsV13() {
+  if(document.getElementById('pb-governance-tools-v13')) return;
+
+  const host =
+    document.getElementById('pb-clean-home-command-center-v1') ||
+    document.getElementById('sec-dashboard') ||
+    document.querySelector('.dashboard') ||
+    document.body;
+
+  const panel = document.createElement('div');
+  panel.id = 'pb-governance-tools-v13';
+  panel.style.cssText = 'margin:12px 0;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);';
+
+  panel.innerHTML = `
+    <div style="font-weight:1000;margin-bottom:8px;">Tournament Governance</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" id="pb-score-audit-home-btn-v13" onclick="pbScoreAuditOpenModalV1()">🧾 Score Audit</button>
+      <button class="btn btn-secondary btn-sm" id="pb-score-correction-home-btn-v13" onclick="pbScoreCorrectionOpenModalV1()">🛠 Score Corrections</button>
+      <button class="btn btn-secondary btn-sm" id="pb-approvals-home-btn-v13" onclick="pbOrganizerApprovalOpenModalV1()">✅ Approvals</button>
+      <button class="btn btn-secondary btn-sm" id="pb-final-cert-home-btn-v13" onclick="pbFinalCertOpenModalV1()">🏁 Certify Results</button>
+    </div>
+    <div style="margin-top:7px;color:var(--txt3,#94a3b8);font-size:.78rem;">SMS correction resubmit is paused. Corrections use organizer override.</div>
+  `;
+
+  host.appendChild(panel);
+}
+
+(function pbInstallRestoreGovernanceToolsV13(){
+  if(window.__PB_RESTORE_GOVERNANCE_TOOLS_V13_INSTALLED__) return;
+  window.__PB_RESTORE_GOVERNANCE_TOOLS_V13_INSTALLED__ = true;
+
+  pbGovEnsureStateV13();
+
+  const install = () => {
+    try {
+      pbGovernanceEnsureButtonsV13();
+      pbApprovedScoreLockWrapV13('saveScore', 'Manual score save');
+      pbApprovedScoreLockWrapV13('saveScoreInline', 'Inline score save');
+      pbApprovedScoreLockWrapV13('msPullNow', 'Mobile score pull');
+    } catch(e) {
+      console.error('Governance tools install failed', e);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(install, 0);
+    setTimeout(install, 300);
+  });
+
+  document.addEventListener('click', () => {
+    setTimeout(install, 100);
+  }, true);
+
+  if(typeof showTab === 'function' && !showTab.__pbGovernanceWrappedV13) {
+    const originalShowTab = showTab;
+    showTab = function() {
+      const result = originalShowTab.apply(this, arguments);
+      setTimeout(install, 100);
+      return result;
+    };
+    showTab.__pbGovernanceWrappedV13 = true;
+  }
+
+  setTimeout(install, 0);
+  setTimeout(install, 300);
+})();
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
