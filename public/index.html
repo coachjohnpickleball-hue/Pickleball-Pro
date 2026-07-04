@@ -4760,6 +4760,81 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 // fetch() across origins, and pages.dev (Cloudflare Pages' shared domain)
 // can't be scoped to a specific path in Access either — both dead ends
 // this project hit before landing on "one Worker serves everything."
+
+/* PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2 */
+(function(){
+  if (window.__PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_INSTALLED__) return;
+  window.__PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_INSTALLED__ = true;
+
+  function pbV33E2Norm(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function pbV33E2UrlClientId() {
+    try {
+      return pbV33E2Norm(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function pbV33E2IsRecoveryPrompt(message) {
+    const text = String(message || "").toLowerCase();
+    return (
+      text.includes("resume previous") ||
+      text.includes("resume saved session") ||
+      text.includes("previous local browser session") ||
+      text.includes("last saved")
+    );
+  }
+
+  const originalConfirm = window.confirm.bind(window);
+
+  window.confirm = function(message) {
+    const clientId = pbV33E2UrlClientId();
+
+    if (clientId && pbV33E2IsRecoveryPrompt(message)) {
+      console.warn("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2 blocked shared recovery popup", {
+        clientId,
+        message: String(message || "")
+      });
+
+      try {
+        sessionStorage.setItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED", JSON.stringify({
+          clientId,
+          message: String(message || ""),
+          blockedAt: new Date().toISOString()
+        }));
+      } catch (e) {}
+
+      return false;
+    }
+
+    return originalConfirm(message);
+  };
+
+  window.pbRecoveryPopupBlockerV33E2Status = function(){
+    const result = {
+      marker: "PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2",
+      url: location.href,
+      clientId: pbV33E2UrlClientId(),
+      installed: true,
+      lastBlocked: sessionStorage.getItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED") || null,
+      v33cPresent: document.documentElement.innerHTML.includes("PB_CLIENT_STRICT_ISOLATION_V33C")
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch (e) {}
+    return result;
+  };
+})();
+
 var RELAY_BASE = '';
 
 // ── State, navigation, utility functions ─────────────────
@@ -52529,6 +52604,310 @@ function exportEndSessionSummary(){
     setTimeout(applyUrlAuthority, 250);
     setTimeout(applyUrlAuthority, 1000);
   });
+})();
+
+
+
+
+
+/* PB_CLIENT_STRICT_ISOLATION_V33C */
+(function(){
+  const MARKER = "PB_CLIENT_STRICT_ISOLATION_V33C";
+  const IDENTITY_KEY = "PB_CLIENT_IDENTITY_V22";
+  const LICENSE_KEY = "PB_CLIENT_LICENSE_SERVER_V24";
+  const LAST_CLIENT_KEY = "PB_CLIENT_STRICT_ISOLATION_V33C_LAST_CLIENT";
+
+  if (window.__PB_CLIENT_STRICT_ISOLATION_V33C_INSTALLED__) return;
+  window.__PB_CLIENT_STRICT_ISOLATION_V33C_INSTALLED__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase() || "local-client";
+  }
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function currentClientId() {
+    const fromUrl = urlClientId();
+    if (fromUrl && fromUrl !== "local-client") return fromUrl;
+
+    const identity = readJson(IDENTITY_KEY);
+    if (identity.clientId) return cleanClientId(identity.clientId);
+
+    const license = readJson(LICENSE_KEY);
+    if (license.clientId) return cleanClientId(license.clientId);
+
+    return "local-client";
+  }
+
+  function baseAutoSaveKey() {
+    try {
+      if (typeof AUTO_SAVE_KEY !== "undefined" && AUTO_SAVE_KEY) return String(AUTO_SAVE_KEY);
+    } catch (e) {}
+    return "pickleball_autosave";
+  }
+
+  function liveKey(clientId) {
+    return baseAutoSaveKey() + "::client-live-v33c::" + cleanClientId(clientId || currentClientId());
+  }
+
+  function snapshotKeyV33B(clientId) {
+    return baseAutoSaveKey() + "::client-snapshot-v33b::" + cleanClientId(clientId || currentClientId()) + "::latest";
+  }
+
+  function stateSummaryFromData(data) {
+    const s = data && data.state ? data.state : {};
+    const players = Array.isArray(s.players) ? s.players.length : 0;
+    const rounds = Array.isArray(s.schedule) ? s.schedule.length : 0;
+    const matches = Array.isArray(s.schedule)
+      ? s.schedule.reduce((sum, round) => sum + ((round || []).length || 0), 0)
+      : 0;
+
+    return { players, rounds, matches };
+  }
+
+  function currentStateSummary() {
+    try {
+      return {
+        players: Array.isArray(state.players) ? state.players.length : 0,
+        rounds: Array.isArray(state.schedule) ? state.schedule.length : 0,
+        matches: Array.isArray(state.schedule)
+          ? state.schedule.reduce((sum, round) => sum + ((round || []).length || 0), 0)
+          : 0
+      };
+    } catch (e) {
+      return { players: 0, rounds: 0, matches: 0 };
+    }
+  }
+
+  function hasSessionData(data) {
+    const s = stateSummaryFromData(data);
+    return s.players > 0 || s.rounds > 0 || s.matches > 0;
+  }
+
+  function resetVisibleSession() {
+    if (!window.state || typeof state !== "object") return;
+
+    state.players = [];
+    state.waitlist = [];
+    state.teams = [];
+    state.roundTeams = [];
+    state.schedule = [];
+    state.activeMatchIdx = null;
+    state.roundHistory = [];
+    state.byeRounds = [];
+    state.notifiedRounds = new Set();
+    state.startedRounds = new Set();
+    state._skippedPods = [];
+    state._manualAdjustments = 0;
+    state.fixedTeams = [];
+    state.partnerLocks = [];
+  }
+
+  function renderAll() {
+    [
+      "renderPlayers",
+      "renderTeams",
+      "renderSchedule",
+      "renderCourtsGrid",
+      "updateCourtSelectorUI",
+      "updateProgress",
+      "renderStandings",
+      "renderPlayoffs",
+      "onModeChange",
+      "renderDashboard",
+      "renderAdminLock"
+    ].forEach(function(fn){
+      try {
+        if (typeof window[fn] === "function") window[fn]();
+      } catch (e) {}
+    });
+  }
+
+  function saveLiveForClient(reason) {
+    const clientId = currentClientId();
+
+    try {
+      if (typeof buildSaveData !== "function") return false;
+
+      const data = buildSaveData();
+      data.clientId = clientId;
+      data.clientIsolationVersion = MARKER;
+      data.clientIsolationSavedAt = new Date().toISOString();
+      data.clientIsolationReason = reason || "save";
+
+      localStorage.setItem(liveKey(clientId), JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.warn(MARKER + " scoped save failed", e);
+      return false;
+    }
+  }
+
+  function getBestSavedForClient(clientId) {
+    const keys = [
+      liveKey(clientId),
+      snapshotKeyV33B(clientId)
+    ];
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+
+        const data = JSON.parse(raw);
+        if (!hasSessionData(data)) continue;
+
+        return { key, data };
+      } catch (e) {}
+    }
+
+    return null;
+  }
+
+  function clearSharedAutoSave() {
+    try { localStorage.removeItem(baseAutoSaveKey()); } catch (e) {}
+  }
+
+  function applyClientBoundary(reason) {
+    const clientId = currentClientId();
+    if (!clientId || clientId === "local-client") return false;
+
+    const lastClient = cleanClientId(localStorage.getItem(LAST_CLIENT_KEY) || "");
+    const boundaryChange = lastClient && lastClient !== clientId;
+
+    if (!lastClient) {
+      localStorage.setItem(LAST_CLIENT_KEY, clientId);
+      saveLiveForClient("initial-client");
+      return true;
+    }
+
+    if (!boundaryChange) {
+      saveLiveForClient("same-client");
+      return true;
+    }
+
+    clearSharedAutoSave();
+
+    const saved = getBestSavedForClient(clientId);
+
+    if (saved && typeof restoreSaveData === "function") {
+      try {
+        restoreSaveData(saved.data);
+        renderAll();
+
+        try {
+          if (typeof toast === "function") {
+            toast("Loaded isolated session for " + clientId, "ok");
+          }
+        } catch (e) {}
+      } catch (e) {
+        console.warn(MARKER + " restore failed", e);
+        resetVisibleSession();
+        renderAll();
+      }
+    } else {
+      resetVisibleSession();
+      renderAll();
+
+      try {
+        if (typeof toast === "function") {
+          toast("Started fresh isolated session for " + clientId, "ok");
+        }
+      } catch (e) {}
+    }
+
+    localStorage.setItem(LAST_CLIENT_KEY, clientId);
+    saveLiveForClient("client-boundary-" + (reason || "switch"));
+
+    return true;
+  }
+
+  function installAutoSaveMirror() {
+    try {
+      const original = window.autoSave || autoSave;
+
+      if (typeof original !== "function") return;
+      if (original.__pbClientStrictIsolationV33C) return;
+
+      const wrapped = function(){
+        const result = original.apply(this, arguments);
+
+        setTimeout(function(){
+          saveLiveForClient("autosave-mirror");
+        }, 650);
+
+        return result;
+      };
+
+      wrapped.__pbClientStrictIsolationV33C = true;
+      wrapped.__pbOriginalAutoSaveV33C = original;
+
+      window.autoSave = wrapped;
+      try { autoSave = wrapped; } catch (e) {}
+    } catch (e) {
+      console.warn(MARKER + " autosave mirror install failed", e);
+    }
+  }
+
+  window.pbClientStrictIsolationV33CStatus = function(){
+    const clientId = currentClientId();
+    const result = {
+      marker: MARKER,
+      url: location.href,
+      currentClientId: clientId,
+      lastClient: localStorage.getItem(LAST_CLIENT_KEY) || null,
+      sharedAutoSaveKey: baseAutoSaveKey(),
+      sharedAutoSaveExists: !!localStorage.getItem(baseAutoSaveKey()),
+      liveKey: liveKey(clientId),
+      liveExists: !!localStorage.getItem(liveKey(clientId)),
+      v33bSnapshotKey: snapshotKeyV33B(clientId),
+      v33bSnapshotExists: !!localStorage.getItem(snapshotKeyV33B(clientId)),
+      currentState: currentStateSummary()
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch (e) {}
+    return result;
+  };
+
+  window.pbClientStrictIsolationV33CSaveNow = function(){
+    const ok = saveLiveForClient("manual");
+    console.log(ok ? "Saved V33C live client session." : "V33C live save failed.");
+    return ok;
+  };
+
+  function start() {
+    installAutoSaveMirror();
+    setTimeout(function(){ applyClientBoundary("start-50"); }, 50);
+    setTimeout(function(){ applyClientBoundary("start-500"); }, 500);
+    setTimeout(function(){ installAutoSaveMirror(); applyClientBoundary("start-1500"); }, 1500);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+
+  window.addEventListener("load", start);
+  window.addEventListener("pb:client-url-authority-v32c", start);
 })();
 
 </script>
