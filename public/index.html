@@ -21579,6 +21579,9 @@ function saveTournament() {
   const name = `${getTournamentName().replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
   const a = document.createElement('a');
   try {
+    if (typeof pbClientIdentityV22AttachToExport === 'function') pbClientIdentityV22AttachToExport(data);
+  } catch(e) {}
+  try {
     if (typeof pbFixedPairsV19AttachToExport === 'function') pbFixedPairsV19AttachToExport(data);
   } catch(e) {}
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
@@ -21869,6 +21872,424 @@ function pbFixedPairsV19ApplyImported(data, source) {
   }
 }
 
+
+/* PB_CLIENT_IDENTITY_FOUNDATION_V22 */
+function pbClientIdentityV22DefaultId() {
+  try {
+    var host = String(location.hostname || "local").toLowerCase();
+    host = host.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return host || "local-client";
+  } catch(e) {
+    return "local-client";
+  }
+}
+
+function pbClientIdentityV22Clean(value) {
+  return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+}
+
+function pbClientIdentityV22Load() {
+  var defaults = {
+    version: 22,
+    clientName: "Pickleball Pro",
+    clientId: pbClientIdentityV22DefaultId(),
+    licenseLevel: "club",
+    licenseStatus: "active",
+    supportEmail: "",
+    siteUrl: "",
+    savedAt: ""
+  };
+
+  try {
+    var raw = localStorage.getItem("PB_CLIENT_IDENTITY_V22");
+    if (raw) {
+      var parsed = JSON.parse(raw);
+
+      if (parsed && typeof parsed === "object") {
+        Object.keys(defaults).forEach(function(k) {
+          if (parsed[k] !== undefined && parsed[k] !== null) defaults[k] = parsed[k];
+        });
+      }
+    }
+  } catch(e) {}
+
+  try {
+    if (window.state && state.clientIdentityV22 && typeof state.clientIdentityV22 === "object") {
+      Object.keys(defaults).forEach(function(k) {
+        if (state.clientIdentityV22[k] !== undefined && state.clientIdentityV22[k] !== null) {
+          defaults[k] = state.clientIdentityV22[k];
+        }
+      });
+    }
+  } catch(e) {}
+
+  defaults.clientName = pbClientIdentityV22Clean(defaults.clientName) || "Pickleball Pro";
+  defaults.clientId = pbClientIdentityV22Clean(defaults.clientId) || pbClientIdentityV22DefaultId();
+  defaults.licenseLevel = pbClientIdentityV22Clean(defaults.licenseLevel) || "club";
+  defaults.licenseStatus = pbClientIdentityV22Clean(defaults.licenseStatus) || "active";
+  defaults.supportEmail = pbClientIdentityV22Clean(defaults.supportEmail);
+  defaults.siteUrl = pbClientIdentityV22Clean(defaults.siteUrl);
+
+  return defaults;
+}
+
+function pbClientIdentityV22Save(identity, source) {
+  try {
+    identity = identity || {};
+
+    var current = pbClientIdentityV22Load();
+
+    var next = {
+      version: 22,
+      clientName: pbClientIdentityV22Clean(identity.clientName || current.clientName) || "Pickleball Pro",
+      clientId: pbClientIdentityV22Clean(identity.clientId || current.clientId) || pbClientIdentityV22DefaultId(),
+      licenseLevel: pbClientIdentityV22Clean(identity.licenseLevel || current.licenseLevel) || "club",
+      licenseStatus: pbClientIdentityV22Clean(identity.licenseStatus || current.licenseStatus) || "active",
+      supportEmail: pbClientIdentityV22Clean(identity.supportEmail || current.supportEmail),
+      siteUrl: pbClientIdentityV22Clean(identity.siteUrl || current.siteUrl),
+      source: source || identity.source || "save",
+      savedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem("PB_CLIENT_IDENTITY_V22", JSON.stringify(next));
+
+    if (window.state) {
+      state.clientIdentityV22 = next;
+      state.clientName = next.clientName;
+      state.clientId = next.clientId;
+      state.licenseLevel = next.licenseLevel;
+      state.licenseStatus = next.licenseStatus;
+    }
+
+    return next;
+  } catch(e) {
+    console.warn("Client identity V22 save failed", e);
+    return null;
+  }
+}
+
+function pbClientIdentityV22AttachToExport(data) {
+  try {
+    if (!data || typeof data !== "object") return data;
+
+    var identity = pbClientIdentityV22Save(pbClientIdentityV22Load(), "export");
+
+    data.clientIdentityV22 = identity;
+
+    data.state = data.state || {};
+    data.state.clientIdentityV22 = identity;
+    data.state.clientName = identity.clientName;
+    data.state.clientId = identity.clientId;
+    data.state.licenseLevel = identity.licenseLevel;
+    data.state.licenseStatus = identity.licenseStatus;
+
+    data.settings = data.settings || {};
+    data.settings.clientIdentityV22 = identity;
+    data.settings.clientName = identity.clientName;
+    data.settings.clientId = identity.clientId;
+    data.settings.licenseLevel = identity.licenseLevel;
+    data.settings.licenseStatus = identity.licenseStatus;
+
+    return data;
+  } catch(e) {
+    console.warn("Client identity V22 export attach failed", e);
+    return data;
+  }
+}
+
+function pbClientIdentityV22FindImported(data) {
+  try {
+    if (!data || typeof data !== "object") return null;
+
+    if (data.clientIdentityV22) return data.clientIdentityV22;
+    if (data.state && data.state.clientIdentityV22) return data.state.clientIdentityV22;
+    if (data.settings && data.settings.clientIdentityV22) return data.settings.clientIdentityV22;
+
+    if (data.state && (data.state.clientName || data.state.clientId || data.state.licenseLevel)) {
+      return {
+        version: 22,
+        clientName: data.state.clientName || "",
+        clientId: data.state.clientId || "",
+        licenseLevel: data.state.licenseLevel || "",
+        licenseStatus: data.state.licenseStatus || ""
+      };
+    }
+
+    if (data.settings && (data.settings.clientName || data.settings.clientId || data.settings.licenseLevel)) {
+      return {
+        version: 22,
+        clientName: data.settings.clientName || "",
+        clientId: data.settings.clientId || "",
+        licenseLevel: data.settings.licenseLevel || "",
+        licenseStatus: data.settings.licenseStatus || ""
+      };
+    }
+  } catch(e) {}
+
+  return null;
+}
+
+function pbClientIdentityV22ApplyImported(data, source) {
+  try {
+    var imported = pbClientIdentityV22FindImported(data);
+
+    if (!imported) return false;
+
+    var saved = pbClientIdentityV22Save(imported, source || "import");
+
+    if (data && typeof data === "object") {
+      data.clientIdentityV22 = saved;
+
+      data.state = data.state || {};
+      data.state.clientIdentityV22 = saved;
+      data.state.clientName = saved.clientName;
+      data.state.clientId = saved.clientId;
+      data.state.licenseLevel = saved.licenseLevel;
+      data.state.licenseStatus = saved.licenseStatus;
+
+      data.settings = data.settings || {};
+      data.settings.clientIdentityV22 = saved;
+      data.settings.clientName = saved.clientName;
+      data.settings.clientId = saved.clientId;
+      data.settings.licenseLevel = saved.licenseLevel;
+      data.settings.licenseStatus = saved.licenseStatus;
+    }
+
+    setTimeout(pbClientIdentityV22RenderAll, 100);
+    setTimeout(pbClientIdentityV22RenderAll, 600);
+
+    return true;
+  } catch(e) {
+    console.warn("Client identity V22 import apply failed", e);
+    return false;
+  }
+}
+
+function pbClientIdentityV22PlanLabel(level) {
+  level = String(level || "").toLowerCase();
+
+  if (level === "trial") return "Trial";
+  if (level === "club") return "Club";
+  if (level === "pro") return "Pro";
+  if (level === "enterprise") return "Enterprise";
+
+  return level ? level.charAt(0).toUpperCase() + level.slice(1) : "Club";
+}
+
+function pbClientIdentityV22StatusLabel(status) {
+  status = String(status || "").toLowerCase();
+
+  if (status === "active") return "Active";
+  if (status === "trial") return "Trial";
+  if (status === "expired") return "Expired";
+  if (status === "paused") return "Paused";
+
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Active";
+}
+
+function pbClientIdentityV22RenderBadge() {
+  try {
+    var identity = pbClientIdentityV22Load();
+
+    var title = document.getElementById("dash-tournament-name");
+
+    if (!title || !title.parentNode) return;
+
+    var badge = document.getElementById("pb-client-identity-badge-v22");
+
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "pb-client-identity-badge-v22";
+      badge.style.cssText =
+        "display:inline-flex;align-items:center;gap:.45rem;margin-top:.35rem;" +
+        "padding:.28rem .55rem;border-radius:999px;border:1px solid rgba(198,255,0,.28);" +
+        "background:rgba(198,255,0,.08);color:var(--txt2);font-size:.78rem;font-weight:800;";
+
+      title.parentNode.insertBefore(badge, title.nextSibling);
+    }
+
+    badge.textContent =
+      "🏢 " + identity.clientName +
+      " · " + pbClientIdentityV22PlanLabel(identity.licenseLevel) +
+      " · " + pbClientIdentityV22StatusLabel(identity.licenseStatus);
+  } catch(e) {}
+}
+
+function pbClientIdentityV22RenderAdminCard() {
+  try {
+    var admin =
+      document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin || !admin.appendChild) return false;
+
+    var card = document.getElementById("pb-client-identity-card-v22");
+    var identity = pbClientIdentityV22Load();
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-client-identity-card-v22";
+      card.className = "card";
+      card.style.marginTop = "1rem";
+
+      card.innerHTML =
+        '<div class="card-title">Company / License</div>' +
+        '<p style="color:var(--txt2);margin-top:.25rem">Client identity used for exports, backups, saved tournament records, and future licensing.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;margin-top:.75rem">' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">Company / Client Name' +
+            '<input id="pb-client-name-v22" type="text" placeholder="Example: Pickleplex Burloak" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+          '</label>' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">Client ID' +
+            '<input id="pb-client-id-v22" type="text" placeholder="example-client-id" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+          '</label>' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">License Level' +
+            '<select id="pb-client-license-level-v22" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+              '<option value="trial">Trial</option>' +
+              '<option value="club">Club</option>' +
+              '<option value="pro">Pro</option>' +
+              '<option value="enterprise">Enterprise</option>' +
+            '</select>' +
+          '</label>' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">License Status' +
+            '<select id="pb-client-license-status-v22" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+              '<option value="active">Active</option>' +
+              '<option value="trial">Trial</option>' +
+              '<option value="paused">Paused</option>' +
+              '<option value="expired">Expired</option>' +
+            '</select>' +
+          '</label>' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">Support Email' +
+            '<input id="pb-client-support-email-v22" type="email" placeholder="support@example.com" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+          '</label>' +
+          '<label style="display:flex;flex-direction:column;gap:.3rem;font-size:.85rem;font-weight:800">Site URL' +
+            '<input id="pb-client-site-url-v22" type="url" placeholder="https://client.example.com" style="padding:.55rem;border-radius:.5rem;border:1px solid var(--border);background:var(--bg);color:var(--txt)">' +
+          '</label>' +
+        '</div>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="pb-client-save-v22">Save Company Settings</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-client-defaults-v22">Use Defaults</button>' +
+        '</div>' +
+        '<div id="pb-client-status-v22" style="margin-top:.6rem;color:var(--txt3);font-size:.82rem"></div>';
+
+      admin.appendChild(card);
+    }
+
+    var nameEl = document.getElementById("pb-client-name-v22");
+    var idEl = document.getElementById("pb-client-id-v22");
+    var levelEl = document.getElementById("pb-client-license-level-v22");
+    var statusEl = document.getElementById("pb-client-license-status-v22");
+    var emailEl = document.getElementById("pb-client-support-email-v22");
+    var siteEl = document.getElementById("pb-client-site-url-v22");
+    var statusText = document.getElementById("pb-client-status-v22");
+
+    if (nameEl && !nameEl.__pbClientIdentityV22Bound) {
+      nameEl.__pbClientIdentityV22Bound = true;
+
+      var saveBtn = document.getElementById("pb-client-save-v22");
+      var defaultsBtn = document.getElementById("pb-client-defaults-v22");
+
+      if (saveBtn) {
+        saveBtn.addEventListener("click", function() {
+          var saved = pbClientIdentityV22Save({
+            clientName: nameEl ? nameEl.value : "",
+            clientId: idEl ? idEl.value : "",
+            licenseLevel: levelEl ? levelEl.value : "",
+            licenseStatus: statusEl ? statusEl.value : "",
+            supportEmail: emailEl ? emailEl.value : "",
+            siteUrl: siteEl ? siteEl.value : ""
+          }, "admin-card");
+
+          pbClientIdentityV22RenderAll();
+
+          try { if (typeof autoSave === "function") autoSave(); } catch(e) {}
+
+          if (statusText && saved) {
+            statusText.textContent = "Saved " + saved.clientName + " · " + pbClientIdentityV22PlanLabel(saved.licenseLevel) + " · " + pbClientIdentityV22StatusLabel(saved.licenseStatus);
+          }
+
+          try {
+            if (typeof toast === "function") toast("Company settings saved", "ok");
+          } catch(e) {}
+        });
+      }
+
+      if (defaultsBtn) {
+        defaultsBtn.addEventListener("click", function() {
+          pbClientIdentityV22Save({
+            clientName: "Pickleball Pro",
+            clientId: pbClientIdentityV22DefaultId(),
+            licenseLevel: "club",
+            licenseStatus: "active",
+            supportEmail: "",
+            siteUrl: ""
+          }, "defaults");
+
+          pbClientIdentityV22RenderAdminCard();
+          pbClientIdentityV22RenderBadge();
+
+          try {
+            if (typeof toast === "function") toast("Company defaults restored", "ok");
+          } catch(e) {}
+        });
+      }
+    }
+
+    if (nameEl) nameEl.value = identity.clientName || "";
+    if (idEl) idEl.value = identity.clientId || "";
+    if (levelEl) levelEl.value = identity.licenseLevel || "club";
+    if (statusEl) statusEl.value = identity.licenseStatus || "active";
+    if (emailEl) emailEl.value = identity.supportEmail || "";
+    if (siteEl) siteEl.value = identity.siteUrl || "";
+
+    if (statusText) {
+      statusText.textContent =
+        "Current: " + identity.clientName +
+        " · ID: " + identity.clientId +
+        " · " + pbClientIdentityV22PlanLabel(identity.licenseLevel) +
+        " · " + pbClientIdentityV22StatusLabel(identity.licenseStatus);
+    }
+
+    return true;
+  } catch(e) {
+    console.warn("Client identity V22 admin render failed", e);
+    return false;
+  }
+}
+
+function pbClientIdentityV22RenderAll() {
+  pbClientIdentityV22RenderBadge();
+  pbClientIdentityV22RenderAdminCard();
+}
+
+(function installClientIdentityV22() {
+  if (window.__PB_CLIENT_IDENTITY_FOUNDATION_V22_INSTALLED__) return;
+  window.__PB_CLIENT_IDENTITY_FOUNDATION_V22_INSTALLED__ = true;
+
+  try { pbClientIdentityV22Save(pbClientIdentityV22Load(), "install"); } catch(e) {}
+
+  document.addEventListener("DOMContentLoaded", function() {
+    setTimeout(pbClientIdentityV22RenderAll, 200);
+    setTimeout(pbClientIdentityV22RenderAll, 900);
+    setTimeout(pbClientIdentityV22RenderAll, 1800);
+  });
+
+  document.addEventListener("click", function(e) {
+    try {
+      var txt = String(e.target && e.target.textContent || "").toLowerCase();
+
+      if (txt.indexOf("admin") >= 0 || txt.indexOf("save") >= 0 || txt.indexOf("export") >= 0 || txt.indexOf("backup") >= 0) {
+        setTimeout(pbClientIdentityV22RenderAll, 150);
+        setTimeout(function(){ pbClientIdentityV22Save(pbClientIdentityV22Load(), "click"); }, 200);
+      }
+    } catch(err) {}
+  }, true);
+
+  setTimeout(pbClientIdentityV22RenderAll, 500);
+  setTimeout(pbClientIdentityV22RenderAll, 1500);
+})();
+
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
@@ -21876,6 +22297,9 @@ function loadTournament(event) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
+      try {
+        if (typeof pbClientIdentityV22ApplyImported === 'function') pbClientIdentityV22ApplyImported(data, 'loadTournament-before-apply');
+      } catch(e) {}
       try {
         if (typeof pbFixedPairsV19ApplyImported === 'function') pbFixedPairsV19ApplyImported(data, 'loadTournament-before-apply');
       } catch(e) {}
