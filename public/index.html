@@ -21832,10 +21832,295 @@ function saveTournament() {
   const data = buildSaveData();
   const name = `${getTournamentName().replace(/[^a-zA-Z0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
   const a = document.createElement('a');
+  try {
+    if (typeof pbFixedPairsV19AttachToExport === 'function') pbFixedPairsV19AttachToExport(data);
+  } catch(e) {}
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
   a.download = name;
   a.click();
   toast(`💾 Saved as ${name}`);
+}
+
+
+/* PB_FIXED_PAIRS_REAL_EXPORT_LOAD_V19 */
+function pbFixedPairsV19Parse(raw, fallback) {
+  try {
+    if(raw == null || raw === '') return fallback;
+    return JSON.parse(raw);
+  } catch(e) {
+    return fallback;
+  }
+}
+
+function pbFixedPairsV19LooksLikePairArray(v) {
+  return Array.isArray(v) &&
+    v.length > 0 &&
+    v.every(function(pair) {
+      return Array.isArray(pair) &&
+        pair.length >= 2 &&
+        isFinite(Number(pair[0])) &&
+        isFinite(Number(pair[1]));
+    });
+}
+
+function pbFixedPairsV19ReadCurrent() {
+  var out = {
+    version: 19,
+    source: "real-export",
+    savedAt: new Date().toISOString(),
+    pairs: [],
+    mode: "",
+    duprFormat: "",
+    duprOverflow: "",
+    localStoragePairs: [],
+    localStorageKeys: {}
+  };
+
+  try {
+    if(window.state && Array.isArray(state.fixedPartnerDuprPairs) && state.fixedPartnerDuprPairs.length) {
+      out.pairs = state.fixedPartnerDuprPairs;
+    }
+  } catch(e) {}
+
+  try {
+    if(window.state && state.fixedPairsDirectBackupV17 && Array.isArray(state.fixedPairsDirectBackupV17.pairs) && state.fixedPairsDirectBackupV17.pairs.length) {
+      out.pairs = state.fixedPairsDirectBackupV17.pairs;
+      out.mode = out.mode || state.fixedPairsDirectBackupV17.mode || "";
+      out.duprFormat = out.duprFormat || state.fixedPairsDirectBackupV17.duprFormat || "";
+      out.duprOverflow = out.duprOverflow || state.fixedPairsDirectBackupV17.duprOverflow || "";
+    }
+  } catch(e) {}
+
+  try {
+    var savedV17 = pbFixedPairsV19Parse(localStorage.getItem("PB_FIXED_PAIRS_DIRECT_SAVE_V17"), null);
+
+    if(savedV17 && Array.isArray(savedV17.pairs) && savedV17.pairs.length) {
+      out.pairs = out.pairs.length ? out.pairs : savedV17.pairs;
+      out.mode = out.mode || savedV17.mode || "";
+      out.duprFormat = out.duprFormat || savedV17.duprFormat || "";
+      out.duprOverflow = out.duprOverflow || savedV17.duprOverflow || "";
+    }
+  } catch(e) {}
+
+  try {
+    var savedV18 = pbFixedPairsV19Parse(localStorage.getItem("PB_FIXED_PAIRS_RESTORE_BRIDGE_V18"), null);
+
+    if(savedV18 && Array.isArray(savedV18.pairs) && savedV18.pairs.length) {
+      out.pairs = out.pairs.length ? out.pairs : savedV18.pairs;
+      out.mode = out.mode || savedV18.mode || "";
+      out.duprFormat = out.duprFormat || savedV18.duprFormat || "";
+      out.duprOverflow = out.duprOverflow || savedV18.duprOverflow || "";
+    }
+  } catch(e) {}
+
+  try {
+    out.duprFormat = out.duprFormat || localStorage.getItem("pbDuprFormatV18") || "";
+    out.duprOverflow = out.duprOverflow || localStorage.getItem("pbDuprOverflowV18") || "";
+  } catch(e) {}
+
+  try {
+    var modeEl = document.getElementById("team-mode") ||
+      document.querySelector('[name="team-mode"]') ||
+      document.querySelector('[name="scheduleMode"]');
+
+    if(modeEl && modeEl.value) out.mode = out.mode || String(modeEl.value || "");
+  } catch(e) {}
+
+  // Last resort: scan localStorage for an array shaped like fixed partner pairs.
+  // This only runs during export, not on page startup.
+  try {
+    for(var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if(!key) continue;
+
+      var raw = localStorage.getItem(key);
+      var parsed = pbFixedPairsV19Parse(raw, null);
+
+      if(pbFixedPairsV19LooksLikePairArray(parsed)) {
+        out.localStoragePairs.push({
+          key: key,
+          pairs: parsed
+        });
+
+        if(!out.pairs.length) out.pairs = parsed;
+      }
+
+      if(/fixed|partner|pair|dupr|mode/i.test(key)) {
+        out.localStorageKeys[key] = raw;
+      }
+    }
+  } catch(e) {}
+
+  if(!Array.isArray(out.pairs)) out.pairs = [];
+
+  return out;
+}
+
+function pbFixedPairsV19AttachToExport(data) {
+  try {
+    if(!data || typeof data !== "object") return data;
+
+    var backup = pbFixedPairsV19ReadCurrent();
+
+    data.fixedPairsBackupV19 = backup;
+
+    data.state = data.state || {};
+    data.state.fixedPartnerDuprPairs = backup.pairs || [];
+    data.state.fixedPairsBackupV19 = backup;
+    data.state.fixedPairsDirectBackupV17 = backup;
+    data.state.fixedPairsRestoreBridgeV18 = backup;
+    data.state.pbDuprFormatV18 = backup.duprFormat || "";
+    data.state.pbDuprOverflowV18 = backup.duprOverflow || "";
+
+    data.settings = data.settings || {};
+    data.settings.fixedPairsBackupV19 = backup;
+    data.settings.fixedPartnerDuprPairs = backup.pairs || [];
+    data.settings.pbDuprFormatV18 = backup.duprFormat || "";
+    data.settings.pbDuprOverflowV18 = backup.duprOverflow || "";
+
+    try {
+      if(window.state) {
+        state.fixedPartnerDuprPairs = backup.pairs || [];
+        state.fixedPairsBackupV19 = backup;
+        state.fixedPairsDirectBackupV17 = backup;
+        state.fixedPairsRestoreBridgeV18 = backup;
+      }
+    } catch(e) {}
+
+    return data;
+  } catch(e) {
+    console.warn("Fixed pairs export attach V19 failed", e);
+    return data;
+  }
+}
+
+function pbFixedPairsV19FindBackup(obj, depth) {
+  if(!obj || typeof obj !== "object") return null;
+
+  depth = depth || 0;
+  if(depth > 5) return null;
+
+  if(obj.fixedPairsBackupV19) return obj.fixedPairsBackupV19;
+  if(obj.fixedPairsDirectBackupV17) return obj.fixedPairsDirectBackupV17;
+  if(obj.fixedPairsRestoreBridgeV18) return obj.fixedPairsRestoreBridgeV18;
+  if(obj.fixedPairsSafeBackupV16) return obj.fixedPairsSafeBackupV16;
+  if(Array.isArray(obj.fixedPartnerDuprPairs)) {
+    return {
+      version: 19,
+      source: "fixedPartnerDuprPairs",
+      pairs: obj.fixedPartnerDuprPairs,
+      mode: obj.fixedPartnerDuprModeV17 || obj.fixedPartnerDuprModeV16 || "",
+      duprFormat: obj.pbDuprFormatV18 || "",
+      duprOverflow: obj.pbDuprOverflowV18 || ""
+    };
+  }
+
+  var keys = Object.keys(obj);
+
+  for(var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+
+    if(!/fixed|partner|pair|dupr|state|settings|backup|tournament/i.test(k)) continue;
+
+    var found = pbFixedPairsV19FindBackup(obj[k], depth + 1);
+    if(found) return found;
+  }
+
+  return null;
+}
+
+function pbFixedPairsV19ApplyImported(data, source) {
+  try {
+    var backup = pbFixedPairsV19FindBackup(data, 0);
+
+    if(!backup || typeof backup !== "object") return false;
+
+    var pairs = [];
+
+    if(Array.isArray(backup.pairs)) pairs = backup.pairs;
+    else if(Array.isArray(backup.fixedPartnerDuprPairs)) pairs = backup.fixedPartnerDuprPairs;
+
+    if(!Array.isArray(pairs)) pairs = [];
+
+    var normalized = pairs
+      .filter(function(pair) {
+        return Array.isArray(pair) &&
+          pair.length >= 2 &&
+          isFinite(Number(pair[0])) &&
+          isFinite(Number(pair[1])) &&
+          Number(pair[0]) !== Number(pair[1]);
+      })
+      .map(function(pair) {
+        return [Number(pair[0]), Number(pair[1])];
+      });
+
+    backup.version = 19;
+    backup.source = source || backup.source || "import";
+    backup.restoredAt = new Date().toISOString();
+    backup.pairs = normalized;
+
+    if(data && typeof data === "object") {
+      data.state = data.state || {};
+      data.state.fixedPartnerDuprPairs = normalized;
+      data.state.fixedPairsBackupV19 = backup;
+      data.state.fixedPairsDirectBackupV17 = backup;
+      data.state.fixedPairsRestoreBridgeV18 = backup;
+      data.state.pbDuprFormatV18 = backup.duprFormat || data.state.pbDuprFormatV18 || "";
+      data.state.pbDuprOverflowV18 = backup.duprOverflow || data.state.pbDuprOverflowV18 || "";
+
+      data.settings = data.settings || {};
+      data.settings.fixedPartnerDuprPairs = normalized;
+      data.settings.fixedPairsBackupV19 = backup;
+      data.settings.pbDuprFormatV18 = backup.duprFormat || data.settings.pbDuprFormatV18 || "";
+      data.settings.pbDuprOverflowV18 = backup.duprOverflow || data.settings.pbDuprOverflowV18 || "";
+    }
+
+    try {
+      if(window.state) {
+        state.fixedPartnerDuprPairs = normalized;
+        state.fixedPairsBackupV19 = backup;
+        state.fixedPairsDirectBackupV17 = backup;
+        state.fixedPairsRestoreBridgeV18 = backup;
+        state.pbDuprFormatV18 = backup.duprFormat || state.pbDuprFormatV18 || "";
+        state.pbDuprOverflowV18 = backup.duprOverflow || state.pbDuprOverflowV18 || "";
+      }
+    } catch(e) {}
+
+    // Feed the existing V17/V18 fixed-pair restore fallback keys.
+    try { localStorage.setItem("PB_FIXED_PAIRS_DIRECT_SAVE_V17", JSON.stringify(backup)); } catch(e) {}
+    try { localStorage.setItem("PB_FIXED_PAIRS_RESTORE_BRIDGE_V18", JSON.stringify(backup)); } catch(e) {}
+    try { localStorage.setItem("PB_FIXED_PAIRS_BACKUP_V19", JSON.stringify(backup)); } catch(e) {}
+
+    try {
+      if(backup.duprFormat !== undefined && backup.duprFormat !== null) {
+        localStorage.setItem("pbDuprFormatV18", String(backup.duprFormat || ""));
+      }
+
+      if(backup.duprOverflow !== undefined && backup.duprOverflow !== null) {
+        localStorage.setItem("pbDuprOverflowV18", String(backup.duprOverflow || ""));
+      }
+    } catch(e) {}
+
+    setTimeout(function(){
+      try {
+        if(window.state) {
+          state.fixedPartnerDuprPairs = normalized;
+          state.fixedPairsBackupV19 = backup;
+          state.fixedPairsDirectBackupV17 = backup;
+          state.fixedPairsRestoreBridgeV18 = backup;
+        }
+      } catch(e) {}
+
+      try { if(typeof renderPairs === "function") renderPairs(); } catch(e) {}
+      try { if(typeof renderFixedPairs === "function") renderFixedPairs(); } catch(e) {}
+      try { if(typeof updateUi === "function") updateUi(); } catch(e) {}
+    }, 500);
+
+    return true;
+  } catch(e) {
+    console.warn("Fixed pairs import apply V19 failed", e);
+    return false;
+  }
 }
 
 function loadTournament(event) {
@@ -21845,6 +22130,9 @@ function loadTournament(event) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
+      try {
+        if (typeof pbFixedPairsV19ApplyImported === 'function') pbFixedPairsV19ApplyImported(data, 'loadTournament-before-apply');
+      } catch(e) {}
       if(!data.state) throw new Error('Invalid file');
 
       restoreSaveData(data);
@@ -45155,8 +45443,10 @@ function exportEndSessionSummary(){
     } catch(e) {}
 
     try {
-      if(window.state) state.fixedPartnerDuprModeV16 = String(mode || "");
-      if(typeof pbFixedPairsSafeCaptureV16 === "function") pbFixedPairsSafeCaptureV16("rememberMode");
+      if(window.state) {
+        state.fixedPartnerDuprModeV17 = String(mode || "");
+        fixedPairsBackupV17("rememberMode", loadPairs());
+      }
     } catch(e) {}
   }
 
@@ -45465,16 +45755,113 @@ function exportEndSessionSummary(){
     return out;
   }
 
+  /* PB_FIXED_PAIRS_DIRECT_SAVE_V17 */
+  function fixedPairsBackupV17(source, pairs) {
+    try {
+      if (!window.state) return null;
+
+      pairs = sanitizePairs(pairs || []);
+
+      var mode = "";
+      var duprFormat = "";
+      var duprOverflow = "";
+
+      try { mode = String(localStorage.getItem(MODE_KEY) || ""); } catch(e) {}
+      try { duprFormat = String(localStorage.getItem("pbDuprFormatV18") || ""); } catch(e) {}
+      try { duprOverflow = String(localStorage.getItem("pbDuprOverflowV18") || ""); } catch(e) {}
+
+      var backup = {
+        version: 17,
+        source: source || "fixed-pairs",
+        savedAt: new Date().toISOString(),
+        pairs: pairs,
+        mode: mode,
+        duprFormat: duprFormat,
+        duprOverflow: duprOverflow,
+        pairsKey: PAIRS_KEY,
+        modeKey: MODE_KEY
+      };
+
+      state.fixedPartnerDuprPairs = pairs;
+      state.fixedPairsDirectBackupV17 = backup;
+      state.fixedPairsSafeBackupV16 = backup;
+      state.fixedPairsBackup = backup;
+      state.fixedPairsModeBackup = backup;
+      state.fixedPartnerDuprModeV17 = mode;
+      state.pbDuprFormatV18 = duprFormat;
+      state.pbDuprOverflowV18 = duprOverflow;
+
+      try { localStorage.setItem("PB_FIXED_PAIRS_DIRECT_SAVE_V17", JSON.stringify(backup)); } catch(e) {}
+
+      return backup;
+    } catch(e) {
+      console.warn("Fixed pairs backup V17 failed", e);
+      return null;
+    }
+  }
+
+  function fixedPairsRestoreV17(source) {
+    try {
+      if (!window.state) return [];
+
+      var backup =
+        state.fixedPairsDirectBackupV17 ||
+        state.fixedPairsSafeBackupV16 ||
+        state.fixedPairsBackup ||
+        state.fixedPairsModeBackup ||
+        null;
+
+      if (!backup) {
+        try { backup = JSON.parse(localStorage.getItem("PB_FIXED_PAIRS_DIRECT_SAVE_V17") || "null"); } catch(e) {}
+      }
+
+      if (!backup || typeof backup !== "object") return [];
+
+      var pairs = sanitizePairs(backup.pairs || []);
+
+      state.fixedPartnerDuprPairs = pairs;
+
+      try { localStorage.setItem(PAIRS_KEY, JSON.stringify(pairs)); } catch(e) {}
+
+      if (backup.mode !== undefined && backup.mode !== null) {
+        try { localStorage.setItem(MODE_KEY, String(backup.mode || "")); } catch(e) {}
+        state.fixedPartnerDuprModeV17 = String(backup.mode || "");
+      }
+
+      if (backup.duprFormat !== undefined && backup.duprFormat !== null) {
+        try { localStorage.setItem("pbDuprFormatV18", String(backup.duprFormat || "")); } catch(e) {}
+        state.pbDuprFormatV18 = String(backup.duprFormat || "");
+      }
+
+      if (backup.duprOverflow !== undefined && backup.duprOverflow !== null) {
+        try { localStorage.setItem("pbDuprOverflowV18", String(backup.duprOverflow || "")); } catch(e) {}
+        state.pbDuprOverflowV18 = String(backup.duprOverflow || "");
+      }
+
+      state.fixedPairsDirectBackupV17 = backup;
+
+      return pairs;
+    } catch(e) {
+      console.warn("Fixed pairs restore V17 failed", e);
+      return [];
+    }
+  }
+
   function loadPairs() {
     try {
-      if (window.state && Array.isArray(state.fixedPartnerDuprPairs)) {
+      if (window.state && Array.isArray(state.fixedPartnerDuprPairs) && state.fixedPartnerDuprPairs.length) {
         return sanitizePairs(state.fixedPartnerDuprPairs);
       }
     } catch(e) {}
 
     try {
-      return sanitizePairs(JSON.parse(localStorage.getItem(PAIRS_KEY) || "[]") || []);
-    } catch(e2) {
+      var localPairs = sanitizePairs(JSON.parse(localStorage.getItem(PAIRS_KEY) || "[]") || []);
+      if (localPairs.length) return localPairs;
+    } catch(e2) {}
+
+    try {
+      return sanitizePairs(fixedPairsRestoreV17("loadPairs") || []);
+    } catch(e3) {
       return [];
     }
   }
@@ -45493,7 +45880,7 @@ function exportEndSessionSummary(){
     } catch(e2) {}
 
     try {
-      if(typeof pbFixedPairsSafeCaptureV16 === "function") pbFixedPairsSafeCaptureV16("savePairs");
+      fixedPairsBackupV17("savePairs", pairs);
     } catch(e4) {}
 
     try {
@@ -45504,6 +45891,385 @@ function exportEndSessionSummary(){
 
     return pairs;
   }
+
+  
+/* PB_FIXED_PAIRS_RESTORE_BRIDGE_V18 */
+  var fixedPairsPendingRestoreV18 = null;
+
+  function fixedPairsBackupFromObjectV18(obj, depth) {
+    if (!obj || typeof obj !== "object") return null;
+
+    depth = depth || 0;
+    if (depth > 4) return null;
+
+    if (obj.fixedPairsDirectBackupV17) return obj.fixedPairsDirectBackupV17;
+    if (obj.fixedPairsSafeBackupV16) return obj.fixedPairsSafeBackupV16;
+    if (obj.fixedPairsBackup) return obj.fixedPairsBackup;
+    if (obj.fixedPairsModeBackup) return obj.fixedPairsModeBackup;
+
+    if (Array.isArray(obj.fixedPartnerDuprPairs)) {
+      return {
+        version: 18,
+        source: "fixedPartnerDuprPairs",
+        pairs: obj.fixedPartnerDuprPairs,
+        mode: obj.fixedPartnerDuprModeV17 || obj.fixedPartnerDuprModeV16 || "",
+        duprFormat: obj.pbDuprFormatV18 || "",
+        duprOverflow: obj.pbDuprOverflowV18 || ""
+      };
+    }
+
+    if (obj.state && typeof obj.state === "object") {
+      var fromState = fixedPairsBackupFromObjectV18(obj.state, depth + 1);
+      if (fromState) return fromState;
+    }
+
+    if (obj.tournament && typeof obj.tournament === "object") {
+      var fromTournament = fixedPairsBackupFromObjectV18(obj.tournament, depth + 1);
+      if (fromTournament) return fromTournament;
+    }
+
+    if (obj.data && typeof obj.data === "object") {
+      var fromData = fixedPairsBackupFromObjectV18(obj.data, depth + 1);
+      if (fromData) return fromData;
+    }
+
+    if (obj.appState && typeof obj.appState === "object") {
+      var fromAppState = fixedPairsBackupFromObjectV18(obj.appState, depth + 1);
+      if (fromAppState) return fromAppState;
+    }
+
+    var keys = Object.keys(obj).slice(0, 80);
+
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+
+      if (!/fixed|partner|dupr|pair|tournament|state|backup/i.test(key)) continue;
+
+      var child = obj[key];
+
+      if (child && typeof child === "object") {
+        var found = fixedPairsBackupFromObjectV18(child, depth + 1);
+        if (found) return found;
+      }
+    }
+
+    return null;
+  }
+
+  function fixedPairsApplyRestoreV18(backup, source) {
+    try {
+      if (!backup || typeof backup !== "object") return false;
+
+      var pairs = [];
+
+      if (Array.isArray(backup.pairs)) {
+        pairs = backup.pairs;
+      } else if (Array.isArray(backup.fixedPartnerDuprPairs)) {
+        pairs = backup.fixedPartnerDuprPairs;
+      }
+
+      pairs = sanitizePairs(pairs || []);
+
+      if (!pairs.length) return false;
+
+      if (window.state) {
+        state.fixedPartnerDuprPairs = pairs;
+
+        state.fixedPairsRestoreBridgeV18 = {
+          version: 18,
+          source: source || backup.source || "restore",
+          restoredAt: new Date().toISOString(),
+          pairs: pairs,
+          mode: backup.mode || backup.fixedPartnerDuprModeV17 || backup.fixedPartnerDuprModeV16 || "",
+          duprFormat: backup.duprFormat || backup.pbDuprFormatV18 || "",
+          duprOverflow: backup.duprOverflow || backup.pbDuprOverflowV18 || ""
+        };
+
+        state.fixedPairsDirectBackupV17 = state.fixedPairsRestoreBridgeV18;
+        state.fixedPairsBackup = state.fixedPairsRestoreBridgeV18;
+        state.fixedPairsModeBackup = state.fixedPairsRestoreBridgeV18;
+      }
+
+      try {
+        localStorage.setItem(PAIRS_KEY, JSON.stringify(pairs));
+      } catch(e) {}
+
+      var mode = backup.mode || backup.fixedPartnerDuprModeV17 || backup.fixedPartnerDuprModeV16 || "";
+
+      if (mode) {
+        try { localStorage.setItem(MODE_KEY, String(mode)); } catch(e) {}
+
+        try {
+          if (window.state) state.fixedPartnerDuprModeV17 = String(mode);
+
+          var modeEl = document.getElementById("team-mode") ||
+            document.querySelector('[name="team-mode"]') ||
+            document.querySelector('[name="scheduleMode"]');
+
+          if (modeEl && Array.from(modeEl.options || []).some(function(o){ return o.value === String(mode); })) {
+            modeEl.value = String(mode);
+            modeEl.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        } catch(e) {}
+      }
+
+      var duprFormat = backup.duprFormat || backup.pbDuprFormatV18 || "";
+      var duprOverflow = backup.duprOverflow || backup.pbDuprOverflowV18 || "";
+
+      if (duprFormat) {
+        try { localStorage.setItem("pbDuprFormatV18", String(duprFormat)); } catch(e) {}
+        try { if (window.state) state.pbDuprFormatV18 = String(duprFormat); } catch(e) {}
+      }
+
+      if (duprOverflow !== undefined && duprOverflow !== null && String(duprOverflow) !== "") {
+        try { localStorage.setItem("pbDuprOverflowV18", String(duprOverflow)); } catch(e) {}
+        try { if (window.state) state.pbDuprOverflowV18 = String(duprOverflow); } catch(e) {}
+      }
+
+      try {
+        localStorage.setItem("PB_FIXED_PAIRS_RESTORE_BRIDGE_V18", JSON.stringify(state.fixedPairsRestoreBridgeV18 || {
+          version: 18,
+          source: source || "restore",
+          pairs: pairs,
+          mode: mode,
+          duprFormat: duprFormat,
+          duprOverflow: duprOverflow
+        }));
+      } catch(e) {}
+
+      try {
+        if (typeof renderPairs === "function") renderPairs();
+      } catch(e) {}
+
+      try {
+        if (typeof renderFixedPairs === "function") renderFixedPairs();
+      } catch(e) {}
+
+      try {
+        if (typeof updateUi === "function") updateUi();
+      } catch(e) {}
+
+      try {
+        if (typeof saveState === "function") saveState();
+        else if (typeof save === "function") save();
+        else if (typeof persistState === "function") persistState();
+      } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn("Fixed pairs restore bridge V18 failed", e);
+      return false;
+    }
+  }
+
+  function fixedPairsApplyPendingRestoreV18(source) {
+    if (fixedPairsPendingRestoreV18) {
+      return fixedPairsApplyRestoreV18(fixedPairsPendingRestoreV18, source || "pending");
+    }
+
+    try {
+      if (window.state) {
+        var fromState = fixedPairsBackupFromObjectV18(state, 0);
+        if (fromState) return fixedPairsApplyRestoreV18(fromState, source || "state");
+      }
+    } catch(e) {}
+
+    try {
+      var raw = localStorage.getItem("PB_FIXED_PAIRS_RESTORE_BRIDGE_V18") ||
+        localStorage.getItem("PB_FIXED_PAIRS_DIRECT_SAVE_V17") ||
+        localStorage.getItem("PB_FIXED_PAIRS_SAFE_SAVE_BACKUP_V16");
+
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        var fromLocal = fixedPairsBackupFromObjectV18(parsed, 0) || parsed;
+        if (fromLocal) return fixedPairsApplyRestoreV18(fromLocal, source || "local");
+      }
+    } catch(e) {}
+
+    return false;
+  }
+
+  function fixedPairsReadImportFileV18(file) {
+    try {
+      if (!file) return;
+
+      var reader = new FileReader();
+
+      reader.onload = function() {
+        try {
+          var parsed = JSON.parse(String(reader.result || ""));
+          var backup = fixedPairsBackupFromObjectV18(parsed, 0);
+
+          if (!backup) return;
+
+          fixedPairsPendingRestoreV18 = backup;
+
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("file-immediate"); }, 100);
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("file-after-import-1"); }, 700);
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("file-after-import-2"); }, 1600);
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("file-after-import-3"); }, 3200);
+        } catch(e) {}
+      };
+
+      reader.readAsText(file);
+    } catch(e) {}
+  }
+
+  function fixedPairsWrapLoadFunctionV18(name) {
+    try {
+      var fn = window[name];
+
+      if (typeof fn !== "function") return;
+      if (fn.__pbFixedPairsRestoreBridgeWrappedV18) return;
+
+      var wrapped = function() {
+        var result = fn.apply(this, arguments);
+
+        setTimeout(function(){ fixedPairsApplyPendingRestoreV18(name + "-after-100"); }, 100);
+        setTimeout(function(){ fixedPairsApplyPendingRestoreV18(name + "-after-800"); }, 800);
+        setTimeout(function(){ fixedPairsApplyPendingRestoreV18(name + "-after-2000"); }, 2000);
+
+        return result;
+      };
+
+      wrapped.__pbFixedPairsRestoreBridgeWrappedV18 = true;
+      window[name] = wrapped;
+    } catch(e) {}
+  }
+
+  (function installFixedPairsRestoreBridgeV18(){
+    if (window.__PB_FIXED_PAIRS_RESTORE_BRIDGE_V18_INSTALLED__) return;
+    window.__PB_FIXED_PAIRS_RESTORE_BRIDGE_V18_INSTALLED__ = true;
+
+    [
+      "loadState",
+      "load",
+      "restoreState",
+      "importState",
+      "importTournament",
+      "restoreTournament",
+      "applyState",
+      "hydrateState",
+      "loadTournament",
+      "importJSON",
+      "restoreBackup"
+    ].forEach(fixedPairsWrapLoadFunctionV18);
+
+    document.addEventListener("change", function(e) {
+      try {
+        var el = e.target;
+        if (!el || el.type !== "file" || !el.files || !el.files.length) return;
+
+        fixedPairsReadImportFileV18(el.files[0]);
+      } catch(err) {}
+    }, true);
+
+    document.addEventListener("click", function(e) {
+      try {
+        var txt = String(e.target && e.target.textContent || "").toLowerCase();
+
+        if (
+          txt.indexOf("load") >= 0 ||
+          txt.indexOf("restore") >= 0 ||
+          txt.indexOf("import") >= 0 ||
+          txt.indexOf("backup") >= 0
+        ) {
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("button-after-500"); }, 500);
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("button-after-1500"); }, 1500);
+          setTimeout(function(){ fixedPairsApplyPendingRestoreV18("button-after-3000"); }, 3000);
+        }
+      } catch(err) {}
+    }, true);
+
+    setTimeout(function(){ fixedPairsApplyPendingRestoreV18("startup-1000"); }, 1000);
+  })();
+
+
+  
+/* PB_FIXED_PAIRS_NO_REAPPLY_V20 */
+  function fixedPairsClearOldRestoreBridgeV20(source) {
+    try {
+      fixedPairsPendingRestoreV18 = null;
+    } catch(e) {}
+
+    try {
+      localStorage.removeItem("PB_FIXED_PAIRS_RESTORE_BRIDGE_V18");
+    } catch(e) {}
+
+    try {
+      window.__PB_FIXED_PAIRS_NO_REAPPLY_V20_LAST_CLEAR__ = {
+        source: source || "clear",
+        at: new Date().toISOString()
+      };
+    } catch(e) {}
+  }
+
+  /*
+    Disable the old V18 bridge.
+    V18 was useful for testing, but it re-applies stale fixed-pair data after restore/load.
+    V19 now handles the real export/load path, so V18 should not keep firing.
+  */
+  function fixedPairsApplyPendingRestoreV18(source) {
+    fixedPairsClearOldRestoreBridgeV20(source || "v18-disabled");
+    return false;
+  }
+
+  function fixedPairsReadImportFileV18(file) {
+    fixedPairsClearOldRestoreBridgeV20("v18-file-reader-disabled");
+    return false;
+  }
+
+  function fixedPairsWrapLoadFunctionV18(name) {
+    return false;
+  }
+
+  (function installFixedPairsNoReapplyV20(){
+    if (window.__PB_FIXED_PAIRS_NO_REAPPLY_V20_INSTALLED__) return;
+    window.__PB_FIXED_PAIRS_NO_REAPPLY_V20_INSTALLED__ = true;
+
+    fixedPairsClearOldRestoreBridgeV20("install");
+
+    document.addEventListener("click", function(e) {
+      try {
+        var txt = String(e.target && e.target.textContent || "").toLowerCase();
+
+        if (
+          txt.indexOf("remove") >= 0 ||
+          txt.indexOf("delete") >= 0 ||
+          txt.indexOf("clear") >= 0 ||
+          txt.indexOf("save") >= 0 ||
+          txt.indexOf("fixed") >= 0 ||
+          txt.indexOf("pair") >= 0
+        ) {
+          setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("click"); }, 0);
+          setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("click-late"); }, 400);
+        }
+      } catch(err) {}
+    }, true);
+
+    document.addEventListener("change", function(e) {
+      try {
+        var el = e.target;
+
+        if (!el) return;
+
+        if (
+          el.id === "team-mode" ||
+          el.name === "team-mode" ||
+          el.name === "scheduleMode" ||
+          String(el.id || "").toLowerCase().indexOf("pair") >= 0 ||
+          String(el.name || "").toLowerCase().indexOf("pair") >= 0
+        ) {
+          setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("change"); }, 0);
+          setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("change-late"); }, 400);
+        }
+      } catch(err) {}
+    }, true);
+
+    setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("startup"); }, 300);
+    setTimeout(function(){ fixedPairsClearOldRestoreBridgeV20("startup-late"); }, 1200);
+  })();
+
 
   function pairRating(pair) {
     return ratingOf(pair[0]) + ratingOf(pair[1]);
