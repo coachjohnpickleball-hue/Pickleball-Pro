@@ -52910,6 +52910,441 @@ function exportEndSessionSummary(){
   window.addEventListener("pb:client-url-authority-v32c", start);
 })();
 
+
+
+/* PB_ADMIN_CONSOLE_CLEANUP_V34A */
+(function(){
+  const MARKER = "PB_ADMIN_CONSOLE_CLEANUP_V34A";
+  const OVERVIEW_ID = "pb-admin-overview-v34a";
+  const SHELL_ID = "pb-admin-cleanup-shell-v34a";
+  const STYLE_ID = "pb-admin-cleanup-style-v34a";
+
+  if (window.__PB_ADMIN_CONSOLE_CLEANUP_V34A_INSTALLED__) return;
+  window.__PB_ADMIN_CONSOLE_CLEANUP_V34A_INSTALLED__ = true;
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function esc(value) {
+    try {
+      if (typeof escHtml === "function") return escHtml(String(value ?? ""));
+    } catch(e) {}
+
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function adminRoot() {
+    return document.getElementById("sec-admin") ||
+      document.querySelector(".section#admin") ||
+      document.querySelector("[data-section='admin']") ||
+      document.querySelector("[data-tab='admin']") ||
+      null;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      #${OVERVIEW_ID} {
+        border: 1px solid var(--border, rgba(255,255,255,.16));
+        border-radius: 18px;
+        padding: 1rem;
+        margin: 0 0 1rem;
+        background: rgba(255,255,255,.045);
+      }
+
+      #${OVERVIEW_ID} .pb-v34-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+        gap: .7rem;
+        margin-top: .85rem;
+      }
+
+      #${OVERVIEW_ID} .pb-v34-tile {
+        border: 1px solid var(--border, rgba(255,255,255,.12));
+        border-radius: 14px;
+        padding: .75rem;
+        background: rgba(0,0,0,.12);
+      }
+
+      #${OVERVIEW_ID} .pb-v34-label {
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--txt3, #9aa);
+        font-weight: 800;
+      }
+
+      #${OVERVIEW_ID} .pb-v34-value {
+        margin-top: .2rem;
+        font-weight: 850;
+        color: var(--txt, inherit);
+        word-break: break-word;
+      }
+
+      #${SHELL_ID} {
+        display: grid;
+        gap: .8rem;
+      }
+
+      #${SHELL_ID} details.pb-v34-section {
+        border: 1px solid var(--border, rgba(255,255,255,.14));
+        border-radius: 18px;
+        background: rgba(255,255,255,.03);
+        overflow: hidden;
+      }
+
+      #${SHELL_ID} details.pb-v34-section > summary {
+        cursor: pointer;
+        list-style: none;
+        padding: .9rem 1rem;
+        font-weight: 900;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        user-select: none;
+      }
+
+      #${SHELL_ID} details.pb-v34-section > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      #${SHELL_ID} .pb-v34-count {
+        font-size: .75rem;
+        color: var(--txt3, #9aa);
+        font-weight: 700;
+      }
+
+      #${SHELL_ID} .pb-v34-body {
+        padding: 0 1rem 1rem;
+        display: grid;
+        gap: .8rem;
+      }
+
+      #${SHELL_ID} .pb-v34-body > * {
+        margin-top: 0 !important;
+      }
+
+      .pb-v34-hidden-debug {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function currentStatus() {
+    const identity = readJson("PB_CLIENT_IDENTITY_V22");
+    const license = readJson("PB_CLIENT_LICENSE_SERVER_V24");
+    const clientId = urlClientId() || cleanClientId(identity.clientId || license.clientId || "");
+    const serverId = cleanClientId(license.clientId || "");
+    const browserId = cleanClientId(identity.clientId || "");
+
+    let lastBlocked = null;
+    try {
+      lastBlocked = sessionStorage.getItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED") || null;
+    } catch(e) {}
+
+    return {
+      clientId: clientId || "—",
+      browserId: browserId || "—",
+      serverId: serverId || "—",
+      clientsMatch: !!clientId && clientId === browserId && clientId === serverId,
+      name: license.clientName || identity.clientName || clientId || "—",
+      plan: license.licenseLevel || license.licenseLabel || identity.licenseLevel || "—",
+      status: license.licenseStatus || identity.licenseStatus || "—",
+      playerLimit: license.playerLimit || "—",
+      adminSeats: license.adminSeats || "—",
+      v32c: document.documentElement.innerHTML.includes("PB_CLIENT_URL_AUTHORITY_FIX_V32C"),
+      v33c: document.documentElement.innerHTML.includes("PB_CLIENT_STRICT_ISOLATION_V33C"),
+      v33e2: document.documentElement.innerHTML.includes("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2"),
+      lastBlocked
+    };
+  }
+
+  function renderOverview(root) {
+    if (!root) return;
+
+    let card = document.getElementById(OVERVIEW_ID);
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = OVERVIEW_ID;
+      root.insertBefore(card, root.firstChild);
+    }
+
+    const s = currentStatus();
+    const matchBadge = s.clientsMatch ? "✅ Client Match" : "⚠️ Check Client";
+    const isolation = s.v32c && s.v33c && s.v33e2 ? "✅ Active" : "⚠️ Check";
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ball,#c6ff00);font-weight:900">Admin Overview</div>
+          <h3 style="margin:.18rem 0 0">Current client health</h3>
+          <div style="margin-top:.25rem;color:var(--txt2,#9aa)">Quick status first. Detailed tools are grouped below.</div>
+        </div>
+        <div style="font-weight:900;color:${s.clientsMatch ? "var(--lime,#c6ff00)" : "var(--red,#ff6b6b)"}">${esc(matchBadge)}</div>
+      </div>
+
+      <div class="pb-v34-grid">
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Client</div>
+          <div class="pb-v34-value">${esc(s.name)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Client ID</div>
+          <div class="pb-v34-value">${esc(s.clientId)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Plan / Status</div>
+          <div class="pb-v34-value">${esc(String(s.plan).toUpperCase())} · ${esc(String(s.status).toUpperCase())}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Limits</div>
+          <div class="pb-v34-value">${esc(s.playerLimit)} players · ${esc(s.adminSeats)} admins</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Isolation</div>
+          <div class="pb-v34-value">${esc(isolation)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Recovery Popup</div>
+          <div class="pb-v34-value">${s.v33e2 ? "✅ Protected" : "⚠️ Check"}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem">
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('client')">Client Setup</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('security')">Security</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('recovery')">Recovery</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('developer')">Diagnostics</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34ARender()">Refresh</button>
+      </div>
+    `;
+  }
+
+  function sectionForElement(el) {
+    const text = String(el.innerText || el.textContent || "").toLowerCase();
+    const id = String(el.id || "").toLowerCase();
+
+    if (
+      text.includes("client onboarding") ||
+      text.includes("company / license") ||
+      text.includes("server license registry") ||
+      text.includes("advanced license admin") ||
+      text.includes("server license enforcement") ||
+      text.includes("plan limits") ||
+      id.includes("client-license") ||
+      id.includes("license-admin") ||
+      id.includes("onboarding")
+    ) return "client";
+
+    if (
+      text.includes("admin lock") ||
+      text.includes("access log") ||
+      text.includes("tos status") ||
+      text.includes("terms settings") ||
+      text.includes("security")
+    ) return "security";
+
+    if (
+      text.includes("round backup") ||
+      text.includes("backup completed") ||
+      text.includes("restore") ||
+      text.includes("score audit") ||
+      text.includes("score correction") ||
+      text.includes("recovery") ||
+      text.includes("backup / restore")
+    ) return "recovery";
+
+    if (
+      text.includes("pb_client_") ||
+      text.includes("pb_block_") ||
+      text.includes("diagnostic") ||
+      text.includes("marker") ||
+      text.includes("v32") ||
+      text.includes("v33") ||
+      text.includes("developer")
+    ) return "developer";
+
+    return "other";
+  }
+
+  const sectionMeta = {
+    client: { title: "🏢 Client Setup", open: true },
+    security: { title: "🔐 Security / Lock", open: false },
+    recovery: { title: "🧰 Tournament Recovery", open: false },
+    developer: { title: "🧪 Developer Diagnostics", open: false },
+    other: { title: "⚙️ Other Admin Tools", open: false }
+  };
+
+  function ensureShell(root) {
+    let shell = document.getElementById(SHELL_ID);
+
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.id = SHELL_ID;
+      root.appendChild(shell);
+    }
+
+    Object.keys(sectionMeta).forEach(key => {
+      let section = document.getElementById("pb-v34-section-" + key);
+
+      if (!section) {
+        section = document.createElement("details");
+        section.id = "pb-v34-section-" + key;
+        section.className = "pb-v34-section";
+        if (sectionMeta[key].open) section.open = true;
+
+        section.innerHTML = `
+          <summary>
+            <span>${sectionMeta[key].title}</span>
+            <span class="pb-v34-count" id="pb-v34-count-${key}">0 items</span>
+          </summary>
+          <div class="pb-v34-body" id="pb-v34-body-${key}"></div>
+        `;
+
+        shell.appendChild(section);
+      }
+    });
+
+    return shell;
+  }
+
+  function groupAdminCards(root) {
+    if (!root) return;
+
+    const shell = ensureShell(root);
+    const candidates = Array.from(root.children).filter(el => {
+      if (!el || !el.id && !el.className) return false;
+      if (el.id === OVERVIEW_ID || el.id === SHELL_ID) return false;
+      if (el.closest && el.closest("#" + SHELL_ID)) return false;
+      if (el.tagName === "SCRIPT" || el.tagName === "STYLE") return false;
+      if (el.dataset && el.dataset.pbV34Skip === "1") return false;
+
+      const text = String(el.innerText || el.textContent || "").trim();
+      if (!text) return false;
+
+      return true;
+    });
+
+    candidates.forEach(el => {
+      const key = sectionForElement(el);
+      const body = document.getElementById("pb-v34-body-" + key);
+      if (!body) return;
+
+      el.dataset.pbV34Grouped = key;
+      body.appendChild(el);
+    });
+
+    Object.keys(sectionMeta).forEach(key => {
+      const body = document.getElementById("pb-v34-body-" + key);
+      const count = document.getElementById("pb-v34-count-" + key);
+      const section = document.getElementById("pb-v34-section-" + key);
+
+      const n = body ? body.children.length : 0;
+
+      if (count) count.textContent = n + (n === 1 ? " item" : " items");
+      if (section) section.style.display = n ? "" : "none";
+    });
+  }
+
+  function render() {
+    ensureStyle();
+
+    const root = adminRoot();
+    if (!root) return;
+
+    renderOverview(root);
+    groupAdminCards(root);
+  }
+
+  window.pbAdminCleanupV34ARender = render;
+
+  window.pbAdminCleanupV34AOpen = function(key) {
+    render();
+
+    Object.keys(sectionMeta).forEach(k => {
+      const section = document.getElementById("pb-v34-section-" + k);
+      if (section) section.open = k === key;
+    });
+
+    const target = document.getElementById("pb-v34-section-" + key);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  window.pbAdminCleanupV34AStatus = function(){
+    const status = currentStatus();
+    status.marker = MARKER;
+    status.overviewExists = !!document.getElementById(OVERVIEW_ID);
+    status.shellExists = !!document.getElementById(SHELL_ID);
+
+    console.log(JSON.stringify(status, null, 2));
+    try { copy(JSON.stringify(status, null, 2)); } catch(e) {}
+    return status;
+  };
+
+  function scheduleRender() {
+    setTimeout(render, 50);
+    setTimeout(render, 400);
+    setTimeout(render, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleRender);
+  } else {
+    scheduleRender();
+  }
+
+  window.addEventListener("load", scheduleRender);
+  window.addEventListener("pb:client-url-authority-v32c", scheduleRender);
+
+  try {
+    const originalShowTab = window.showTab || showTab;
+    if (typeof originalShowTab === "function" && !originalShowTab.__pbAdminCleanupV34A) {
+      const wrappedShowTab = function(){
+        const result = originalShowTab.apply(this, arguments);
+        try {
+          const tab = arguments && arguments.length ? String(arguments[0]) : "";
+          if (tab === "admin") scheduleRender();
+        } catch(e) {}
+        return result;
+      };
+
+      wrappedShowTab.__pbAdminCleanupV34A = true;
+      window.showTab = wrappedShowTab;
+      try { showTab = wrappedShowTab; } catch(e) {}
+    }
+  } catch(e) {}
+})();
+
 </script>
 
 </body>
