@@ -52321,6 +52321,216 @@ function exportEndSessionSummary(){
   };
 })();
 
+
+
+
+
+/* PB_CLIENT_URL_AUTHORITY_FIX_V32C */
+(function(){
+  const MARKER = "PB_CLIENT_URL_AUTHORITY_FIX_V32C";
+  const IDENTITY_KEY = "PB_CLIENT_IDENTITY_V22";
+  const LICENSE_KEY = "PB_CLIENT_LICENSE_SERVER_V24";
+  const ONBOARDING_KEY = "PB_CLIENT_ONBOARDING_V31_LAST";
+
+  if (window.__PB_CLIENT_URL_AUTHORITY_FIX_V32C_INSTALLED__) return;
+  window.__PB_CLIENT_URL_AUTHORITY_FIX_V32C_INSTALLED__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    let id = "";
+    try {
+      id = new URLSearchParams(window.location.search || "").get("clientId") || "";
+    } catch (e) {}
+
+    if (!id) {
+      const m = String(window.location.href || "").match(/[?&]clientId=([^&#?]+)/i);
+      if (m) {
+        try { id = decodeURIComponent(m[1]); } catch (e) { id = m[1]; }
+      }
+    }
+
+    return cleanClientId(id);
+  }
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function writeIdentity(clientId, license, source) {
+    license = license || {};
+    const existing = readJson(IDENTITY_KEY);
+
+    const plan = String(
+      license.licenseLevel ||
+      license.plan ||
+      existing.licenseLevel ||
+      ""
+    ).toLowerCase();
+
+    const status = String(
+      license.licenseStatus ||
+      license.status ||
+      existing.licenseStatus ||
+      "active"
+    ).toLowerCase();
+
+    const identity = Object.assign({}, existing, {
+      version: 22,
+      clientId,
+      clientName: license.clientName || license.companyName || existing.clientName || clientId,
+      licenseLevel: plan,
+      licenseStatus: status,
+      supportEmail: license.supportEmail || existing.supportEmail || "",
+      siteUrl: license.siteUrl || existing.siteUrl || "",
+      source: source || MARKER,
+      savedAt: new Date().toISOString()
+    });
+
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
+    return identity;
+  }
+
+  function normalizeLicense(clientId, data) {
+    data = data || {};
+    const raw = data.license || data.clientLicense || data.record || data.client || data || {};
+
+    const plan = String(
+      raw.licenseLevel ||
+      raw.plan ||
+      raw.licenseLabel ||
+      "trial"
+    ).toLowerCase();
+
+    const status = String(
+      raw.licenseStatus ||
+      raw.status ||
+      "active"
+    ).toLowerCase();
+
+    const license = Object.assign({}, raw, {
+      version: raw.version || "24B",
+      marker: raw.marker || "PB_SERVER_LICENSE_ROUTE_FIX_V24B",
+      clientId,
+      clientName: raw.clientName || raw.companyName || clientId,
+      licenseLevel: plan,
+      licenseLabel: raw.licenseLabel || (plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "Trial"),
+      licenseStatus: status,
+      playerLimit: Number(raw.playerLimit || raw.maxPlayers || (plan === "club" ? 40 : 16)),
+      adminSeats: Number(raw.adminSeats || (plan === "club" ? 2 : 1)),
+      source: MARKER,
+      updatedAt: raw.updatedAt || new Date().toISOString()
+    });
+
+    return license;
+  }
+
+  function clearStaleLicense(reason) {
+    try { localStorage.removeItem(LICENSE_KEY); } catch (e) {}
+    try { localStorage.removeItem(ONBOARDING_KEY); } catch (e) {}
+    try { sessionStorage.setItem("PB_CLIENT_URL_AUTHORITY_FIX_V32C_REASON", reason || "url-authority"); } catch (e) {}
+  }
+
+  function cleanUrlFor(clientId) {
+    let path = window.location.pathname || "/";
+    path = path.replace(/\/&.*$/i, "/");
+    if (!path.startsWith("/")) path = "/" + path;
+    if (!path) path = "/";
+    return window.location.origin + path + "?clientId=" + encodeURIComponent(clientId) + "&v=url-authority-v32c-" + Date.now();
+  }
+
+  async function fetchServerLicense(clientId) {
+    try {
+      const res = await fetch("/api/client-license?clientId=" + encodeURIComponent(clientId) + "&v=" + Date.now(), {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (!res.ok) throw new Error("HTTP " + res.status);
+
+      const data = await res.json();
+      const license = normalizeLicense(clientId, data);
+
+      localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+      writeIdentity(clientId, license, MARKER + "_SERVER");
+
+      return license;
+    } catch (e) {
+      console.warn(MARKER + " server sync failed", e);
+      return null;
+    }
+  }
+
+  async function applyUrlAuthority() {
+    const clientId = urlClientId();
+    if (!clientId) return;
+
+    const identity = readJson(IDENTITY_KEY);
+    const license = readJson(LICENSE_KEY);
+
+    const identityId = cleanClientId(identity.clientId || "");
+    const licenseId = cleanClientId(license.clientId || "");
+
+    if (identityId !== clientId || (licenseId && licenseId !== clientId)) {
+      clearStaleLicense("url-client-overrode-cache");
+      writeIdentity(clientId, { clientName: clientId, licenseStatus: "active" }, MARKER + "_URL");
+
+      const reloadKey = "PB_CLIENT_URL_AUTHORITY_FIX_V32C_RELOAD_" + clientId;
+      let alreadyReloaded = "";
+      try { alreadyReloaded = sessionStorage.getItem(reloadKey) || ""; } catch (e) {}
+
+      if (alreadyReloaded !== "1") {
+        try { sessionStorage.setItem(reloadKey, "1"); } catch (e) {}
+        window.location.replace(cleanUrlFor(clientId));
+        return;
+      }
+    }
+
+    const fresh = await fetchServerLicense(clientId);
+
+    try {
+      window.dispatchEvent(new CustomEvent("pb:client-url-authority-v32c", {
+        detail: { clientId, license: fresh }
+      }));
+    } catch (e) {}
+
+    [
+      "renderDashboard",
+      "renderAdminLock",
+      "renderPlayers",
+      "renderSchedule"
+    ].forEach(function(fn){
+      try {
+        if (typeof window[fn] === "function") window[fn]();
+      } catch (e) {}
+    });
+  }
+
+  window.pbClientUrlAuthorityFixV32C = applyUrlAuthority;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyUrlAuthority);
+  } else {
+    applyUrlAuthority();
+  }
+
+  window.addEventListener("load", function(){
+    setTimeout(applyUrlAuthority, 250);
+    setTimeout(applyUrlAuthority, 1000);
+  });
+})();
+
 </script>
 
 </body>
