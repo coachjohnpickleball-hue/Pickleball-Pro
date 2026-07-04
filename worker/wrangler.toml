@@ -60,7 +60,7 @@ fallthrough = true
 
 [[env.staging.kv_namespaces]]
 binding = "USAGE"
-id = "faac1bcc30ef4711a9377e60ef70636d"
+id = "d4be478f609e4696aae597c6adf6c533"
 
 [env.staging.vars]
 CURRENT_TERMS_VERSION = "2026-06-24"
