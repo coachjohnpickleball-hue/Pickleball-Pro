@@ -260,6 +260,193 @@ async function checkAndIncrement(env, key, max) {
 }
 
 
+// PB_SERVER_LICENSE_ROUTE_FIX_V24B
+function pbServerLicenseSlugV24B(value) {
+  return String(value || 'default')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'default';
+}
+
+function pbServerLicenseDefaultsV24B(clientId, env) {
+  const id = pbServerLicenseSlugV24B(clientId || 'default');
+
+  return {
+    version: '24B',
+    marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+    clientId: id,
+    clientName: id === 'default' ? 'Pickleball Pro' : id,
+    licenseLevel: 'club',
+    licenseLabel: 'Club',
+    licenseStatus: 'active',
+    playerLimit: 40,
+    mobileScoring: true,
+    officialResults: true,
+    support: 'Standard support',
+    source: 'server-default',
+    environment: (env && env.ENVIRONMENT) || 'production',
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function pbServerLicenseKeyV24B(clientId) {
+  return `client-license:${pbServerLicenseSlugV24B(clientId)}`;
+}
+
+function pbServerLicenseNormalizeV24B(input, env) {
+  input = input && typeof input === 'object' ? input : {};
+
+  const level = String(input.licenseLevel || input.level || 'club').toLowerCase();
+  const id = pbServerLicenseSlugV24B(input.clientId || input.id || 'default');
+
+  const limits = {
+    trial: { label: 'Trial', status: 'trial', playerLimit: 16, mobileScoring: false, officialResults: false, support: 'Community support' },
+    club: { label: 'Club', status: 'active', playerLimit: 40, mobileScoring: true, officialResults: true, support: 'Standard support' },
+    pro: { label: 'Pro', status: 'active', playerLimit: 96, mobileScoring: true, officialResults: true, support: 'Priority support' },
+    enterprise: { label: 'Enterprise', status: 'active', playerLimit: 250, mobileScoring: true, officialResults: true, support: 'Dedicated support' }
+  };
+
+  const base = limits[level] || limits.club;
+
+  return {
+    version: '24B',
+    marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+    clientId: id,
+    clientName: String(input.clientName || input.name || id || 'Pickleball Pro').trim(),
+    licenseLevel: limits[level] ? level : 'club',
+    licenseLabel: input.licenseLabel || base.label,
+    licenseStatus: String(input.licenseStatus || input.status || base.status || 'active').toLowerCase(),
+    playerLimit: Number(input.playerLimit || base.playerLimit),
+    mobileScoring: input.mobileScoring !== undefined ? !!input.mobileScoring : !!base.mobileScoring,
+    officialResults: input.officialResults !== undefined ? !!input.officialResults : !!base.officialResults,
+    support: String(input.support || base.support || 'Standard support'),
+    source: input.source || 'server',
+    environment: (env && env.ENVIRONMENT) || 'production',
+    updatedAt: input.updatedAt || new Date().toISOString()
+  };
+}
+
+async function pbServerLicenseGetV24B(env, clientId) {
+  const id = pbServerLicenseSlugV24B(clientId || 'default');
+
+  if (!env || !env.USAGE) {
+    return pbServerLicenseDefaultsV24B(id, env);
+  }
+
+  const key = pbServerLicenseKeyV24B(id);
+
+  try {
+    const raw = await env.USAGE.get(key);
+
+    if (raw) {
+      return pbServerLicenseNormalizeV24B(JSON.parse(raw), env);
+    }
+  } catch (e) {}
+
+  const created = pbServerLicenseDefaultsV24B(id, env);
+  created.source = 'auto-created';
+
+  try {
+    await env.USAGE.put(key, JSON.stringify(created));
+  } catch (e) {}
+
+  return created;
+}
+
+async function pbServerLicenseSaveV24B(env, body, clientId) {
+  const license = pbServerLicenseNormalizeV24B(Object.assign({}, body || {}, {
+    clientId: (body && body.clientId) || clientId || 'default',
+    source: 'admin'
+  }), env);
+
+  if (env && env.USAGE) {
+    await env.USAGE.put(pbServerLicenseKeyV24B(license.clientId), JSON.stringify(license));
+  }
+
+  return license;
+}
+
+async function pbServerLicenseJsonBodyV24B(request) {
+  try {
+    const body = await request.json();
+    return body && typeof body === 'object' ? body : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+async function pbServerLicenseApiV24B(request, env, url) {
+  const clientId =
+    url.searchParams.get('clientId') ||
+    url.searchParams.get('client') ||
+    url.searchParams.get('id') ||
+    'default';
+
+  if (request.method === 'GET') {
+    const license = await pbServerLicenseGetV24B(env, clientId);
+
+    return json({
+      ok: true,
+      marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+      license
+    }, 200, env);
+  }
+
+  if (request.method === 'POST') {
+    const body = await pbServerLicenseJsonBodyV24B(request);
+    const license = await pbServerLicenseSaveV24B(env, body, clientId);
+
+    return json({
+      ok: true,
+      marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+      license
+    }, 200, env);
+  }
+
+  return json({
+    ok: false,
+    marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+    error: 'Method not allowed'
+  }, 405, env);
+}
+
+async function pbServerLicenseAdminClientsV24B(request, env) {
+  if (request.method !== 'GET') {
+    return json({ ok: false, error: 'Method not allowed' }, 405, env);
+  }
+
+  const clients = [];
+
+  try {
+    if (env && env.USAGE) {
+      let cursor;
+
+      do {
+        const page = await env.USAGE.list({ prefix: 'client-license:', cursor });
+        cursor = page.cursor;
+
+        for (const key of page.keys || []) {
+          try {
+            const raw = await env.USAGE.get(key.name);
+            if (raw) clients.push(pbServerLicenseNormalizeV24B(JSON.parse(raw), env));
+          } catch (e) {}
+        }
+      } while (cursor);
+    }
+  } catch (e) {}
+
+  return json({
+    ok: true,
+    marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
+    count: clients.length,
+    clients
+  }, 200, env);
+}
+
+
+
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -363,6 +550,16 @@ export default {
     // Normalize away accidental double slashes (some older code paths in
     // the frontend call '//email' etc.) so routing is forgiving.
     const path = url.pathname.replace(/\/{2,}/g, '/');
+
+    // PB_SERVER_LICENSE_ROUTE_FIX_V24B_ROUTE
+    if (path === '/api/client-license' || url.pathname === '/api/client-license') {
+      return pbServerLicenseApiV24B(request, env, url);
+    }
+
+    if (path === '/admin/clients' || url.pathname === '/admin/clients') {
+      return pbServerLicenseAdminClientsV24B(request, env);
+    }
+
 
     // ── Identify the caller via Cloudflare Access ───────────────────────
     // Moved above the GET/POST split so identity is available for BOTH —

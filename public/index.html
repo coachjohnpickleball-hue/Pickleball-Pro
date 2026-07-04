@@ -22721,6 +22721,188 @@ function pbLicenseV23TextAction(txt, onclickText) {
 })();
 
 
+
+/* PB_CLIENT_LICENSE_SERVER_SYNC_V24 */
+async function pbClientLicenseServerV24Fetch(clientId) {
+  try {
+    clientId = clientId || "";
+
+    if (!clientId && typeof pbClientIdentityV22Load === "function") {
+      clientId = (pbClientIdentityV22Load() || {}).clientId || "";
+    }
+
+    clientId = String(clientId || "default").trim() || "default";
+
+    var res = await fetch("/api/client-license?clientId=" + encodeURIComponent(clientId), {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+
+    if (!res.ok) return null;
+
+    var data = await res.json();
+
+    if (!data || !data.license) return null;
+
+    return data.license;
+  } catch(e) {
+    return null;
+  }
+}
+
+function pbClientLicenseServerV24Apply(license, source) {
+  try {
+    if (!license || typeof license !== "object") return false;
+
+    var identity = {
+      clientName: license.clientName || "",
+      clientId: license.clientId || "",
+      licenseLevel: license.licenseLevel || license.level || "club",
+      licenseStatus: license.licenseStatus || license.status || "active",
+      source: source || "server-v24"
+    };
+
+    if (typeof pbClientIdentityV22Save === "function") {
+      pbClientIdentityV22Save(identity, "server-v24");
+    }
+
+    if (window.state) {
+      state.serverLicenseV24 = license;
+      state.clientLicenseServerV24 = license;
+      state.licensePolicyV23 = state.licensePolicyV23 || {};
+      state.licensePolicyV23.serverLicenseV24 = license;
+    }
+
+    try {
+      localStorage.setItem("PB_CLIENT_LICENSE_SERVER_V24", JSON.stringify(license));
+    } catch(e) {}
+
+    try {
+      if (typeof pbClientIdentityV22RenderAll === "function") pbClientIdentityV22RenderAll();
+      if (typeof pbLicenseV23RenderAll === "function") pbLicenseV23RenderAll();
+    } catch(e) {}
+
+    return true;
+  } catch(e) {
+    console.warn("Client license server apply V24 failed", e);
+    return false;
+  }
+}
+
+async function pbClientLicenseServerV24Sync(source) {
+  try {
+    var id = "";
+
+    if (typeof pbClientIdentityV22Load === "function") {
+      id = (pbClientIdentityV22Load() || {}).clientId || "";
+    }
+
+    var license = await pbClientLicenseServerV24Fetch(id || "default");
+
+    if (!license) return false;
+
+    return pbClientLicenseServerV24Apply(license, source || "sync");
+  } catch(e) {
+    return false;
+  }
+}
+
+function pbClientLicenseServerV24RenderAdminCard() {
+  try {
+    var admin =
+      document.getElementById("admin") ||
+      document.getElementById("sec-admin") ||
+      document.querySelector('[id*="admin" i]');
+
+    if (!admin || !admin.appendChild) return false;
+
+    var card = document.getElementById("pb-client-license-server-card-v24");
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-client-license-server-card-v24";
+      card.className = "card";
+      card.style.marginTop = "1rem";
+
+      card.innerHTML =
+        '<div class="card-title">Server License Registry</div>' +
+        '<p style="color:var(--txt2);margin-top:.25rem">Reads the client license from the Cloudflare Worker/KV registry. This is the backend foundation for paid client isolation.</p>' +
+        '<div id="pb-client-license-server-status-v24" style="margin-top:.65rem;font-weight:900">Checking server license...</div>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem">' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-client-license-server-sync-v24">Sync Server License</button>' +
+        '</div>';
+
+      admin.appendChild(card);
+
+      var btn = document.getElementById("pb-client-license-server-sync-v24");
+
+      if (btn) {
+        btn.addEventListener("click", function() {
+          pbClientLicenseServerV24Sync("admin-button").then(function(ok) {
+            pbClientLicenseServerV24RenderAdminCard();
+
+            try {
+              if (typeof toast === "function") toast(ok ? "Server license synced" : "Server license unavailable", ok ? "ok" : "err");
+            } catch(e) {}
+          });
+        });
+      }
+    }
+
+    var status = document.getElementById("pb-client-license-server-status-v24");
+    var license = null;
+
+    try {
+      license = JSON.parse(localStorage.getItem("PB_CLIENT_LICENSE_SERVER_V24") || "null");
+    } catch(e) {}
+
+    if (status) {
+      if (license) {
+        status.textContent =
+          "Server: " +
+          (license.clientName || license.clientId || "Client") +
+          " · " +
+          String(license.licenseLabel || license.licenseLevel || "Club") +
+          " · " +
+          String(license.licenseStatus || "active").toUpperCase() +
+          " · " +
+          String(license.playerLimit || "?") +
+          " players";
+      } else {
+        status.textContent = "Server license not synced yet.";
+      }
+    }
+
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+(function installClientLicenseServerSyncV24(){
+  if (window.__PB_CLIENT_LICENSE_SERVER_SYNC_V24_INSTALLED__) return;
+  window.__PB_CLIENT_LICENSE_SERVER_SYNC_V24_INSTALLED__ = true;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(pbClientLicenseServerV24RenderAdminCard, 900);
+    setTimeout(function(){ pbClientLicenseServerV24Sync("startup"); }, 1200);
+    setTimeout(pbClientLicenseServerV24RenderAdminCard, 2200);
+  });
+
+  document.addEventListener("click", function(e){
+    try {
+      var txt = String(e.target && e.target.textContent || "").toLowerCase();
+
+      if (txt.indexOf("admin") >= 0 || txt.indexOf("license") >= 0 || txt.indexOf("company") >= 0) {
+        setTimeout(pbClientLicenseServerV24RenderAdminCard, 250);
+      }
+    } catch(err) {}
+  }, true);
+
+  setTimeout(pbClientLicenseServerV24RenderAdminCard, 1500);
+})();
+
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
