@@ -540,6 +540,62 @@ async function acceptTerms(){
 </script></main></body></html>`;
 }
 
+
+
+// PB_ADVANCED_LICENSE_ADMIN_V26B
+function pbAdvancedLicenseAdminV26BJson(obj, status = 200) {
+  return new Response(JSON.stringify(obj, null, 2), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+function pbAdvancedLicenseAdminV26BAuthorized(request, env) {
+  const expected = String((env && env.ADMIN_LICENSE_TOKEN) || '').trim();
+  if (!expected) return false;
+
+  const got =
+    String(request.headers.get('x-admin-license-token') || '').trim() ||
+    String(request.headers.get('x-admin-token') || '').trim();
+
+  return Boolean(got && got === expected);
+}
+
+async function pbAdvancedLicenseAdminV26BApi(request, env, url) {
+  try {
+    if (!pbAdvancedLicenseAdminV26BAuthorized(request, env)) {
+      return pbAdvancedLicenseAdminV26BJson({
+        ok: false,
+        marker: 'PB_ADVANCED_LICENSE_ADMIN_V26B',
+        error: 'Unauthorized license admin request'
+      }, 401);
+    }
+
+    if (typeof pbServerLicenseApiV24B !== 'function') {
+      return pbAdvancedLicenseAdminV26BJson({
+        ok: false,
+        marker: 'PB_ADVANCED_LICENSE_ADMIN_V26B',
+        error: 'Server license registry V24B handler not available'
+      }, 500);
+    }
+
+    const proxyUrl = new URL(url.toString());
+    proxyUrl.pathname = '/api/client-license';
+
+    const proxyRequest = new Request(proxyUrl.toString(), request);
+    const response = await pbServerLicenseApiV24B(proxyRequest, env, proxyUrl);
+
+    response.headers.set('x-pb-license-admin-marker', 'PB_ADVANCED_LICENSE_ADMIN_V26B');
+    return response;
+  } catch (err) {
+    return pbAdvancedLicenseAdminV26BJson({
+      ok: false,
+      marker: 'PB_ADVANCED_LICENSE_ADMIN_V26B',
+      error: err && err.message ? err.message : String(err)
+    }, 500);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
@@ -550,6 +606,13 @@ export default {
     // Normalize away accidental double slashes (some older code paths in
     // the frontend call '//email' etc.) so routing is forgiving.
     const path = url.pathname.replace(/\/{2,}/g, '/');
+
+    // PB_ADVANCED_LICENSE_ADMIN_V26B_ROUTE
+    if (path === '/api/admin/client-license' || url.pathname === '/api/admin/client-license') {
+      return pbAdvancedLicenseAdminV26BApi(request, env, url);
+    }
+
+
 
     // PB_SERVER_LICENSE_ROUTE_FIX_V24B_ROUTE
     if (path === '/api/client-license' || url.pathname === '/api/client-license') {

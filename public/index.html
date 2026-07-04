@@ -22903,6 +22903,348 @@ function pbClientLicenseServerV24RenderAdminCard() {
 })();
 
 
+
+
+/* PB_ADVANCED_LICENSE_ADMIN_UI_V26B */
+function pbAdvancedLicenseAdminV26BSlug(v) {
+  try {
+    return String(v || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "default";
+  } catch (e) {
+    return "default";
+  }
+}
+
+function pbAdvancedLicenseAdminV26BIdentity() {
+  try {
+    if (typeof pbClientIdentityV22Load === "function") return pbClientIdentityV22Load() || {};
+  } catch (e) {}
+  return {};
+}
+
+function pbAdvancedLicenseAdminV26BToken() {
+  try {
+    var el = document.getElementById("pb-v26b-admin-token");
+    var token = el ? String(el.value || "").trim() : "";
+    if (token) localStorage.setItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN", token);
+    return token || String(localStorage.getItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN") || "").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+function pbAdvancedLicenseAdminV26BSetStatus(msg, bad) {
+  try {
+    var el = document.getElementById("pb-v26b-status");
+    if (!el) return;
+    el.textContent = msg || "";
+    el.style.color = bad ? "var(--red)" : "var(--txt2)";
+  } catch (e) {}
+}
+
+function pbAdvancedLicenseAdminV26BDefaults(level) {
+  level = String(level || "club").toLowerCase();
+  if (level === "trial") return { playerLimit: 16, mobileScoring: false, officialResults: false, supportTier: "community" };
+  if (level === "pro") return { playerLimit: 96, mobileScoring: true, officialResults: true, supportTier: "priority" };
+  if (level === "enterprise") return { playerLimit: 250, mobileScoring: true, officialResults: true, supportTier: "dedicated" };
+  return { playerLimit: 40, mobileScoring: true, officialResults: true, supportTier: "standard" };
+}
+
+function pbAdvancedLicenseAdminV26BCurrentClientId() {
+  try {
+    var field = document.getElementById("pb-v26b-client-id");
+    if (field && field.value) return pbAdvancedLicenseAdminV26BSlug(field.value);
+    var identity = pbAdvancedLicenseAdminV26BIdentity();
+    return pbAdvancedLicenseAdminV26BSlug(identity.clientId || location.hostname || "default");
+  } catch (e) {
+    return "default";
+  }
+}
+
+function pbAdvancedLicenseAdminV26BFill(license) {
+  try {
+    license = license || {};
+    var identity = pbAdvancedLicenseAdminV26BIdentity();
+    var clientId = pbAdvancedLicenseAdminV26BSlug(license.clientId || identity.clientId || location.hostname || "default");
+    var clientName = license.clientName || identity.clientName || clientId;
+    var level = String(license.licenseLevel || license.level || identity.licenseLevel || "club").toLowerCase();
+    var status = String(license.licenseStatus || license.status || identity.licenseStatus || "active").toLowerCase();
+    var d = pbAdvancedLicenseAdminV26BDefaults(level);
+
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.value = val == null ? "" : String(val);
+    };
+    var chk = function(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.checked = !!val;
+    };
+
+    set("pb-v26b-client-id", clientId);
+    set("pb-v26b-client-name", clientName);
+    set("pb-v26b-license-level", level);
+    set("pb-v26b-license-status", status);
+    set("pb-v26b-player-limit", license.playerLimit || d.playerLimit);
+    set("pb-v26b-support-tier", license.supportTier || d.supportTier);
+    chk("pb-v26b-mobile-scoring", license.mobileScoring == null ? d.mobileScoring : license.mobileScoring);
+    chk("pb-v26b-official-results", license.officialResults == null ? d.officialResults : license.officialResults);
+  } catch (e) {
+    pbAdvancedLicenseAdminV26BSetStatus("Could not fill license editor: " + e.message, true);
+  }
+}
+
+async function pbAdvancedLicenseAdminV26BLoad() {
+  try {
+    var token = pbAdvancedLicenseAdminV26BToken();
+    if (!token) {
+      pbAdvancedLicenseAdminV26BSetStatus("Enter owner admin token first.", true);
+      return false;
+    }
+
+    var clientId = pbAdvancedLicenseAdminV26BCurrentClientId();
+    pbAdvancedLicenseAdminV26BSetStatus("Loading server license...", false);
+
+    var res = await fetch("/api/admin/client-license?clientId=" + encodeURIComponent(clientId), {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "x-admin-license-token": token
+      }
+    });
+
+    var data = await res.json().catch(function(){ return null; });
+    if (!res.ok || !data || !data.license) {
+      throw new Error((data && data.error) || ("Server returned " + res.status));
+    }
+
+    pbAdvancedLicenseAdminV26BFill(data.license);
+    pbAdvancedLicenseAdminV26BSetStatus("Loaded: " + (data.license.clientId || clientId) + " · " + String(data.license.licenseLevel || "club").toUpperCase(), false);
+    return true;
+  } catch (e) {
+    pbAdvancedLicenseAdminV26BSetStatus("Load failed: " + e.message, true);
+    return false;
+  }
+}
+
+async function pbAdvancedLicenseAdminV26BSave() {
+  try {
+    var token = pbAdvancedLicenseAdminV26BToken();
+    if (!token) {
+      pbAdvancedLicenseAdminV26BSetStatus("Enter owner admin token first.", true);
+      return false;
+    }
+
+    var clientId = pbAdvancedLicenseAdminV26BCurrentClientId();
+    var levelEl = document.getElementById("pb-v26b-license-level");
+    var level = levelEl ? String(levelEl.value || "club").toLowerCase() : "club";
+    var d = pbAdvancedLicenseAdminV26BDefaults(level);
+
+    var val = function(id, fallback) {
+      var el = document.getElementById(id);
+      return el ? String(el.value || fallback || "").trim() : fallback;
+    };
+    var checked = function(id, fallback) {
+      var el = document.getElementById(id);
+      return el ? !!el.checked : !!fallback;
+    };
+
+    var playerLimit = parseInt(val("pb-v26b-player-limit", d.playerLimit), 10);
+    if (!Number.isFinite(playerLimit) || playerLimit < 4) playerLimit = d.playerLimit;
+
+    var license = {
+      clientId: clientId,
+      clientName: val("pb-v26b-client-name", clientId),
+      licenseLevel: level,
+      licenseLabel: level.charAt(0).toUpperCase() + level.slice(1),
+      licenseStatus: val("pb-v26b-license-status", "active").toLowerCase(),
+      playerLimit: playerLimit,
+      mobileScoring: checked("pb-v26b-mobile-scoring", d.mobileScoring),
+      officialResults: checked("pb-v26b-official-results", d.officialResults),
+      supportTier: val("pb-v26b-support-tier", d.supportTier),
+      source: "advanced-license-admin-v26b",
+      updatedAt: new Date().toISOString()
+    };
+
+    pbAdvancedLicenseAdminV26BSetStatus("Saving server license...", false);
+
+    var res = await fetch("/api/admin/client-license?clientId=" + encodeURIComponent(clientId), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-admin-license-token": token
+      },
+      body: JSON.stringify(license)
+    });
+
+    var data = await res.json().catch(function(){ return null; });
+    if (!res.ok || !data || !data.license) {
+      throw new Error((data && data.error) || ("Server returned " + res.status));
+    }
+
+    pbAdvancedLicenseAdminV26BFill(data.license);
+
+    try {
+      if (typeof pbClientLicenseServerV24Apply === "function") {
+        pbClientLicenseServerV24Apply(data.license, "advanced-license-admin-v26b-save");
+      }
+      if (typeof pbClientLicenseServerV24RenderAdminCard === "function") {
+        pbClientLicenseServerV24RenderAdminCard();
+      }
+      if (typeof pbLicenseV23RenderAll === "function") pbLicenseV23RenderAll();
+      if (typeof pbClientIdentityV22RenderAll === "function") pbClientIdentityV22RenderAll();
+    } catch (e) {}
+
+    pbAdvancedLicenseAdminV26BSetStatus("Saved: " + data.license.clientId + " · " + String(data.license.licenseLevel || "club").toUpperCase() + " · " + String(data.license.licenseStatus || "active").toUpperCase(), false);
+
+    try {
+      if (typeof toast === "function") toast("Advanced license saved");
+    } catch (e) {}
+
+    return true;
+  } catch (e) {
+    pbAdvancedLicenseAdminV26BSetStatus("Save failed: " + e.message, true);
+    try {
+      if (typeof toast === "function") toast("License save failed", "err");
+    } catch (x) {}
+    return false;
+  }
+}
+
+function pbAdvancedLicenseAdminV26BApplyPreset() {
+  try {
+    var levelEl = document.getElementById("pb-v26b-license-level");
+    var level = levelEl ? levelEl.value : "club";
+    var d = pbAdvancedLicenseAdminV26BDefaults(level);
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+    var chk = function(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.checked = !!val;
+    };
+    set("pb-v26b-player-limit", d.playerLimit);
+    set("pb-v26b-support-tier", d.supportTier);
+    chk("pb-v26b-mobile-scoring", d.mobileScoring);
+    chk("pb-v26b-official-results", d.officialResults);
+    pbAdvancedLicenseAdminV26BSetStatus("Preset applied locally. Click Save Server License to update KV.", false);
+  } catch (e) {}
+}
+
+function pbAdvancedLicenseAdminV26BRender() {
+  try {
+    var admin = document.getElementById("admin") || document.getElementById("sec-admin") || document.querySelector('[id*="admin" i]');
+    if (!admin || !admin.appendChild) return false;
+
+    var existing = document.getElementById("pb-advanced-license-admin-card-v26b");
+    if (existing) return true;
+
+    var card = document.createElement("div");
+    card.id = "pb-advanced-license-admin-card-v26b";
+    card.className = "card";
+    card.style.marginTop = "1rem";
+
+    card.innerHTML =
+      '<details id="pb-v26b-details">' +
+        '<summary style="cursor:pointer;font-weight:900;font-size:1.05rem">🔐 Advanced License Admin <span style="font-size:.78rem;color:var(--txt2);font-weight:600">(owner only)</span></summary>' +
+        '<p style="color:var(--txt2);margin-top:.65rem">Edit a client license in the Cloudflare Worker/KV registry. This is collapsed by default and does not replace the existing license cards.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.65rem;margin-top:.85rem">' +
+          '<label>Owner Admin Token<input id="pb-v26b-admin-token" type="password" placeholder="Paste token" autocomplete="off"></label>' +
+          '<label>Client ID<input id="pb-v26b-client-id" placeholder="client-id"></label>' +
+          '<label>Client Name<input id="pb-v26b-client-name" placeholder="Client name"></label>' +
+          '<label>License Level<select id="pb-v26b-license-level">' +
+            '<option value="trial">Trial</option>' +
+            '<option value="club">Club</option>' +
+            '<option value="pro">Pro</option>' +
+            '<option value="enterprise">Enterprise</option>' +
+          '</select></label>' +
+          '<label>Status<select id="pb-v26b-license-status">' +
+            '<option value="active">Active</option>' +
+            '<option value="trial">Trial</option>' +
+            '<option value="paused">Paused</option>' +
+            '<option value="expired">Expired</option>' +
+          '</select></label>' +
+          '<label>Player Limit<input id="pb-v26b-player-limit" type="number" min="4" step="1"></label>' +
+          '<label>Support Tier<input id="pb-v26b-support-tier" placeholder="standard"></label>' +
+          '<label style="display:flex;align-items:center;gap:.5rem;margin-top:1.6rem"><input id="pb-v26b-mobile-scoring" type="checkbox"> Mobile Scoring</label>' +
+          '<label style="display:flex;align-items:center;gap:.5rem;margin-top:1.6rem"><input id="pb-v26b-official-results" type="checkbox"> Official Results</label>' +
+        '</div>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem">' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v26b-load">Load Server License</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" id="pb-v26b-preset">Apply Level Preset</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" id="pb-v26b-save">Save Server License</button>' +
+        '</div>' +
+        '<div id="pb-v26b-status" style="margin-top:.7rem;color:var(--txt2);font-weight:800">Collapsed and inactive until opened.</div>' +
+      '</details>';
+
+    var serverCard = document.getElementById("pb-client-license-server-card-v24");
+    if (serverCard && serverCard.parentNode) {
+      serverCard.parentNode.insertBefore(card, serverCard.nextSibling);
+    } else {
+      admin.appendChild(card);
+    }
+
+    var token = "";
+    try { token = localStorage.getItem("PB_ADVANCED_LICENSE_ADMIN_V26B_TOKEN") || ""; } catch (e) {}
+    var tokenEl = document.getElementById("pb-v26b-admin-token");
+    if (tokenEl && token) tokenEl.value = token;
+
+    pbAdvancedLicenseAdminV26BFill({});
+
+    var levelEl = document.getElementById("pb-v26b-license-level");
+    if (levelEl) levelEl.addEventListener("change", pbAdvancedLicenseAdminV26BApplyPreset);
+
+    var loadBtn = document.getElementById("pb-v26b-load");
+    if (loadBtn) loadBtn.addEventListener("click", pbAdvancedLicenseAdminV26BLoad);
+
+    var presetBtn = document.getElementById("pb-v26b-preset");
+    if (presetBtn) presetBtn.addEventListener("click", pbAdvancedLicenseAdminV26BApplyPreset);
+
+    var saveBtn = document.getElementById("pb-v26b-save");
+    if (saveBtn) saveBtn.addEventListener("click", pbAdvancedLicenseAdminV26BSave);
+
+    return true;
+  } catch (e) {
+    console.warn("PB_ADVANCED_LICENSE_ADMIN_UI_V26B render failed", e);
+    return false;
+  }
+}
+
+function installAdvancedLicenseAdminV26B() {
+  if (window.__PB_ADVANCED_LICENSE_ADMIN_UI_V26B_INSTALLED__) return;
+  window.__PB_ADVANCED_LICENSE_ADMIN_UI_V26B_INSTALLED__ = true;
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbAdvancedLicenseAdminV26BWrapped) {
+    window.showTab = function(tab) {
+      var result = oldShowTab.apply(this, arguments);
+      if (tab === "admin") {
+        setTimeout(pbAdvancedLicenseAdminV26BRender, 0);
+        setTimeout(pbAdvancedLicenseAdminV26BRender, 250);
+      }
+      return result;
+    };
+    window.showTab.__pbAdvancedLicenseAdminV26BWrapped = true;
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function(){
+      setTimeout(pbAdvancedLicenseAdminV26BRender, 500);
+      setTimeout(pbAdvancedLicenseAdminV26BRender, 1500);
+    });
+  } else {
+    setTimeout(pbAdvancedLicenseAdminV26BRender, 500);
+    setTimeout(pbAdvancedLicenseAdminV26BRender, 1500);
+  }
+}
+
+installAdvancedLicenseAdminV26B();
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
