@@ -23456,6 +23456,236 @@ function installPlanLimitsAdminSeatsV27() {
 
 installPlanLimitsAdminSeatsV27();
 
+
+
+/* PB_LICENSE_GATE_V28 */
+function pbLicenseGateV28ReadServerLicense() {
+  var license = {};
+  try {
+    var keys = [
+      "PB_CLIENT_LICENSE_SERVER_V24",
+      "PB_CLIENT_LICENSE_SERVER_V24_LAST",
+      "PB_ADVANCED_LICENSE_ADMIN_V26B_LAST"
+    ];
+
+    for (var i = 0; i < keys.length; i++) {
+      var raw = localStorage.getItem(keys[i]);
+      if (!raw) continue;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.license) return parsed.license;
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch (e) {}
+  return license;
+}
+
+function pbLicenseGateV28Current() {
+  var identity = {};
+  var server = {};
+
+  try {
+    if (typeof pbClientIdentityV22Load === "function") {
+      identity = pbClientIdentityV22Load() || {};
+    }
+  } catch (e) {}
+
+  try {
+    server = pbLicenseGateV28ReadServerLicense() || {};
+  } catch (e) {}
+
+  var level = String(server.licenseLevel || server.level || identity.licenseLevel || "club").toLowerCase();
+  var status = String(server.licenseStatus || server.status || identity.licenseStatus || "active").toLowerCase();
+
+  var defaults = { playerLimit: 40, adminSeats: 2 };
+  try {
+    if (typeof pbPlanLimitsAdminSeatsV27Defaults === "function") {
+      defaults = pbPlanLimitsAdminSeatsV27Defaults(level) || defaults;
+    }
+  } catch (e) {}
+
+  var playerLimit = parseInt(server.playerLimit || identity.playerLimit || defaults.playerLimit, 10);
+  if (!Number.isFinite(playerLimit) || playerLimit < 4) playerLimit = defaults.playerLimit;
+
+  var adminSeats = parseInt(server.adminSeats || identity.adminSeats || defaults.adminSeats, 10);
+  if (!Number.isFinite(adminSeats) || adminSeats < 1) adminSeats = defaults.adminSeats;
+
+  return {
+    clientId: server.clientId || identity.clientId || location.hostname || "default",
+    clientName: server.clientName || identity.clientName || "Pickleball Pro",
+    licenseLevel: level,
+    licenseStatus: status,
+    playerLimit: playerLimit,
+    adminSeats: adminSeats,
+    mobileScoring: server.mobileScoring,
+    officialResults: server.officialResults
+  };
+}
+
+function pbLicenseGateV28IsBlockedStatus(status) {
+  status = String(status || "").toLowerCase();
+  return status === "paused" || status === "expired" || status === "blocked" || status === "suspended";
+}
+
+function pbLicenseGateV28IsAllowed() {
+  var license = pbLicenseGateV28Current();
+  return !pbLicenseGateV28IsBlockedStatus(license.licenseStatus);
+}
+
+function pbLicenseGateV28Message() {
+  var license = pbLicenseGateV28Current();
+  var status = String(license.licenseStatus || "active").toUpperCase();
+  var level = String(license.licenseLevel || "club").toUpperCase();
+
+  if (!pbLicenseGateV28IsBlockedStatus(license.licenseStatus)) {
+    return "Plan active: " + level + " · " + license.playerLimit + " players · " + license.adminSeats + " admin seat" + (license.adminSeats === 1 ? "" : "s");
+  }
+
+  if (license.licenseStatus === "paused") {
+    return "License paused: new tournament setup is blocked until the plan is reactivated.";
+  }
+
+  if (license.licenseStatus === "expired") {
+    return "License expired: new tournament setup is blocked until the plan is renewed.";
+  }
+
+  return "License " + status + ": new tournament setup is blocked.";
+}
+
+function pbLicenseGateV28ToastBlocked(action) {
+  var msg = pbLicenseGateV28Message();
+  try {
+    if (typeof toast === "function") {
+      toast(msg, "err");
+      return;
+    }
+  } catch (e) {}
+  alert(msg);
+}
+
+function pbLicenseGateV28RenderBanner() {
+  try {
+    var license = pbLicenseGateV28Current();
+    var blocked = pbLicenseGateV28IsBlockedStatus(license.licenseStatus);
+
+    var banner = document.getElementById("pb-license-gate-banner-v28");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "pb-license-gate-banner-v28";
+      banner.style.margin = ".75rem 0";
+      banner.style.padding = ".75rem .9rem";
+      banner.style.borderRadius = "14px";
+      banner.style.fontWeight = "900";
+      banner.style.border = "1px solid var(--border)";
+      banner.style.background = "rgba(255,255,255,.04)";
+
+      var target =
+        document.getElementById("sec-admin") ||
+        document.getElementById("admin") ||
+        document.querySelector(".section.active") ||
+        document.body;
+
+      if (target && target.insertBefore) {
+        target.insertBefore(banner, target.firstChild);
+      }
+    }
+
+    banner.textContent = (blocked ? "🚫 " : "✅ ") + pbLicenseGateV28Message();
+    banner.style.display = "";
+    banner.style.color = blocked ? "var(--red)" : "var(--txt)";
+    banner.style.borderColor = blocked ? "rgba(239,83,80,.45)" : "var(--border)";
+    banner.style.background = blocked ? "rgba(239,83,80,.10)" : "rgba(255,255,255,.04)";
+  } catch (e) {}
+}
+
+function pbLicenseGateV28BlockIfNeeded(action) {
+  if (pbLicenseGateV28IsAllowed()) return false;
+  pbLicenseGateV28RenderBanner();
+  pbLicenseGateV28ToastBlocked(action || "action");
+  return true;
+}
+
+function pbLicenseGateV28WrapFunction(name, label) {
+  try {
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbLicenseGateV28Wrapped) return false;
+
+    window[name] = function() {
+      if (pbLicenseGateV28BlockIfNeeded(label || name)) return;
+      return fn.apply(this, arguments);
+    };
+
+    window[name].__pbLicenseGateV28Wrapped = true;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function pbLicenseGateV28Install() {
+  if (window.__PB_LICENSE_GATE_V28_INSTALLED__) return;
+  window.__PB_LICENSE_GATE_V28_INSTALLED__ = true;
+
+  [
+    ["addPlayer", "adding players"],
+    ["promptGenerateSchedule", "generating a schedule"],
+    ["generateSchedule", "generating a schedule"],
+    ["generateNextRound", "generating another round"],
+    ["generateNextDraftRound", "generating another round"],
+    ["regenerateDraftRoundsOnly", "regenerating draft rounds"],
+    ["lockRound", "starting a round"]
+  ].forEach(function(pair) {
+    pbLicenseGateV28WrapFunction(pair[0], pair[1]);
+  });
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbLicenseGateV28Wrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin" || tab === "dashboard" || tab === "schedule" || tab === "players") {
+          setTimeout(pbLicenseGateV28RenderBanner, 0);
+          setTimeout(pbLicenseGateV28RenderBanner, 300);
+        }
+        return result;
+      };
+      window.showTab.__pbLicenseGateV28Wrapped = true;
+    }
+  } catch (e) {}
+
+  [
+    "pbClientLicenseServerV24Apply",
+    "pbClientLicenseServerV24RenderAdminCard",
+    "pbAdvancedLicenseAdminV26BSave",
+    "pbAdvancedLicenseAdminV26BLoad",
+    "pbLicenseV23RenderAll"
+  ].forEach(function(name) {
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbLicenseGateV28Wrapped) {
+        window[name] = function() {
+          var result = fn.apply(this, arguments);
+          setTimeout(pbLicenseGateV28RenderBanner, 0);
+          setTimeout(pbLicenseGateV28RenderBanner, 300);
+          return result;
+        };
+        window[name].__pbLicenseGateV28Wrapped = true;
+      }
+    } catch (e) {}
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbLicenseGateV28RenderBanner, 700);
+      setTimeout(pbLicenseGateV28RenderBanner, 1600);
+    });
+  } else {
+    setTimeout(pbLicenseGateV28RenderBanner, 700);
+    setTimeout(pbLicenseGateV28RenderBanner, 1600);
+  }
+}
+
+pbLicenseGateV28Install();
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;
