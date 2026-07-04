@@ -18586,6 +18586,92 @@ function pbGovernanceEnsureButtonsV13() {
   setTimeout(install, 300);
 })();
 
+
+/* PB_CLEAN_STRAY_APPROVAL_STATUS_V14 */
+function pbCleanStrayApprovalStatusTextV14(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+}
+
+function pbCleanStrayApprovalStatusV14() {
+  try {
+    const patterns = [
+      /scored games need approval/i,
+      /currently approved/i,
+      /fully team-accepted/i,
+      /scored games available for approval/i,
+      /team-accepted.*available for approval/i
+    ];
+
+    Array.from(document.body.querySelectorAll('div,span,p,small')).forEach(el => {
+      if(!el || !el.parentElement) return;
+
+      // Keep approval notes if they are inside the actual Organizer Approvals modal.
+      if(el.closest('#pb-organizer-approval-modal-v1')) return;
+
+      const txt = pbCleanStrayApprovalStatusTextV14(el.textContent || '');
+
+      if(!txt || txt.length > 220) return;
+
+      const isStrayApprovalText = patterns.some(rx => rx.test(txt));
+
+      if(!isStrayApprovalText) return;
+
+      // Avoid removing large app containers.
+      if(el.children.length > 3) return;
+
+      el.remove();
+    });
+  } catch(e) {}
+}
+
+/*
+  Disable old approval UI injectors.
+  The restored V13 Governance panel now owns:
+  - Approvals
+  - Approve All Scored
+  - Remove All Approvals
+  These older injectors were causing approval status notes to leak onto the Schedule page.
+*/
+function pbApprovalV8InjectButtons() {
+  pbCleanStrayApprovalStatusV14();
+}
+
+function pbApprovalInjectApproveAllScoredButtonV3() {
+  pbCleanStrayApprovalStatusV14();
+}
+
+function pbRemoveAllApprovalsInjectButtonV1() {
+  pbCleanStrayApprovalStatusV14();
+}
+
+function pbApprovalV9RefreshModalLive() {
+  pbCleanStrayApprovalStatusV14();
+
+  try {
+    if(document.getElementById('pb-organizer-approval-modal-v1') && typeof pbOrganizerApprovalOpenModalV1 === 'function') {
+      pbOrganizerApprovalOpenModalV1();
+    }
+  } catch(e) {}
+}
+
+(function pbInstallCleanStrayApprovalStatusV14(){
+  if(window.__PB_CLEAN_STRAY_APPROVAL_STATUS_V14_INSTALLED__) return;
+  window.__PB_CLEAN_STRAY_APPROVAL_STATUS_V14_INSTALLED__ = true;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(pbCleanStrayApprovalStatusV14, 0);
+    setTimeout(pbCleanStrayApprovalStatusV14, 300);
+  });
+
+  document.addEventListener('click', function() {
+    setTimeout(pbCleanStrayApprovalStatusV14, 50);
+    setTimeout(pbCleanStrayApprovalStatusV14, 300);
+  }, true);
+
+  setTimeout(pbCleanStrayApprovalStatusV14, 0);
+  setTimeout(pbCleanStrayApprovalStatusV14, 300);
+})();
+
 function matchTeamName(playerIdxArr) {
   if(!playerIdxArr) return '—';
   return playerIdxArr.map(i => {
