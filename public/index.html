@@ -22948,10 +22948,10 @@ function pbAdvancedLicenseAdminV26BSetStatus(msg, bad) {
 
 function pbAdvancedLicenseAdminV26BDefaults(level) {
   level = String(level || "club").toLowerCase();
-  if (level === "trial") return { playerLimit: 16, mobileScoring: false, officialResults: false, supportTier: "community" };
-  if (level === "pro") return { playerLimit: 96, mobileScoring: true, officialResults: true, supportTier: "priority" };
-  if (level === "enterprise") return { playerLimit: 250, mobileScoring: true, officialResults: true, supportTier: "dedicated" };
-  return { playerLimit: 40, mobileScoring: true, officialResults: true, supportTier: "standard" };
+  if (level === "trial") return { playerLimit: 16, adminSeats: 1, mobileScoring: false, officialResults: false, supportTier: "community" };
+  if (level === "pro") return { playerLimit: 96, adminSeats: 5, mobileScoring: true, officialResults: true, supportTier: "priority" };
+  if (level === "enterprise") return { playerLimit: 250, adminSeats: 25, mobileScoring: true, officialResults: true, supportTier: "dedicated" };
+  return { playerLimit: 40, adminSeats: 2, mobileScoring: true, officialResults: true, supportTier: "standard" };
 }
 
 function pbAdvancedLicenseAdminV26BCurrentClientId() {
@@ -22989,6 +22989,7 @@ function pbAdvancedLicenseAdminV26BFill(license) {
     set("pb-v26b-license-level", level);
     set("pb-v26b-license-status", status);
     set("pb-v26b-player-limit", license.playerLimit || d.playerLimit);
+    set("pb-v27-admin-seats", license.adminSeats || d.adminSeats);
     set("pb-v26b-support-tier", license.supportTier || d.supportTier);
     chk("pb-v26b-mobile-scoring", license.mobileScoring == null ? d.mobileScoring : license.mobileScoring);
     chk("pb-v26b-official-results", license.officialResults == null ? d.officialResults : license.officialResults);
@@ -23055,6 +23056,9 @@ async function pbAdvancedLicenseAdminV26BSave() {
     var playerLimit = parseInt(val("pb-v26b-player-limit", d.playerLimit), 10);
     if (!Number.isFinite(playerLimit) || playerLimit < 4) playerLimit = d.playerLimit;
 
+    var adminSeats = parseInt(val("pb-v27-admin-seats", d.adminSeats), 10);
+    if (!Number.isFinite(adminSeats) || adminSeats < 1) adminSeats = d.adminSeats;
+
     var license = {
       clientId: clientId,
       clientName: val("pb-v26b-client-name", clientId),
@@ -23062,6 +23066,7 @@ async function pbAdvancedLicenseAdminV26BSave() {
       licenseLabel: level.charAt(0).toUpperCase() + level.slice(1),
       licenseStatus: val("pb-v26b-license-status", "active").toLowerCase(),
       playerLimit: playerLimit,
+      adminSeats: adminSeats,
       mobileScoring: checked("pb-v26b-mobile-scoring", d.mobileScoring),
       officialResults: checked("pb-v26b-official-results", d.officialResults),
       supportTier: val("pb-v26b-support-tier", d.supportTier),
@@ -23170,6 +23175,7 @@ function pbAdvancedLicenseAdminV26BRender() {
             '<option value="expired">Expired</option>' +
           '</select></label>' +
           '<label>Player Limit<input id="pb-v26b-player-limit" type="number" min="4" step="1"></label>' +
+          '<label>Admin Seats<input id="pb-v27-admin-seats" type="number" min="1" step="1"></label>' +
           '<label>Support Tier<input id="pb-v26b-support-tier" placeholder="standard"></label>' +
           '<label style="display:flex;align-items:center;gap:.5rem;margin-top:1.6rem"><input id="pb-v26b-mobile-scoring" type="checkbox"> Mobile Scoring</label>' +
           '<label style="display:flex;align-items:center;gap:.5rem;margin-top:1.6rem"><input id="pb-v26b-official-results" type="checkbox"> Official Results</label>' +
@@ -23244,6 +23250,211 @@ function installAdvancedLicenseAdminV26B() {
 }
 
 installAdvancedLicenseAdminV26B();
+
+
+
+/* PB_PLAN_LIMITS_ADMIN_SEATS_V27 */
+function pbPlanLimitsAdminSeatsV27Defaults(level) {
+  level = String(level || "club").toLowerCase();
+  if (level === "trial") return { playerLimit: 16, adminSeats: 1 };
+  if (level === "pro") return { playerLimit: 96, adminSeats: 5 };
+  if (level === "enterprise") return { playerLimit: 250, adminSeats: 25 };
+  return { playerLimit: 40, adminSeats: 2 };
+}
+
+function pbPlanLimitsAdminSeatsV27Number(value, fallback) {
+  var n = parseInt(value, 10);
+  if (Number.isFinite(n) && n >= 1) return n;
+  return fallback;
+}
+
+function pbPlanLimitsAdminSeatsV27CurrentLicense() {
+  var license = {};
+
+  try {
+    var raw = localStorage.getItem("PB_CLIENT_LICENSE_SERVER_V24") ||
+              localStorage.getItem("PB_CLIENT_LICENSE_SERVER_V24_LAST") ||
+              "";
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.license) license = parsed.license;
+      else if (parsed && typeof parsed === "object") license = parsed;
+    }
+  } catch (e) {}
+
+  try {
+    if (typeof pbClientIdentityV22Load === "function") {
+      var identity = pbClientIdentityV22Load() || {};
+      license = Object.assign({}, identity, license);
+    }
+  } catch (e) {}
+
+  try {
+    var levelEl = document.getElementById("pb-v26b-license-level");
+    var seatsEl = document.getElementById("pb-v27-admin-seats");
+    var playerEl = document.getElementById("pb-v26b-player-limit");
+    if (levelEl && levelEl.value) license.licenseLevel = levelEl.value;
+    if (seatsEl && seatsEl.value) license.adminSeats = seatsEl.value;
+    if (playerEl && playerEl.value) license.playerLimit = playerEl.value;
+  } catch (e) {}
+
+  var level = license.licenseLevel || license.level || "club";
+  var defaults = pbPlanLimitsAdminSeatsV27Defaults(level);
+
+  license.playerLimit = parseInt(license.playerLimit, 10) || defaults.playerLimit;
+  license.adminSeats = pbPlanLimitsAdminSeatsV27Number(license.adminSeats, defaults.adminSeats);
+
+  return license;
+}
+
+function pbPlanLimitsAdminSeatsV27RenameHeadings() {
+  try {
+    var nodes = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,summary,div,strong,b"));
+    nodes.forEach(function(el) {
+      if (!el || !el.textContent) return;
+      if (el.children && el.children.length > 2) return;
+      var txt = String(el.textContent || "").trim();
+      if (txt === "License Limits") el.textContent = "Plan Limits";
+    });
+  } catch (e) {}
+}
+
+function pbPlanLimitsAdminSeatsV27Render() {
+  try {
+    pbPlanLimitsAdminSeatsV27RenameHeadings();
+
+    var license = pbPlanLimitsAdminSeatsV27CurrentLicense();
+    var level = String(license.licenseLevel || license.level || "club").toUpperCase();
+    var playerLimit = parseInt(license.playerLimit, 10) || 40;
+    var adminSeats = pbPlanLimitsAdminSeatsV27Number(license.adminSeats, pbPlanLimitsAdminSeatsV27Defaults(level).adminSeats);
+
+    var headings = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,summary,div,strong,b"));
+    var heading = headings.find(function(el) {
+      return String(el.textContent || "").trim() === "Plan Limits";
+    });
+
+    if (!heading) return false;
+
+    var card = heading.closest(".card") || heading.closest("section") || heading.parentElement;
+    if (!card) return false;
+
+    var existing = document.getElementById("pb-plan-limits-admin-seats-v27");
+    if (!existing) {
+      existing = document.createElement("div");
+      existing.id = "pb-plan-limits-admin-seats-v27";
+      existing.style.marginTop = ".85rem";
+      existing.style.padding = ".75rem";
+      existing.style.border = "1px solid var(--border)";
+      existing.style.borderRadius = "12px";
+      existing.style.background = "rgba(255,255,255,.035)";
+      card.appendChild(existing);
+    }
+
+    existing.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem">' +
+        '<div>' +
+          '<div style="font-size:.78rem;color:var(--txt2);font-weight:800;text-transform:uppercase;letter-spacing:.05em">Player Limit</div>' +
+          '<div style="font-size:1.1rem;font-weight:900">' + playerLimit + ' players</div>' +
+          '<div style="font-size:.78rem;color:var(--txt2)">Active players per tournament/session</div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="font-size:.78rem;color:var(--txt2);font-weight:800;text-transform:uppercase;letter-spacing:.05em">Admin Seats</div>' +
+          '<div style="font-size:1.1rem;font-weight:900">' + adminSeats + ' admin' + (adminSeats === 1 ? '' : 's') + '</div>' +
+          '<div style="font-size:.78rem;color:var(--txt2)">Organizer/admin users for this client</div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="font-size:.78rem;color:var(--txt2);font-weight:800;text-transform:uppercase;letter-spacing:.05em">Plan</div>' +
+          '<div style="font-size:1.1rem;font-weight:900">' + level + '</div>' +
+          '<div style="font-size:.78rem;color:var(--txt2)">Player limits and admin seats are separate</div>' +
+        '</div>' +
+      '</div>';
+
+    return true;
+  } catch (e) {
+    console.warn("PB_PLAN_LIMITS_ADMIN_SEATS_V27 render failed", e);
+    return false;
+  }
+}
+
+function installPlanLimitsAdminSeatsV27() {
+  if (window.__PB_PLAN_LIMITS_ADMIN_SEATS_V27_INSTALLED__) return;
+  window.__PB_PLAN_LIMITS_ADMIN_SEATS_V27_INSTALLED__ = true;
+
+  try {
+    if (typeof pbLicenseV23PolicyFor === "function" && !pbLicenseV23PolicyFor.__pbPlanLimitsAdminSeatsV27Wrapped) {
+      var oldPolicyFor = pbLicenseV23PolicyFor;
+      window.pbLicenseV23PolicyFor = function(level) {
+        var policy = oldPolicyFor.apply(this, arguments) || {};
+        var d = pbPlanLimitsAdminSeatsV27Defaults(policy.licenseLevel || level || "club");
+        if (policy.adminSeats == null) policy.adminSeats = d.adminSeats;
+        return policy;
+      };
+      window.pbLicenseV23PolicyFor.__pbPlanLimitsAdminSeatsV27Wrapped = true;
+    }
+  } catch (e) {}
+
+  ["pbLicenseV23RenderAll", "pbLicenseV23RenderAdminCard", "pbClientLicenseServerV24RenderAdminCard"].forEach(function(name) {
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbPlanLimitsAdminSeatsV27Wrapped) {
+        window[name] = function() {
+          var result = fn.apply(this, arguments);
+          setTimeout(pbPlanLimitsAdminSeatsV27Render, 0);
+          setTimeout(pbPlanLimitsAdminSeatsV27Render, 200);
+          return result;
+        };
+        window[name].__pbPlanLimitsAdminSeatsV27Wrapped = true;
+      }
+    } catch (e) {}
+  });
+
+  try {
+    if (typeof pbAdvancedLicenseAdminV26BApplyPreset === "function" && !pbAdvancedLicenseAdminV26BApplyPreset.__pbPlanLimitsAdminSeatsV27Wrapped) {
+      var oldPreset = pbAdvancedLicenseAdminV26BApplyPreset;
+      window.pbAdvancedLicenseAdminV26BApplyPreset = function() {
+        var result = oldPreset.apply(this, arguments);
+        try {
+          var license = pbPlanLimitsAdminSeatsV27CurrentLicense();
+          var level = document.getElementById("pb-v26b-license-level")?.value || license.licenseLevel || "club";
+          var d = pbPlanLimitsAdminSeatsV27Defaults(level);
+          var seatsEl = document.getElementById("pb-v27-admin-seats");
+          if (seatsEl) seatsEl.value = d.adminSeats;
+        } catch (e) {}
+        setTimeout(pbPlanLimitsAdminSeatsV27Render, 0);
+        return result;
+      };
+      window.pbAdvancedLicenseAdminV26BApplyPreset.__pbPlanLimitsAdminSeatsV27Wrapped = true;
+    }
+  } catch (e) {}
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbPlanLimitsAdminSeatsV27Wrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin") {
+          setTimeout(pbPlanLimitsAdminSeatsV27Render, 0);
+          setTimeout(pbPlanLimitsAdminSeatsV27Render, 300);
+          setTimeout(pbPlanLimitsAdminSeatsV27Render, 900);
+        }
+        return result;
+      };
+      window.showTab.__pbPlanLimitsAdminSeatsV27Wrapped = true;
+    }
+  } catch (e) {}
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbPlanLimitsAdminSeatsV27Render, 500);
+      setTimeout(pbPlanLimitsAdminSeatsV27Render, 1500);
+    });
+  } else {
+    setTimeout(pbPlanLimitsAdminSeatsV27Render, 500);
+    setTimeout(pbPlanLimitsAdminSeatsV27Render, 1500);
+  }
+}
+
+installPlanLimitsAdminSeatsV27();
 
 function loadTournament(event) {
   const file = event.target.files[0];

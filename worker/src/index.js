@@ -596,6 +596,61 @@ async function pbAdvancedLicenseAdminV26BApi(request, env, url) {
   }
 }
 
+
+
+// PB_PLAN_LIMITS_ADMIN_SEATS_V27
+function pbPlanLimitsAdminSeatsV27Defaults(level) {
+  level = String(level || 'club').toLowerCase();
+  if (level === 'trial') return { adminSeats: 1 };
+  if (level === 'pro') return { adminSeats: 5 };
+  if (level === 'enterprise') return { adminSeats: 25 };
+  return { adminSeats: 2 };
+}
+
+function pbPlanLimitsAdminSeatsV27Number(value, fallback) {
+  const n = parseInt(value, 10);
+  if (Number.isFinite(n) && n >= 1) return n;
+  return fallback;
+}
+
+function pbPlanLimitsAdminSeatsV27Apply(license) {
+  license = license && typeof license === 'object' ? license : {};
+  const level = license.licenseLevel || license.level || 'club';
+  const defaults = pbPlanLimitsAdminSeatsV27Defaults(level);
+  license.adminSeats = pbPlanLimitsAdminSeatsV27Number(license.adminSeats, defaults.adminSeats);
+  return license;
+}
+
+try {
+  if (typeof pbServerLicenseDefaultsV24B === 'function' && !pbServerLicenseDefaultsV24B.__pbPlanLimitsAdminSeatsV27Wrapped) {
+    const pbPlanLimitsAdminSeatsV27OldDefaults = pbServerLicenseDefaultsV24B;
+    pbServerLicenseDefaultsV24B = function() {
+      const license = pbPlanLimitsAdminSeatsV27OldDefaults.apply(this, arguments) || {};
+      return pbPlanLimitsAdminSeatsV27Apply(license);
+    };
+    pbServerLicenseDefaultsV24B.__pbPlanLimitsAdminSeatsV27Wrapped = true;
+  }
+
+  if (typeof pbServerLicenseNormalizeV24B === 'function' && !pbServerLicenseNormalizeV24B.__pbPlanLimitsAdminSeatsV27Wrapped) {
+    const pbPlanLimitsAdminSeatsV27OldNormalize = pbServerLicenseNormalizeV24B;
+    pbServerLicenseNormalizeV24B = function(input) {
+      const normalized = pbPlanLimitsAdminSeatsV27OldNormalize.apply(this, arguments) || {};
+      const source = input && typeof input === 'object' ? input : {};
+      const level = normalized.licenseLevel || source.licenseLevel || source.level || 'club';
+      const defaults = pbPlanLimitsAdminSeatsV27Defaults(level);
+      normalized.adminSeats = pbPlanLimitsAdminSeatsV27Number(
+        source.adminSeats != null ? source.adminSeats : normalized.adminSeats,
+        defaults.adminSeats
+      );
+      normalized.planTerminology = 'plan-limits-v27';
+      return normalized;
+    };
+    pbServerLicenseNormalizeV24B.__pbPlanLimitsAdminSeatsV27Wrapped = true;
+  }
+} catch (err) {
+  console.warn('PB_PLAN_LIMITS_ADMIN_SEATS_V27 install failed', err);
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
