@@ -23686,6 +23686,164 @@ function pbLicenseGateV28Install() {
 
 pbLicenseGateV28Install();
 
+
+
+/* PB_SERVER_LICENSE_ENFORCEMENT_UI_V29 */
+function pbServerLicenseEnforcementUiV29ClientId() {
+  try {
+    if (typeof pbClientIdentityV22Load === "function") {
+      var identity = pbClientIdentityV22Load() || {};
+      if (identity.clientId) return String(identity.clientId);
+    }
+  } catch (e) {}
+
+  return String(location.hostname || "default")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "default";
+}
+
+function pbServerLicenseEnforcementUiV29Store(license) {
+  try {
+    localStorage.setItem("PB_CLIENT_LICENSE_SERVER_V24", JSON.stringify(license));
+    localStorage.setItem("PB_CLIENT_LICENSE_SERVER_V24_LAST", JSON.stringify(license));
+    localStorage.setItem("PB_SERVER_LICENSE_ENFORCEMENT_UI_V29_LAST", JSON.stringify({
+      license: license,
+      savedAt: new Date().toISOString()
+    }));
+  } catch (e) {}
+}
+
+function pbServerLicenseEnforcementUiV29Status(msg, bad) {
+  var el = document.getElementById("pb-server-license-enforcement-v29-status");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.color = bad ? "var(--red)" : "var(--txt2)";
+}
+
+async function pbServerLicenseEnforcementUiV29Sync() {
+  try {
+    var clientId = pbServerLicenseEnforcementUiV29ClientId();
+
+    var res = await fetch("/api/license-gate?clientId=" + encodeURIComponent(clientId) + "&v=" + Date.now(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
+    });
+
+    var data = await res.json().catch(function(){ return null; });
+    if (!res.ok || !data || !data.license) {
+      throw new Error((data && data.error) || ("Server returned " + res.status));
+    }
+
+    pbServerLicenseEnforcementUiV29Store(data.license);
+
+    try {
+      if (typeof pbClientLicenseServerV24Apply === "function") {
+        pbClientLicenseServerV24Apply(data.license, "server-enforcement-v29");
+      }
+      if (typeof pbLicenseGateV28RenderBanner === "function") pbLicenseGateV28RenderBanner();
+      if (typeof pbPlanLimitsAdminSeatsV27Render === "function") pbPlanLimitsAdminSeatsV27Render();
+      if (typeof pbLicenseV23RenderAll === "function") pbLicenseV23RenderAll();
+      if (typeof pbClientLicenseServerV24RenderAdminCard === "function") pbClientLicenseServerV24RenderAdminCard();
+    } catch (e) {}
+
+    pbServerLicenseEnforcementUiV29Status(
+      data.allowed
+        ? "Server enforcement active: license is allowed."
+        : "Server enforcement active: license is blocked.",
+      !data.allowed
+    );
+
+    return data;
+  } catch (e) {
+    pbServerLicenseEnforcementUiV29Status("Server enforcement check failed: " + e.message, true);
+    return null;
+  }
+}
+
+function pbServerLicenseEnforcementUiV29RenderAdminStatus() {
+  var admin = document.getElementById("admin") || document.getElementById("sec-admin") || document.querySelector('[id*="admin" i]');
+  if (!admin) return false;
+
+  var existing = document.getElementById("pb-server-license-enforcement-v29-card");
+  if (!existing) {
+    existing = document.createElement("div");
+    existing.id = "pb-server-license-enforcement-v29-card";
+    existing.className = "card";
+    existing.style.marginTop = "1rem";
+    existing.innerHTML =
+      '<h3>🛡️ Server License Enforcement</h3>' +
+      '<p style="color:var(--txt2)">Checks the Worker/KV license directly so the browser cannot rely only on cached local license values.</p>' +
+      '<div id="pb-server-license-enforcement-v29-status" style="font-weight:900;color:var(--txt2);margin:.5rem 0">Not checked yet.</div>' +
+      '<button type="button" class="btn btn-secondary btn-sm" id="pb-server-license-enforcement-v29-check">Check Server License</button>';
+
+    var advancedCard = document.getElementById("pb-advanced-license-admin-card-v26b");
+    if (advancedCard && advancedCard.parentNode) {
+      advancedCard.parentNode.insertBefore(existing, advancedCard.nextSibling);
+    } else {
+      admin.appendChild(existing);
+    }
+
+    var btn = document.getElementById("pb-server-license-enforcement-v29-check");
+    if (btn) btn.addEventListener("click", pbServerLicenseEnforcementUiV29Sync);
+  }
+
+  return true;
+}
+
+function pbServerLicenseEnforcementUiV29Install() {
+  if (window.__PB_SERVER_LICENSE_ENFORCEMENT_UI_V29_INSTALLED__) return;
+  window.__PB_SERVER_LICENSE_ENFORCEMENT_UI_V29_INSTALLED__ = true;
+
+  try {
+    var oldShowTab = window.showTab;
+    if (typeof oldShowTab === "function" && !oldShowTab.__pbServerLicenseEnforcementUiV29Wrapped) {
+      window.showTab = function(tab) {
+        var result = oldShowTab.apply(this, arguments);
+        if (tab === "admin") {
+          setTimeout(pbServerLicenseEnforcementUiV29RenderAdminStatus, 0);
+          setTimeout(pbServerLicenseEnforcementUiV29Sync, 250);
+        }
+        if (tab === "dashboard" || tab === "players" || tab === "schedule") {
+          setTimeout(pbServerLicenseEnforcementUiV29Sync, 150);
+        }
+        return result;
+      };
+      window.showTab.__pbServerLicenseEnforcementUiV29Wrapped = true;
+    }
+  } catch (e) {}
+
+  ["pbAdvancedLicenseAdminV26BSave", "pbAdvancedLicenseAdminV26BLoad", "pbClientLicenseServerV24Sync"].forEach(function(name) {
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbServerLicenseEnforcementUiV29Wrapped) {
+        window[name] = async function() {
+          var result = await fn.apply(this, arguments);
+          setTimeout(pbServerLicenseEnforcementUiV29Sync, 350);
+          return result;
+        };
+        window[name].__pbServerLicenseEnforcementUiV29Wrapped = true;
+      }
+    } catch (e) {}
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(pbServerLicenseEnforcementUiV29RenderAdminStatus, 700);
+      setTimeout(pbServerLicenseEnforcementUiV29Sync, 900);
+      setTimeout(pbServerLicenseEnforcementUiV29Sync, 2200);
+    });
+  } else {
+    setTimeout(pbServerLicenseEnforcementUiV29RenderAdminStatus, 700);
+    setTimeout(pbServerLicenseEnforcementUiV29Sync, 900);
+    setTimeout(pbServerLicenseEnforcementUiV29Sync, 2200);
+  }
+}
+
+pbServerLicenseEnforcementUiV29Install();
+
 function loadTournament(event) {
   const file = event.target.files[0];
   if(!file) return;

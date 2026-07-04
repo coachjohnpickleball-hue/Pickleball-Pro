@@ -651,6 +651,156 @@ try {
   console.warn('PB_PLAN_LIMITS_ADMIN_SEATS_V27 install failed', err);
 }
 
+
+
+// PB_SERVER_LICENSE_ENFORCEMENT_V29
+function pbServerLicenseEnforcementV29Json(obj, status = 200) {
+  return new Response(JSON.stringify(obj, null, 2), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+function pbServerLicenseEnforcementV29Slug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'default';
+}
+
+function pbServerLicenseEnforcementV29ClientId(request, url) {
+  const q = url.searchParams.get('clientId');
+  if (q) return pbServerLicenseEnforcementV29Slug(q);
+
+  const host = url.hostname || request.headers.get('host') || 'default';
+  return pbServerLicenseEnforcementV29Slug(host);
+}
+
+function pbServerLicenseEnforcementV29IsMutation(request) {
+  const method = String(request.method || 'GET').toUpperCase();
+  return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+}
+
+function pbServerLicenseEnforcementV29Authorized(request, env) {
+  const expected = String((env && env.ADMIN_LICENSE_TOKEN) || '').trim();
+  if (!expected) return false;
+
+  const got =
+    String(request.headers.get('x-admin-license-token') || '').trim() ||
+    String(request.headers.get('x-admin-token') || '').trim();
+
+  return Boolean(got && got === expected);
+}
+
+function pbServerLicenseEnforcementV29BlockedStatus(status) {
+  status = String(status || '').toLowerCase();
+  return status === 'paused' || status === 'expired' || status === 'blocked' || status === 'suspended';
+}
+
+function pbServerLicenseEnforcementV29Defaults(level) {
+  level = String(level || 'club').toLowerCase();
+  if (level === 'trial') return { playerLimit: 16, adminSeats: 1, mobileScoring: false, officialResults: false, supportTier: 'community' };
+  if (level === 'pro') return { playerLimit: 96, adminSeats: 5, mobileScoring: true, officialResults: true, supportTier: 'priority' };
+  if (level === 'enterprise') return { playerLimit: 250, adminSeats: 25, mobileScoring: true, officialResults: true, supportTier: 'dedicated' };
+  return { playerLimit: 40, adminSeats: 2, mobileScoring: true, officialResults: true, supportTier: 'standard' };
+}
+
+function pbServerLicenseEnforcementV29Normalize(license, clientId) {
+  license = license && typeof license === 'object' ? license : {};
+
+  const level = String(license.licenseLevel || license.level || 'club').toLowerCase();
+  const status = String(license.licenseStatus || license.status || 'active').toLowerCase();
+  const defaults = pbServerLicenseEnforcementV29Defaults(level);
+
+  const playerLimit = parseInt(license.playerLimit, 10);
+  const adminSeats = parseInt(license.adminSeats, 10);
+
+  return {
+    ...license,
+    clientId: pbServerLicenseEnforcementV29Slug(license.clientId || clientId),
+    clientName: license.clientName || license.companyName || clientId,
+    licenseLevel: level,
+    licenseLabel: license.licenseLabel || level.charAt(0).toUpperCase() + level.slice(1),
+    licenseStatus: status,
+    playerLimit: Number.isFinite(playerLimit) && playerLimit >= 4 ? playerLimit : defaults.playerLimit,
+    adminSeats: Number.isFinite(adminSeats) && adminSeats >= 1 ? adminSeats : defaults.adminSeats,
+    mobileScoring: license.mobileScoring == null ? defaults.mobileScoring : !!license.mobileScoring,
+    officialResults: license.officialResults == null ? defaults.officialResults : !!license.officialResults,
+    supportTier: license.supportTier || defaults.supportTier,
+    serverEnforced: true,
+    enforcementVersion: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+    blocked: pbServerLicenseEnforcementV29BlockedStatus(status)
+  };
+}
+
+async function pbServerLicenseEnforcementV29GetLicense(request, env, url) {
+  const clientId = pbServerLicenseEnforcementV29ClientId(request, url);
+
+  if (typeof pbServerLicenseGetV24B === 'function') {
+    const license = await pbServerLicenseGetV24B(env, clientId);
+    return pbServerLicenseEnforcementV29Normalize(license, clientId);
+  }
+
+  return pbServerLicenseEnforcementV29Normalize({}, clientId);
+}
+
+async function pbServerLicenseGateV29Api(request, env, url) {
+  try {
+    const license = await pbServerLicenseEnforcementV29GetLicense(request, env, url);
+    return pbServerLicenseEnforcementV29Json({
+      ok: true,
+      marker: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+      license,
+      allowed: !license.blocked,
+      blocked: !!license.blocked,
+      message: license.blocked
+        ? 'License is ' + String(license.licenseStatus || 'blocked').toUpperCase() + '. New tournament activity is blocked.'
+        : 'License is active.'
+    });
+  } catch (err) {
+    return pbServerLicenseEnforcementV29Json({
+      ok: false,
+      marker: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+      error: err && err.message ? err.message : String(err)
+    }, 500);
+  }
+}
+
+async function pbServerLicenseClientLicenseV29Api(request, env, url) {
+  try {
+    if (pbServerLicenseEnforcementV29IsMutation(request) && !pbServerLicenseEnforcementV29Authorized(request, env)) {
+      return pbServerLicenseEnforcementV29Json({
+        ok: false,
+        marker: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+        error: 'Direct license edits require owner admin token'
+      }, 401);
+    }
+
+    if (typeof pbServerLicenseApiV24B === 'function') {
+      const response = await pbServerLicenseApiV24B(request, env, url);
+      response.headers.set('x-pb-server-enforcement', 'PB_SERVER_LICENSE_ENFORCEMENT_V29');
+      return response;
+    }
+
+    return pbServerLicenseEnforcementV29Json({
+      ok: false,
+      marker: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+      error: 'Client license handler not available'
+    }, 500);
+  } catch (err) {
+    return pbServerLicenseEnforcementV29Json({
+      ok: false,
+      marker: 'PB_SERVER_LICENSE_ENFORCEMENT_V29',
+      error: err && err.message ? err.message : String(err)
+    }, 500);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
@@ -661,6 +811,18 @@ export default {
     // Normalize away accidental double slashes (some older code paths in
     // the frontend call '//email' etc.) so routing is forgiving.
     const path = url.pathname.replace(/\/{2,}/g, '/');
+
+    // PB_SERVER_LICENSE_ENFORCEMENT_V29_ROUTE
+    if (path === '/api/license-gate' || url.pathname === '/api/license-gate') {
+      return pbServerLicenseGateV29Api(request, env, url);
+    }
+
+    // PB_SERVER_LICENSE_ENFORCEMENT_V29_ROUTE_CLIENT_LICENSE
+    if (path === '/api/client-license' || url.pathname === '/api/client-license') {
+      return pbServerLicenseClientLicenseV29Api(request, env, url);
+    }
+
+
 
     // PB_ADVANCED_LICENSE_ADMIN_V26B_ROUTE
     if (path === '/api/admin/client-license' || url.pathname === '/api/admin/client-license') {
