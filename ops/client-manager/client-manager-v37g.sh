@@ -1,135 +1,99 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOOL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$TOOL_DIR/../.." && pwd)"
+
+cd "$PROJECT_DIR"
+
+pause_menu() {
+  echo ""
+  read -r -p "Press Enter to return to Client Manager..." _
+}
 
 run_tool() {
   local tool="$1"
-  local arg1="${2:-}"
-  local arg2="${3:-}"
+  shift || true
 
-  if [ ! -f "$SCRIPT_DIR/$tool" ]; then
+  if [[ ! -x "$TOOL_DIR/$tool" ]]; then
     echo ""
-    echo "ERROR: Missing tool:"
-    echo "$SCRIPT_DIR/$tool"
-    exit 1
+    echo "ERROR: Tool not found or not executable:"
+    echo "$TOOL_DIR/$tool"
+    pause_menu
+    return
   fi
 
-  if [ -n "$arg2" ]; then
-    "$SCRIPT_DIR/$tool" "$arg1" "$arg2"
-  elif [ -n "$arg1" ]; then
-    "$SCRIPT_DIR/$tool" "$arg1"
-  else
-    "$SCRIPT_DIR/$tool"
-  fi
+  echo ""
+  echo "Running: $tool $*"
+  echo "----------------------------------------"
+  "$TOOL_DIR/$tool" "$@"
+  pause_menu
 }
 
 while true; do
   clear || true
 
   echo "=============================================="
-  echo " PickleBall Pro Client Manager V37N"
+  echo " PickleBall Pro Client Manager"
   echo "=============================================="
   echo ""
-  echo "Read-only:"
-  echo "  1) List STAGING clients"
-  echo "  2) List PRODUCTION clients"
-  echo "  3) Audit STAGING clients"
-  echo "  4) Audit PRODUCTION clients"
-  echo "  5) Inspect STAGING client"
-  echo "  6) Inspect PRODUCTION client"
+  echo "Read-only"
+  echo "  1)  List STAGING clients"
+  echo "  2)  List PRODUCTION clients"
+  echo "  3)  Audit STAGING clients"
+  echo "  4)  Audit PRODUCTION clients"
+  echo "  5)  License usage audit STAGING"
+  echo "  6)  License usage audit PRODUCTION"
+  echo "  7)  Inspect STAGING client"
+  echo "  8)  Inspect PRODUCTION client"
   echo ""
-  echo "Staging operations:"
-  echo "  7) Create STAGING client"
-  echo "  8) Delete STAGING client"
-  echo "  9) Update STAGING license"
+  echo "Staging operations"
+  echo "  9)  Create STAGING client"
+  echo " 10)  Delete STAGING client"
+  echo " 11)  Update STAGING license"
   echo ""
-  echo "Production operations:"
-  echo " 10) Create PRODUCTION client"
-  echo " 11) Delete PRODUCTION client"
-  echo " 12) Update PRODUCTION license"
+  echo "Production operations"
+  echo " 12)  Create PRODUCTION client"
+  echo " 13)  Delete PRODUCTION client"
+  echo " 14)  Update PRODUCTION license"
   echo ""
-  echo "Other:"
-  echo " 13) Show installed tools"
-  echo " 14) Quit"
+  echo "Other"
+  echo " 15)  Show installed tools"
+  echo " 16)  Quit"
   echo ""
-  read -r -p "Choose option: " CHOICE
 
-  case "$CHOICE" in
-    1)
-      run_tool "list-clients-v37f.sh" "staging"
-      ;;
-    2)
-      run_tool "list-clients-v37f.sh" "production"
-      ;;
-    3)
-      run_tool "audit-clients-v37i.sh" "staging"
-      ;;
-    4)
-      run_tool "audit-clients-v37i.sh" "production"
-      ;;
-    5)
-      read -r -p "STAGING clientId to inspect: " CLIENT_ID
-      run_tool "inspect-client-v37j.sh" "staging" "$CLIENT_ID"
-      ;;
-    6)
-      read -r -p "PRODUCTION clientId to inspect: " CLIENT_ID
-      run_tool "inspect-client-v37j.sh" "production" "$CLIENT_ID"
-      ;;
-    7)
-      run_tool "create-staging-client-v37e.sh"
-      ;;
-    8)
-      run_tool "delete-staging-client-v37d3.sh"
-      ;;
-    9)
-      run_tool "update-staging-license-v37m.sh"
-      ;;
-    10)
+  read -r -p "Choose an option: " choice
+
+  case "$choice" in
+    1)  run_tool "list-clients-v37f.sh" staging ;;
+    2)  run_tool "list-clients-v37f.sh" production ;;
+    3)  run_tool "audit-clients-v37i.sh" staging ;;
+    4)  run_tool "audit-clients-v37i.sh" production ;;
+    5)  run_tool "license-usage-audit-v37q.sh" staging ;;
+    6)  run_tool "license-usage-audit-v37q.sh" production ;;
+    7)  run_tool "inspect-client-v37j.sh" staging ;;
+    8)  run_tool "inspect-client-v37j.sh" production ;;
+    9)  run_tool "create-staging-client-v37e.sh" ;;
+    10) run_tool "delete-staging-client-v37d3.sh" ;;
+    11) run_tool "update-staging-license-v37m.sh" ;;
+    12) run_tool "create-production-client-v37e.sh" ;;
+    13) run_tool "delete-production-client-v37d3.sh" ;;
+    14) run_tool "update-production-license-v37m.sh" ;;
+    15)
       echo ""
-      echo "WARNING: This creates a live PRODUCTION client."
-      read -r -p "Continue? Type YES: " CONFIRM
-      if [ "$CONFIRM" = "YES" ]; then
-        run_tool "create-production-client-v37e.sh"
-      else
-        echo "Cancelled."
-      fi
+      echo "Installed client-manager tools:"
+      echo "----------------------------------------"
+      ls -1 "$TOOL_DIR"
+      pause_menu
       ;;
-    11)
-      echo ""
-      echo "WARNING: This deletes a PRODUCTION client and writes a tombstone."
-      read -r -p "Continue? Type YES: " CONFIRM
-      if [ "$CONFIRM" = "YES" ]; then
-        run_tool "delete-production-client-v37d3.sh"
-      else
-        echo "Cancelled."
-      fi
-      ;;
-    12)
-      echo ""
-      echo "WARNING: This updates a live PRODUCTION client license."
-      read -r -p "Continue? Type YES: " CONFIRM
-      if [ "$CONFIRM" = "YES" ]; then
-        run_tool "update-production-license-v37m.sh"
-      else
-        echo "Cancelled."
-      fi
-      ;;
-    13)
-      echo ""
-      echo "Installed client manager tools:"
-      ls -l "$SCRIPT_DIR"
-      ;;
-    14|q|Q|quit|exit)
-      echo "Done."
+    16|q|Q|quit|exit)
+      echo "Goodbye."
       exit 0
       ;;
     *)
       echo ""
-      echo "Invalid choice."
+      echo "Invalid option: $choice"
+      pause_menu
       ;;
   esac
-
-  echo ""
-  read -r -p "Press Enter to return to menu..."
 done
