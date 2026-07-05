@@ -4,6 +4,150 @@
 
 <script>
 
+/* PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J */
+(function(){
+  const MARKER = "PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J";
+
+  if (window.__PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J__) return;
+  window.__PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getUrlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function hideMissingClientLock() {
+    const clientId = getUrlClientId();
+    if (!clientId) return 0;
+
+    let hidden = 0;
+
+    try {
+      document.documentElement.removeAttribute("data-pb-no-client-lock");
+      document.body.classList.remove(
+        "pb-no-client-lock",
+        "pb-public-no-client-lock-v36d",
+        "pb-no-client-id-guard-v36c"
+      );
+    } catch (e) {}
+
+    const candidates = Array.from(document.querySelectorAll("div,section,article,aside,main,p,h1,h2,h3"));
+
+    candidates
+      .map(el => ({
+        el,
+        text: String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim()
+      }))
+      .filter(x =>
+        x.el !== document.body &&
+        x.el !== document.documentElement &&
+        x.text.includes("Missing client link") &&
+        x.text.includes("private client link") &&
+        x.text.length < 700
+      )
+      .sort((a, b) => a.text.length - b.text.length)
+      .slice(0, 3)
+      .forEach(x => {
+        x.el.style.display = "none";
+        x.el.setAttribute("data-v36j-hidden-missing-client-lock", "true");
+        hidden++;
+      });
+
+    candidates
+      .map(el => ({
+        el,
+        text: String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim()
+      }))
+      .filter(x =>
+        x.el !== document.body &&
+        x.el !== document.documentElement &&
+        x.text === "No tournament data was loaded."
+      )
+      .forEach(x => {
+        x.el.style.display = "none";
+        x.el.setAttribute("data-v36j-hidden-no-data-message", "true");
+        hidden++;
+      });
+
+    return hidden;
+  }
+
+  async function forceClientLoad() {
+    const clientId = getUrlClientId();
+    if (!clientId) return false;
+
+    hideMissingClientLock();
+
+    try {
+      if (typeof window.pbServerFirstHardIsolationV36BLoad === "function") {
+        await window.pbServerFirstHardIsolationV36BLoad();
+        hideMissingClientLock();
+        return true;
+      }
+    } catch (e) {
+      console.warn(MARKER + " load warning", e);
+    }
+
+    return false;
+  }
+
+  let loadedOnce = false;
+  let tries = 0;
+
+  const timer = setInterval(function(){
+    tries++;
+    hideMissingClientLock();
+
+    if (!loadedOnce && getUrlClientId() && typeof window.pbServerFirstHardIsolationV36BLoad === "function") {
+      loadedOnce = true;
+      forceClientLoad();
+    }
+
+    if (tries >= 40) clearInterval(timer);
+  }, 250);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function(){
+      hideMissingClientLock();
+      forceClientLoad();
+    });
+  } else {
+    hideMissingClientLock();
+    forceClientLoad();
+  }
+
+  window.pbPrivateLinkClientIdAuthorityV36JStatus = function(){
+    const result = {
+      marker: MARKER,
+      href: location.href,
+      clientId: getUrlClientId() || null,
+      hasClientId: !!getUrlClientId(),
+      hasV36BLoad: typeof window.pbServerFirstHardIsolationV36BLoad === "function",
+      hiddenMissingClientPanels: hideMissingClientLock(),
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+})();
+
+
+
 
 
 /* PB_PUBLIC_NO_CLIENT_LOCK_V36D */
