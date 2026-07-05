@@ -5,6 +5,1561 @@
 <script>
 
 
+
+/* PB_PUBLIC_NO_CLIENT_LOCK_V36D */
+(function(){
+  const MARKER = "PB_PUBLIC_NO_CLIENT_LOCK_V36D";
+  const BOX_ID = "pb-public-no-client-lock-v36d";
+
+  if (window.__PB_PUBLIC_NO_CLIENT_LOCK_V36D__) return;
+  window.__PB_PUBLIC_NO_CLIENT_LOCK_V36D__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function noClientIdMode() {
+    return !urlClientId();
+  }
+
+  function clearVisibleTournamentState() {
+    if (!noClientIdMode()) return false;
+    if (!window.state || typeof state !== "object") return false;
+
+    try {
+      state.players = [];
+      state.waitlist = [];
+      state.teams = [];
+      state.roundTeams = [];
+      state.schedule = [];
+      state.roundHistory = [];
+      state.byeRounds = [];
+      state.partnerLocks = [];
+      state.fixedTeams = [];
+      state.activeMatchIdx = null;
+
+      try { state.notifiedRounds = new Set(); } catch(e) {}
+      try { state.startedRounds = new Set(); } catch(e) {}
+      try { state.selectedCourts = new Set(); } catch(e) {}
+
+      try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+      try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " clear state failed", e);
+      return false;
+    }
+  }
+
+  function hideOldClientSelector() {
+    try {
+      const old = document.getElementById("pb-no-clientid-guard-v36c");
+      if (old) {
+        old.style.display = "none";
+        old.setAttribute("aria-hidden", "true");
+      }
+
+      if (!document.getElementById("pb-public-no-client-lock-v36d-style")) {
+        const style = document.createElement("style");
+        style.id = "pb-public-no-client-lock-v36d-style";
+        style.textContent = `
+          #pb-no-clientid-guard-v36c {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    } catch(e) {}
+  }
+
+  function renderLock() {
+    if (!noClientIdMode()) return;
+
+    hideOldClientSelector();
+    clearVisibleTournamentState();
+
+    try {
+      document.documentElement.setAttribute("data-pb-public-no-client-lock-v36d", "true");
+      document.body && document.body.setAttribute("data-pb-public-no-client-lock-v36d", "true");
+    } catch(e) {}
+
+    if (document.getElementById(BOX_ID)) return;
+
+    const box = document.createElement("div");
+    box.id = BOX_ID;
+    box.style.cssText = [
+      "position:fixed",
+      "z-index:2147483647",
+      "top:12px",
+      "left:12px",
+      "right:12px",
+      "background:#111827",
+      "color:#fff",
+      "border:1px solid rgba(255,255,255,.18)",
+      "box-shadow:0 18px 48px rgba(0,0,0,.35)",
+      "border-radius:16px",
+      "padding:18px",
+      "font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "line-height:1.35"
+    ].join(";");
+
+    box.innerHTML = `
+      <div style="font-weight:850;font-size:19px;margin-bottom:6px">PickleBall Pro</div>
+      <div style="font-size:15px;font-weight:750;margin-bottom:6px">Missing client link</div>
+      <div style="font-size:14px;color:#d1d5db;max-width:720px">
+        This app requires a private client link. Please use the link provided by your organizer, club, or coach.
+      </div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:12px">
+        No tournament data was loaded.
+      </div>
+    `;
+
+    document.body.appendChild(box);
+  }
+
+  window.pbPublicNoClientLockV36DStatus = function() {
+    const result = {
+      marker: MARKER,
+      urlClientId: urlClientId() || null,
+      noClientIdMode: noClientIdMode(),
+      visiblePlayers: window.state && Array.isArray(state.players) ? state.players.length : null,
+      publicLockVisible: !!document.getElementById(BOX_ID),
+      oldSelectorHidden: (() => {
+        const old = document.getElementById("pb-no-clientid-guard-v36c");
+        if (!old) return true;
+        const styles = getComputedStyle(old);
+        return styles.display === "none" || styles.visibility === "hidden";
+      })(),
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function schedule() {
+    if (!noClientIdMode()) return;
+
+    setTimeout(renderLock, 0);
+    setTimeout(renderLock, 100);
+    setTimeout(renderLock, 500);
+    setTimeout(renderLock, 1200);
+    setTimeout(renderLock, 2200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule);
+  } else {
+    schedule();
+  }
+
+  window.addEventListener("load", schedule);
+})();
+
+
+
+/* PB_NO_CLIENT_ID_GUARD_V36C */
+(function(){
+  const MARKER = "PB_NO_CLIENT_ID_GUARD_V36C";
+
+  if (window.__PB_NO_CLIENT_ID_GUARD_V36C__) return;
+  window.__PB_NO_CLIENT_ID_GUARD_V36C__ = true;
+
+  const originalGetItem = Storage.prototype.getItem;
+  const originalSetItem = Storage.prototype.setItem;
+  const originalRemoveItem = Storage.prototype.removeItem;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function noClientIdMode() {
+    return !urlClientId();
+  }
+
+  function isTournamentDataKey(key) {
+    key = String(key || "");
+
+    return (
+      key === "PB_CLIENT_IDENTITY_V22" ||
+      key === "PB_CLIENT_LICENSE_SERVER_V24" ||
+      key === "PB_CLIENT_LICENSE_SERVER_V24_LAST" ||
+      key === "PB_SERVER_LICENSE_ENFORCEMENT_UI_V29_LAST" ||
+      key === "PB_CLIENT_STRICT_ISOLATION_V33C_LAST_CLIENT" ||
+      key === "pickleball_autosave" ||
+      key === "pb_live_sync" ||
+      key.includes("pickleball_autosave::client") ||
+      key.includes("PB_SERVER_CLIENT_STATE_CACHE_V36B") ||
+      key.includes("PB_BACKUP_BEFORE") ||
+      key.includes("client-snapshot-v33b")
+    );
+  }
+
+  // If no clientId is in the URL, do not allow old browser memory to choose a client.
+  Storage.prototype.getItem = function(key) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      return null;
+    }
+
+    return originalGetItem.apply(this, arguments);
+  };
+
+  Storage.prototype.setItem = function(key, value) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      console.warn(MARKER + " blocked local write without clientId", { key });
+      return;
+    }
+
+    return originalSetItem.apply(this, arguments);
+  };
+
+  Storage.prototype.removeItem = function(key) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      console.warn(MARKER + " blocked local remove without clientId", { key });
+      return;
+    }
+
+    return originalRemoveItem.apply(this, arguments);
+  };
+
+  function clearVisibleTournamentState() {
+    if (!noClientIdMode()) return false;
+    if (!window.state || typeof state !== "object") return false;
+
+    try {
+      state.players = [];
+      state.waitlist = [];
+      state.teams = [];
+      state.roundTeams = [];
+      state.schedule = [];
+      state.roundHistory = [];
+      state.byeRounds = [];
+      state.partnerLocks = [];
+      state.fixedTeams = [];
+      state.activeMatchIdx = null;
+
+      try { state.notifiedRounds = new Set(); } catch(e) {}
+      try { state.startedRounds = new Set(); } catch(e) {}
+      try { state.selectedCourts = new Set(); } catch(e) {}
+
+      try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+      try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " clear state failed", e);
+      return false;
+    }
+  }
+
+  function renderGuard() {
+    if (!noClientIdMode()) return;
+
+    try {
+      document.documentElement.setAttribute("data-pb-no-clientid-v36c", "true");
+      document.body && document.body.setAttribute("data-pb-no-clientid-v36c", "true");
+    } catch(e) {}
+
+    if (document.getElementById("pb-no-clientid-guard-v36c")) return;
+
+    const box = document.createElement("div");
+    box.id = "pb-no-clientid-guard-v36c";
+    box.style.cssText = [
+      "position:fixed",
+      "z-index:2147483647",
+      "top:12px",
+      "left:12px",
+      "right:12px",
+      "background:#111827",
+      "color:#fff",
+      "border:1px solid rgba(255,255,255,.18)",
+      "box-shadow:0 18px 48px rgba(0,0,0,.35)",
+      "border-radius:16px",
+      "padding:16px",
+      "font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "line-height:1.35"
+    ].join(";");
+
+    const base = location.origin + location.pathname;
+
+    box.innerHTML = `
+      <div style="font-weight:800;font-size:18px;margin-bottom:6px">PickleBall Pro: Select a Client</div>
+      <div style="font-size:14px;color:#d1d5db;margin-bottom:12px">
+        This page was opened without a clientId, so tournament data is blocked to prevent client mixing.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a style="background:#22c55e;color:#052e16;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=rally-stage-original&v=v36c-select">Rally Stage Original</a>
+        <a style="background:#60a5fa;color:#082f49;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=burloak-pickleball&v=v36c-select">Burloak</a>
+        <a style="background:#a78bfa;color:#2e1065;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=blue-zone-pickleball&v=v36c-select">Blue Zone</a>
+      </div>
+    `;
+
+    document.body.appendChild(box);
+  }
+
+  window.pbNoClientIdGuardV36CStatus = function() {
+    const result = {
+      marker: MARKER,
+      urlClientId: urlClientId() || null,
+      noClientIdMode: noClientIdMode(),
+      visiblePlayers: window.state && Array.isArray(state.players) ? state.players.length : null,
+      guardVisible: !!document.getElementById("pb-no-clientid-guard-v36c"),
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function schedule() {
+    if (!noClientIdMode()) return;
+
+    setTimeout(clearVisibleTournamentState, 0);
+    setTimeout(clearVisibleTournamentState, 100);
+    setTimeout(clearVisibleTournamentState, 500);
+    setTimeout(clearVisibleTournamentState, 1200);
+    setTimeout(renderGuard, 0);
+    setTimeout(renderGuard, 250);
+    setTimeout(renderGuard, 900);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule);
+  } else {
+    schedule();
+  }
+
+  window.addEventListener("load", schedule);
+})();
+
+
+
+/* PB_SERVER_FIRST_HARD_ISOLATION_V36B */
+(function(){
+  const MARKER = "PB_SERVER_FIRST_HARD_ISOLATION_V36B";
+  const CACHE_PREFIX = "PB_SERVER_CLIENT_STATE_CACHE_V36B::";
+
+  if (window.__PB_SERVER_FIRST_HARD_ISOLATION_V36B__) return;
+  window.__PB_SERVER_FIRST_HARD_ISOLATION_V36B__ = true;
+
+  const originalGetItem = Storage.prototype.getItem;
+  const originalSetItem = Storage.prototype.setItem;
+  const originalRemoveItem = Storage.prototype.removeItem;
+
+  let serverLoaded = false;
+  let serverLoadStarted = false;
+  let lastServerLoad = null;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const raw = originalGetItem.call(localStorage, "PB_CLIENT_IDENTITY_V22");
+      const identity = JSON.parse(raw || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function hasClientMode() {
+    return !!getClientId();
+  }
+
+  function clientLiveKey(id) {
+    return "pickleball_autosave::client-live-v33c::" + id;
+  }
+
+  function clientLegacyKey(id) {
+    return "pickleball_autosave::client::" + id;
+  }
+
+  function serverCacheKey(id) {
+    return CACHE_PREFIX + id;
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function arrFromMaybeSet(value) {
+    try {
+      if (value instanceof Set) return Array.from(value);
+      if (Array.isArray(value)) return value;
+    } catch(e) {}
+    return [];
+  }
+
+  function stateOf(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.state && typeof obj.state === "object") return obj.state;
+    return obj;
+  }
+
+  function playersOf(obj) {
+    if (!obj || typeof obj !== "object") return [];
+    if (Array.isArray(obj.players)) return obj.players;
+    if (obj.state && Array.isArray(obj.state.players)) return obj.state.players;
+    return [];
+  }
+
+  function playerCount(value) {
+    const obj = typeof value === "string" ? parse(value) : value;
+    return playersOf(obj).length;
+  }
+
+  function compatibleState(s) {
+    s = s || {};
+
+    return {
+      players: clone(s.players || []),
+      waitlist: clone(s.waitlist || []),
+      teams: clone(s.teams || []),
+      roundTeams: clone(s.roundTeams || []),
+      schedule: clone(s.schedule || []),
+      roundHistory: clone(s.roundHistory || []),
+      byeRounds: clone(s.byeRounds || []),
+      notifiedRounds: clone(arrFromMaybeSet(s.notifiedRounds)),
+      startedRounds: clone(arrFromMaybeSet(s.startedRounds)),
+      selectedCourts: clone(arrFromMaybeSet(s.selectedCourts)),
+      partnerLocks: clone(s.partnerLocks || []),
+      fixedTeams: clone(s.fixedTeams || []),
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: clone(s.riverState || { enabled: false, numCourts: 0, partners: [] })
+    };
+  }
+
+  function makeSave(s, source) {
+    const now = new Date().toISOString();
+    const c = compatibleState(s);
+
+    return {
+      version: "36B",
+      savedAt: now,
+      source: source || MARKER,
+
+      players: c.players,
+      waitlist: c.waitlist,
+      teams: c.teams,
+      roundTeams: c.roundTeams,
+      schedule: c.schedule,
+      roundHistory: c.roundHistory,
+      byeRounds: c.byeRounds,
+      notifiedRounds: c.notifiedRounds,
+      startedRounds: c.startedRounds,
+      selectedCourts: c.selectedCourts,
+      partnerLocks: c.partnerLocks,
+      fixedTeams: c.fixedTeams,
+      activeMatchIdx: c.activeMatchIdx,
+      riverState: c.riverState,
+
+      state: c
+    };
+  }
+
+  function getServerBackedCacheText(id) {
+    const cacheText = originalGetItem.call(localStorage, serverCacheKey(id));
+    if (playerCount(cacheText) > 0) return cacheText;
+
+    const liveText = originalGetItem.call(localStorage, clientLiveKey(id));
+    if (serverLoaded && playerCount(liveText) > 0) return liveText;
+
+    return null;
+  }
+
+  function isHiddenLocalSourceKey(key) {
+    key = String(key || "");
+
+    return (
+      key === "pb_live_sync" ||
+      key.includes("PB_BACKUP_BEFORE") ||
+      key.includes("client-snapshot-v33b") ||
+      key.includes("client-live-v33c::burloak-pickleball") && getClientId() !== "burloak-pickleball" ||
+      key.includes("client-live-v33c::blue-zone-pickleball") && getClientId() !== "blue-zone-pickleball" ||
+      key.includes("pickleball_autosave::client::burloak-pickleball") && getClientId() !== "burloak-pickleball" ||
+      key.includes("pickleball_autosave::client::blue-zone-pickleball") && getClientId() !== "blue-zone-pickleball"
+    );
+  }
+
+  function isProtectedSaveKey(key) {
+    const id = getClientId();
+    if (!id) return false;
+
+    key = String(key || "");
+
+    return (
+      key === "pickleball_autosave" ||
+      key === clientLiveKey(id) ||
+      key === clientLegacyKey(id)
+    );
+  }
+
+  // Hard rule: while clientId is present, the old app must not read shared or cross-client browser data as truth.
+  Storage.prototype.getItem = function(key) {
+    if (this === localStorage && hasClientMode()) {
+      const id = getClientId();
+      key = String(key || "");
+
+      if (key === "pickleball_autosave" || key === clientLiveKey(id) || key === clientLegacyKey(id)) {
+        const cacheText = getServerBackedCacheText(id);
+
+        if (cacheText) return cacheText;
+
+        // Until the server is loaded, old local recovery sees nothing.
+        return null;
+      }
+
+      if (isHiddenLocalSourceKey(key)) {
+        return null;
+      }
+    }
+
+    return originalGetItem.apply(this, arguments);
+  };
+
+  // Hard rule: during startup, old autosave cannot write blank or cross-client browser state.
+  Storage.prototype.setItem = function(key, value) {
+    if (this === localStorage && hasClientMode()) {
+      const id = getClientId();
+      key = String(key || "");
+
+      if (isProtectedSaveKey(key)) {
+        const newCount = playerCount(String(value || ""));
+        const cacheText = getServerBackedCacheText(id);
+        const oldCount = playerCount(cacheText);
+
+        if (!serverLoaded) {
+          console.warn(MARKER + " blocked pre-server local write", {
+            key,
+            newCount
+          });
+          return;
+        }
+
+        if (oldCount > 0 && newCount === 0) {
+          console.warn(MARKER + " blocked empty overwrite", {
+            key,
+            oldCount,
+            newCount
+          });
+          return;
+        }
+
+        // Never physically write the shared key in client mode.
+        // Redirect it to the current client's scoped key.
+        if (key === "pickleball_autosave") {
+          key = clientLiveKey(id);
+        }
+      }
+
+      if (isHiddenLocalSourceKey(key)) {
+        console.warn(MARKER + " blocked hidden/cross-client local write", { key });
+        return;
+      }
+    }
+
+    return originalSetItem.call(this, key, value);
+  };
+
+  Storage.prototype.removeItem = function(key) {
+    if (this === localStorage && hasClientMode()) {
+      key = String(key || "");
+
+      if (isProtectedSaveKey(key) || isHiddenLocalSourceKey(key)) {
+        console.warn(MARKER + " blocked local remove in server-first mode", { key });
+        return;
+      }
+    }
+
+    return originalRemoveItem.apply(this, arguments);
+  };
+
+  function writeServerCache(id, s, source) {
+    const save = makeSave(s, source || "server-load-v36b");
+    const text = JSON.stringify(save);
+
+    originalSetItem.call(localStorage, serverCacheKey(id), text);
+    originalSetItem.call(localStorage, clientLiveKey(id), text);
+    originalSetItem.call(localStorage, clientLegacyKey(id), text);
+
+    // Clear the physical shared key so it cannot contaminate the next client.
+    try { originalRemoveItem.call(localStorage, "pickleball_autosave"); } catch(e) {}
+
+    return save;
+  }
+
+  function applyState(s, source) {
+    if (!window.state || !s || !Array.isArray(s.players)) return false;
+
+    const c = compatibleState(s);
+
+    state.players = clone(c.players);
+    state.waitlist = clone(c.waitlist);
+    state.teams = clone(c.teams);
+    state.roundTeams = clone(c.roundTeams);
+    state.schedule = clone(c.schedule);
+    state.roundHistory = clone(c.roundHistory);
+    state.byeRounds = clone(c.byeRounds);
+    state.partnerLocks = clone(c.partnerLocks);
+    state.fixedTeams = clone(c.fixedTeams);
+
+    try { state.notifiedRounds = new Set(c.notifiedRounds || []); } catch(e) {}
+    try { state.startedRounds = new Set(c.startedRounds || []); } catch(e) {}
+    try { state.selectedCourts = new Set(c.selectedCourts || []); } catch(e) {}
+
+    writeServerCache(getClientId(), c, source || "applied-v36b");
+
+    try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+    return true;
+  }
+
+  async function loadFromServer(reason) {
+    const id = getClientId();
+    if (!id) return false;
+
+    if (serverLoadStarted && serverLoaded) return true;
+    serverLoadStarted = true;
+
+    try {
+      const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id) + "&v=v36b-" + Date.now(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      const data = await res.json();
+
+      const serverState = data && data.state ? data.state : null;
+      const count = playerCount(serverState);
+
+      lastServerLoad = {
+        ok: !!(data && data.ok),
+        found: !!(data && data.found),
+        clientId: id,
+        players: count,
+        savedAt: data && data.savedAt || null,
+        reason: reason || null,
+        loadedAt: new Date().toISOString()
+      };
+
+      if (data && data.ok && data.found && serverState && count > 0) {
+        serverLoaded = true;
+        applyState(serverState, "server-first-load-v36b");
+        console.warn(MARKER + " loaded server state", lastServerLoad);
+        return true;
+      }
+
+      serverLoaded = true;
+      console.warn(MARKER + " no server state found", lastServerLoad);
+      return false;
+    } catch(e) {
+      lastServerLoad = {
+        ok: false,
+        clientId: id,
+        error: String(e && e.message || e),
+        reason: reason || null,
+        loadedAt: new Date().toISOString()
+      };
+
+      console.warn(MARKER + " server load failed", lastServerLoad);
+      serverLoaded = true;
+      return false;
+    }
+  }
+
+  function visibleStateSnapshot() {
+    if (!window.state || typeof state !== "object") return null;
+    return compatibleState(state);
+  }
+
+  window.pbServerFirstHardIsolationV36BLoad = async function() {
+    const result = await loadFromServer("manual");
+    const status = await window.pbServerFirstHardIsolationV36BStatus();
+    return { loaded: result, status };
+  };
+
+  window.pbServerFirstHardIsolationV36BSaveVisibleToServer = async function() {
+    const id = getClientId();
+    const s = visibleStateSnapshot();
+
+    if (!id || !s || !Array.isArray(s.players)) {
+      const result = { ok: false, error: "Missing clientId or visible state." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        clientId: id,
+        source: "manual-visible-save-v36b",
+        state: s
+      })
+    });
+
+    const data = await res.json();
+    if (data && data.ok) {
+      serverLoaded = true;
+      writeServerCache(id, s, "manual-visible-save-v36b");
+    }
+
+    console.log(JSON.stringify(data, null, 2));
+    try { copy(JSON.stringify(data, null, 2)); } catch(e) {}
+    return data;
+  };
+
+  window.pbServerFirstHardIsolationV36BStatus = async function() {
+    const id = getClientId();
+    const liveText = originalGetItem.call(localStorage, clientLiveKey(id));
+    const legacyText = originalGetItem.call(localStorage, clientLegacyKey(id));
+    const sharedText = originalGetItem.call(localStorage, "pickleball_autosave");
+    const cacheText = originalGetItem.call(localStorage, serverCacheKey(id));
+
+    let server = null;
+
+    try {
+      const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id) + "&v=status-" + Date.now(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+      server = await res.json();
+    } catch(e) {
+      server = { ok: false, error: String(e && e.message || e) };
+    }
+
+    const result = {
+      marker: MARKER,
+      clientId: id,
+      serverLoaded,
+      visiblePlayers: window.state && Array.isArray(state.players) ? state.players.length : 0,
+      serverFound: !!(server && server.found),
+      serverPlayers: server && server.summary ? server.summary.players : 0,
+      serverSavedAt: server && server.savedAt || null,
+      cachePlayers: playerCount(cacheText),
+      clientLivePlayers: playerCount(liveText),
+      clientLegacyPlayers: playerCount(legacyText),
+      physicalSharedPlayers: playerCount(sharedText),
+      lastServerLoad,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function scheduleLoads() {
+    setTimeout(() => loadFromServer("early"), 0);
+    setTimeout(() => loadFromServer("after-old-autosave"), 250);
+    setTimeout(() => loadFromServer("after-render"), 900);
+    setTimeout(() => loadFromServer("late-confirm"), 1800);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleLoads);
+  } else {
+    scheduleLoads();
+  }
+
+  window.addEventListener("load", scheduleLoads);
+})();
+
+
+
+/* PB_SERVER_CLIENT_STATE_CLIENT_V36A */
+(function(){
+  const MARKER = "PB_SERVER_CLIENT_STATE_CLIENT_V36A";
+  const CARD_ID = "pb-server-client-state-v36a-card";
+
+  if (window.__PB_SERVER_CLIENT_STATE_CLIENT_V36A__) return;
+  window.__PB_SERVER_CLIENT_STATE_CLIENT_V36A__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function clientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function apiUrl() {
+    const id = clientId();
+    return "/api/client-state?clientId=" + encodeURIComponent(id);
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function arrFromMaybeSet(value) {
+    try {
+      if (value instanceof Set) return Array.from(value);
+      if (Array.isArray(value)) return value;
+    } catch(e) {}
+
+    return [];
+  }
+
+  function playersOf(obj) {
+    if (!obj || typeof obj !== "object") return [];
+    if (Array.isArray(obj.players)) return obj.players;
+    if (obj.state && Array.isArray(obj.state.players)) return obj.state.players;
+    return [];
+  }
+
+  function stateOf(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.type === "score_update" && obj.state) return obj.state;
+    if (obj.state && typeof obj.state === "object") return obj.state;
+    return obj;
+  }
+
+  function compatibleStateFromState(s) {
+    s = s || {};
+
+    return {
+      players: clone(s.players || []),
+      waitlist: clone(s.waitlist || []),
+      teams: clone(s.teams || []),
+      roundTeams: clone(s.roundTeams || []),
+      schedule: clone(s.schedule || []),
+      roundHistory: clone(s.roundHistory || []),
+      byeRounds: clone(s.byeRounds || []),
+      notifiedRounds: clone(arrFromMaybeSet(s.notifiedRounds)),
+      startedRounds: clone(arrFromMaybeSet(s.startedRounds)),
+      selectedCourts: clone(arrFromMaybeSet(s.selectedCourts)),
+      partnerLocks: clone(s.partnerLocks || []),
+      fixedTeams: clone(s.fixedTeams || []),
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: clone(s.riverState || { enabled: false, numCourts: 0, partners: [] })
+    };
+  }
+
+  function snapshotVisibleState() {
+    if (!window.state || typeof state !== "object") {
+      return null;
+    }
+
+    return compatibleStateFromState(state);
+  }
+
+  function localClientKeys(id) {
+    return [
+      "pickleball_autosave::client-live-v33c::" + id,
+      "pickleball_autosave::client::" + id,
+      "pickleball_autosave"
+    ];
+  }
+
+  function localStateCandidates(id) {
+    const keys = [];
+
+    localClientKeys(id).forEach(k => keys.push(k));
+
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (
+          key.includes(id) ||
+          key.includes("PB_BACKUP_BEFORE") ||
+          key.includes("client-snapshot-v33b")
+        ) {
+          keys.push(key);
+        }
+      });
+    } catch(e) {}
+
+    // Only use pb_live_sync as a fallback source after client-specific backups.
+    keys.push("pb_live_sync");
+
+    return [...new Set(keys)]
+      .map(key => {
+        const obj = parse(localStorage.getItem(key));
+        const s = stateOf(obj);
+        const players = playersOf(obj && obj.type === "score_update" ? { state: s } : obj);
+        return {
+          key,
+          obj,
+          state: s,
+          players,
+          count: players.length
+        };
+      })
+      .filter(c => c.obj && c.state && c.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  function writeLocalCache(id, s, source) {
+    const now = new Date().toISOString();
+    const compatible = compatibleStateFromState(s);
+
+    const save = {
+      version: "36A",
+      savedAt: now,
+      source: source || MARKER,
+      players: compatible.players,
+      waitlist: compatible.waitlist,
+      teams: compatible.teams,
+      roundTeams: compatible.roundTeams,
+      schedule: compatible.schedule,
+      roundHistory: compatible.roundHistory,
+      byeRounds: compatible.byeRounds,
+      notifiedRounds: compatible.notifiedRounds,
+      startedRounds: compatible.startedRounds,
+      selectedCourts: compatible.selectedCourts,
+      partnerLocks: compatible.partnerLocks,
+      fixedTeams: compatible.fixedTeams,
+      activeMatchIdx: compatible.activeMatchIdx,
+      riverState: compatible.riverState,
+      state: compatible
+    };
+
+    const text = JSON.stringify(save);
+
+    localClientKeys(id).forEach(key => {
+      try { localStorage.setItem(key, text); } catch(e) {}
+    });
+
+    return save;
+  }
+
+  function applyState(s, source) {
+    if (!window.state || !s || !Array.isArray(s.players)) return false;
+
+    const compatible = compatibleStateFromState(s);
+
+    state.players = clone(compatible.players);
+    state.waitlist = clone(compatible.waitlist);
+    state.teams = clone(compatible.teams);
+    state.roundTeams = clone(compatible.roundTeams);
+    state.schedule = clone(compatible.schedule);
+    state.roundHistory = clone(compatible.roundHistory);
+    state.byeRounds = clone(compatible.byeRounds);
+    state.partnerLocks = clone(compatible.partnerLocks);
+    state.fixedTeams = clone(compatible.fixedTeams);
+
+    try { state.notifiedRounds = new Set(compatible.notifiedRounds || []); } catch(e) {}
+    try { state.startedRounds = new Set(compatible.startedRounds || []); } catch(e) {}
+    try { state.selectedCourts = new Set(compatible.selectedCourts || []); } catch(e) {}
+
+    writeLocalCache(clientId(), compatible, source || MARKER);
+
+    try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+    return true;
+  }
+
+  async function saveStateToServer(s, source) {
+    const id = clientId();
+
+    if (!id) {
+      return { ok: false, error: "Missing clientId." };
+    }
+
+    const compatible = compatibleStateFromState(s || snapshotVisibleState());
+
+    const res = await fetch(apiUrl(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        clientId: id,
+        source: source || MARKER,
+        state: compatible
+      })
+    });
+
+    const data = await res.json().catch(() => ({
+      ok: false,
+      error: "Invalid server response."
+    }));
+
+    return data;
+  }
+
+  window.pbServerClientStateV36ASave = async function(){
+    const id = clientId();
+    const s = snapshotVisibleState();
+
+    if (!s || !Array.isArray(s.players)) {
+      const result = { ok: false, clientId: id, error: "No visible app state found." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const result = await saveStateToServer(s, "manual-save-current-visible-state");
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  window.pbServerClientStateV36ALoad = async function(){
+    const id = clientId();
+
+    const res = await fetch(apiUrl(), {
+      method: "GET",
+      headers: { "cache-control": "no-store" }
+    });
+
+    const data = await res.json().catch(() => ({
+      ok: false,
+      error: "Invalid server response."
+    }));
+
+    if (data && data.ok && data.found && data.state) {
+      applyState(data.state, "server-load-v36a");
+    }
+
+    console.log(JSON.stringify(data, null, 2));
+    try { copy(JSON.stringify(data, null, 2)); } catch(e) {}
+    return data;
+  };
+
+  window.pbServerClientStateV36ABootstrapFromBestLocal = async function(){
+    const id = clientId();
+
+    if (!id) {
+      const result = { ok: false, error: "Missing clientId." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const candidates = localStateCandidates(id);
+
+    console.table(candidates.map(c => ({
+      key: c.key,
+      players: c.count,
+      names: c.players.map(p => p.name || p.playerName || p.fullName || "").filter(Boolean).slice(0, 5).join(", ")
+    })));
+
+    if (!candidates.length) {
+      const result = { ok: false, clientId: id, error: "No local candidate with players found." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const best = candidates[0];
+    const compatible = compatibleStateFromState(best.state);
+
+    applyState(compatible, "bootstrap-from-" + best.key);
+
+    const serverResult = await saveStateToServer(compatible, "bootstrap-from-" + best.key);
+
+    const result = {
+      ok: !!serverResult.ok,
+      clientId: id,
+      sourceKey: best.key,
+      players: compatible.players.length,
+      serverResult
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  window.pbServerClientStateV36AStatus = async function(){
+    const id = clientId();
+    const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+    const localCandidates = localStateCandidates(id).map(c => ({
+      key: c.key,
+      players: c.count
+    }));
+
+    let server = null;
+
+    try {
+      const res = await fetch(apiUrl(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      server = await res.json();
+    } catch(e) {
+      server = { ok: false, error: String(e && e.message || e) };
+    }
+
+    const result = {
+      marker: MARKER,
+      clientId: id,
+      visiblePlayers,
+      localCandidates,
+      serverFound: !!(server && server.found),
+      serverPlayers: server && server.summary ? server.summary.players : 0,
+      serverSavedAt: server && server.savedAt || null,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  async function autoRecoverFromServerIfEmpty() {
+    try {
+      const id = clientId();
+      if (!id) return false;
+
+      const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+      if (visiblePlayers > 0) return true;
+
+      const res = await fetch(apiUrl(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      const data = await res.json();
+
+      if (data && data.ok && data.found && data.state) {
+        const serverPlayers = playersOf(data.state).length;
+
+        if (serverPlayers > 0) {
+          applyState(data.state, "auto-recover-from-server-v36a");
+          console.warn(MARKER + " auto recovered from server", {
+            clientId: id,
+            players: serverPlayers
+          });
+          return true;
+        }
+      }
+    } catch(e) {
+      console.warn(MARKER + " auto recover failed", e);
+    }
+
+    return false;
+  }
+
+  function renderAdminCard() {
+    try {
+      if (document.getElementById(CARD_ID)) return;
+
+      const root = document.getElementById("sec-admin") ||
+        document.getElementById("admin") ||
+        document.querySelector("[data-section='admin']");
+
+      if (!root) return;
+
+      const card = document.createElement("div");
+      card.id = CARD_ID;
+      card.className = "card";
+      card.style.marginTop = "1rem";
+
+      card.innerHTML = `
+        <div class="card-title">Server Client State V36A</div>
+        <p style="color:var(--txt2)">Cloud save/load for the current client. Use this to make the server the source of truth.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary btn-sm" onclick="pbServerClientStateV36ABootstrapFromBestLocal()">Bootstrap Best Local → Server</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36ASave()">Save Current → Server</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36ALoad()">Load Server → App</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36AStatus()">Status</button>
+        </div>
+      `;
+
+      root.appendChild(card);
+    } catch(e) {}
+  }
+
+  function schedule() {
+    setTimeout(autoRecoverFromServerIfEmpty, 700);
+    setTimeout(autoRecoverFromServerIfEmpty, 1800);
+    setTimeout(renderAdminCard, 800);
+    setTimeout(renderAdminCard, 1800);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule);
+  } else {
+    schedule();
+  }
+
+  window.addEventListener("load", schedule);
+})();
+
+
+
+/* PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B */
+(function(){
+  const MARKER = "PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B";
+  if (window.__PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B__) return;
+  window.__PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function playersOf(save) {
+    if (!save || typeof save !== "object") return [];
+    if (Array.isArray(save.players)) return save.players;
+    if (save.state && Array.isArray(save.state.players)) return save.state.players;
+    return [];
+  }
+
+  function playerCount(value) {
+    const save = typeof value === "string" ? parse(value) : value;
+    return playersOf(save).length;
+  }
+
+  function stateOf(save) {
+    if (!save || typeof save !== "object") return null;
+    if (save.type === "score_update" && save.state) return save.state;
+    if (save.state && typeof save.state === "object") return save.state;
+    return save;
+  }
+
+  function isClientSaveKey(key) {
+    const clientId = getClientId();
+    if (!clientId) return false;
+
+    key = String(key || "");
+
+    return (
+      key === "pickleball_autosave" ||
+      key === "pickleball_autosave::client-live-v33c::" + clientId ||
+      key === "pickleball_autosave::client::" + clientId
+    );
+  }
+
+  function buildCompatibleSave(sourceState, sourceKey) {
+    const s = clone(sourceState || {});
+    const now = new Date().toISOString();
+
+    const fixed = {
+      version: "2.0",
+      savedAt: now,
+
+      players: s.players || [],
+      waitlist: s.waitlist || [],
+      teams: s.teams || [],
+      roundTeams: s.roundTeams || [],
+      schedule: s.schedule || [],
+      roundHistory: s.roundHistory || [],
+      byeRounds: s.byeRounds || [],
+      notifiedRounds: Array.isArray(s.notifiedRounds) ? s.notifiedRounds : [],
+      startedRounds: Array.isArray(s.startedRounds) ? s.startedRounds : [],
+      selectedCourts: Array.isArray(s.selectedCourts) ? s.selectedCourts : [],
+      partnerLocks: s.partnerLocks || [],
+      fixedTeams: s.fixedTeams || [],
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: s.riverState || { enabled: false, numCourts: 0, partners: [] },
+
+      state: {
+        players: s.players || [],
+        waitlist: s.waitlist || [],
+        teams: s.teams || [],
+        roundTeams: s.roundTeams || [],
+        schedule: s.schedule || [],
+        roundHistory: s.roundHistory || [],
+        byeRounds: s.byeRounds || [],
+        notifiedRounds: Array.isArray(s.notifiedRounds) ? s.notifiedRounds : [],
+        startedRounds: Array.isArray(s.startedRounds) ? s.startedRounds : [],
+        selectedCourts: Array.isArray(s.selectedCourts) ? s.selectedCourts : [],
+        partnerLocks: s.partnerLocks || [],
+        fixedTeams: s.fixedTeams || [],
+        activeMatchIdx: s.activeMatchIdx ?? null,
+        riverState: s.riverState || { enabled: false, numCourts: 0, partners: [] }
+      },
+
+      source: MARKER,
+      recoveredFrom: sourceKey || null,
+      recoveredAt: now
+    };
+
+    return fixed;
+  }
+
+  function clientKeys(clientId) {
+    return [
+      "pickleball_autosave::client-live-v33c::" + clientId,
+      "pickleball_autosave::client::" + clientId,
+      "pickleball_autosave"
+    ];
+  }
+
+  function findBestSource(clientId) {
+    const keys = [];
+
+    clientKeys(clientId).forEach(k => keys.push(k));
+    keys.push("pb_live_sync");
+
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (
+          key.includes(clientId) ||
+          key.includes("PB_BACKUP_BEFORE") ||
+          key.includes("client-snapshot-v33b")
+        ) {
+          keys.push(key);
+        }
+      });
+    } catch(e) {}
+
+    const candidates = [...new Set(keys)]
+      .map(key => {
+        const obj = parse(localStorage.getItem(key));
+        const state = stateOf(obj);
+        const count = playerCount(obj);
+        return { key, obj, state, count };
+      })
+      .filter(c => c.obj && c.state && c.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return candidates[0] || null;
+  }
+
+  const originalSetItem = Storage.prototype.setItem;
+
+  Storage.prototype.setItem = function(key, value) {
+    try {
+      if (this === localStorage && isClientSaveKey(key)) {
+        const oldValue = localStorage.getItem(key);
+        const oldCount = playerCount(oldValue);
+        const newCount = playerCount(String(value || ""));
+
+        if (oldCount > 0 && newCount === 0) {
+          console.warn(MARKER + " blocked empty save overwrite", {
+            key,
+            oldCount,
+            newCount
+          });
+
+          try {
+            sessionStorage.setItem(MARKER + "_LAST_BLOCKED", JSON.stringify({
+              key,
+              oldCount,
+              newCount,
+              blockedAt: new Date().toISOString()
+            }));
+          } catch(e) {}
+
+          return;
+        }
+      }
+    } catch(e) {}
+
+    return originalSetItem.apply(this, arguments);
+  };
+
+  function applyStateFromSave(save) {
+    if (!window.state || !save) return false;
+
+    const s = stateOf(save);
+    if (!s || !Array.isArray(s.players) || !s.players.length) return false;
+
+    try {
+      state.players = clone(s.players || []);
+      state.waitlist = clone(s.waitlist || []);
+      state.teams = clone(s.teams || []);
+      state.roundTeams = clone(s.roundTeams || []);
+      state.schedule = clone(s.schedule || []);
+      state.roundHistory = clone(s.roundHistory || []);
+      state.byeRounds = clone(s.byeRounds || []);
+      state.partnerLocks = clone(s.partnerLocks || []);
+      state.fixedTeams = clone(s.fixedTeams || []);
+
+      try { state.notifiedRounds = new Set(s.notifiedRounds || []); } catch(e) {}
+      try { state.startedRounds = new Set(s.startedRounds || []); } catch(e) {}
+      try { state.selectedCourts = new Set(s.selectedCourts || []); } catch(e) {}
+
+      try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+      try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " applyState failed", e);
+      return false;
+    }
+  }
+
+  function recoverIfEmpty() {
+    const clientId = getClientId();
+    if (!clientId) return false;
+
+    const visibleCount = window.state && Array.isArray(state.players) ? state.players.length : 0;
+    const currentKey = "pickleball_autosave::client-live-v33c::" + clientId;
+    const currentCount = playerCount(localStorage.getItem(currentKey));
+
+    if (visibleCount > 0 && currentCount > 0) return true;
+
+    const best = findBestSource(clientId);
+    if (!best || best.count <= 0) return false;
+
+    const fixed = buildCompatibleSave(best.state, best.key);
+    const fixedText = JSON.stringify(fixed);
+
+    clientKeys(clientId).forEach(key => {
+      try { originalSetItem.call(localStorage, key, fixedText); } catch(e) {}
+    });
+
+    applyStateFromSave(fixed);
+
+    console.warn(MARKER + " restored client players", {
+      clientId,
+      players: fixed.players.length,
+      sourceKey: best.key
+    });
+
+    return true;
+  }
+
+  window.pbClientSaveOverwriteGuardV35BStatus = function() {
+    const clientId = getClientId();
+    const key = "pickleball_autosave::client-live-v33c::" + clientId;
+    const save = parse(localStorage.getItem(key)) || {};
+    const topPlayers = Array.isArray(save.players) ? save.players.length : 0;
+    const statePlayers = save.state && Array.isArray(save.state.players) ? save.state.players.length : 0;
+    const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+
+    let lastBlocked = null;
+    try { lastBlocked = sessionStorage.getItem(MARKER + "_LAST_BLOCKED"); } catch(e) {}
+
+    const result = {
+      marker: MARKER,
+      clientId,
+      key,
+      topPlayers,
+      statePlayers,
+      visiblePlayers,
+      source: save.source || null,
+      lastBlocked,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function scheduleRecover() {
+    setTimeout(recoverIfEmpty, 25);
+    setTimeout(recoverIfEmpty, 150);
+    setTimeout(recoverIfEmpty, 500);
+    setTimeout(recoverIfEmpty, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleRecover);
+  } else {
+    scheduleRecover();
+  }
+
+  window.addEventListener("load", scheduleRecover);
+})();
+
 window.__CLIENT__={"client":{"id":"coachjohn","name":"Coach John Pickleball","adminEmail":"coachjohnpickleball@gmail.com"},"branding":{"appName":"Pickleball Pro","logoEmoji":"\ud83c\udfd3","primaryColor":"#C6FF00","accentColor":"#FF9800"},"worker":{"name":"pickleball-relay","kvNamespaceId":"faac1bcc30ef4711a9377e60ef70636d"},"limits":{"maxSmsPerDay":200,"maxEmailPerDay":500},"features":{"sms":true,"email":true,"mobileSync":true,"playoffs":true,"season":true,"duprExport":true}};
 </script>
 <meta charset="UTF-8">
@@ -4763,6 +6318,81 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 // fetch() across origins, and pages.dev (Cloudflare Pages' shared domain)
 // can't be scoped to a specific path in Access either — both dead ends
 // this project hit before landing on "one Worker serves everything."
+
+/* PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2 */
+(function(){
+  if (window.__PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_INSTALLED__) return;
+  window.__PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_INSTALLED__ = true;
+
+  function pbV33E2Norm(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function pbV33E2UrlClientId() {
+    try {
+      return pbV33E2Norm(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function pbV33E2IsRecoveryPrompt(message) {
+    const text = String(message || "").toLowerCase();
+    return (
+      text.includes("resume previous") ||
+      text.includes("resume saved session") ||
+      text.includes("previous local browser session") ||
+      text.includes("last saved")
+    );
+  }
+
+  const originalConfirm = window.confirm.bind(window);
+
+  window.confirm = function(message) {
+    const clientId = pbV33E2UrlClientId();
+
+    if (clientId && pbV33E2IsRecoveryPrompt(message)) {
+      console.warn("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2 blocked shared recovery popup", {
+        clientId,
+        message: String(message || "")
+      });
+
+      try {
+        sessionStorage.setItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED", JSON.stringify({
+          clientId,
+          message: String(message || ""),
+          blockedAt: new Date().toISOString()
+        }));
+      } catch (e) {}
+
+      return false;
+    }
+
+    return originalConfirm(message);
+  };
+
+  window.pbRecoveryPopupBlockerV33E2Status = function(){
+    const result = {
+      marker: "PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2",
+      url: location.href,
+      clientId: pbV33E2UrlClientId(),
+      installed: true,
+      lastBlocked: sessionStorage.getItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED") || null,
+      v33cPresent: document.documentElement.innerHTML.includes("PB_CLIENT_STRICT_ISOLATION_V33C")
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch (e) {}
+    return result;
+  };
+})();
+
 var RELAY_BASE = '';
 
 // ── State, navigation, utility functions ─────────────────
@@ -52323,6 +53953,957 @@ function exportEndSessionSummary(){
     return st;
   };
 })();
+
+
+
+
+
+/* PB_CLIENT_URL_AUTHORITY_FIX_V32C */
+(function(){
+  const MARKER = "PB_CLIENT_URL_AUTHORITY_FIX_V32C";
+  const IDENTITY_KEY = "PB_CLIENT_IDENTITY_V22";
+  const LICENSE_KEY = "PB_CLIENT_LICENSE_SERVER_V24";
+  const ONBOARDING_KEY = "PB_CLIENT_ONBOARDING_V31_LAST";
+
+  if (window.__PB_CLIENT_URL_AUTHORITY_FIX_V32C_INSTALLED__) return;
+  window.__PB_CLIENT_URL_AUTHORITY_FIX_V32C_INSTALLED__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    let id = "";
+    try {
+      id = new URLSearchParams(window.location.search || "").get("clientId") || "";
+    } catch (e) {}
+
+    if (!id) {
+      const m = String(window.location.href || "").match(/[?&]clientId=([^&#?]+)/i);
+      if (m) {
+        try { id = decodeURIComponent(m[1]); } catch (e) { id = m[1]; }
+      }
+    }
+
+    return cleanClientId(id);
+  }
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function writeIdentity(clientId, license, source) {
+    license = license || {};
+    const existing = readJson(IDENTITY_KEY);
+
+    const plan = String(
+      license.licenseLevel ||
+      license.plan ||
+      existing.licenseLevel ||
+      ""
+    ).toLowerCase();
+
+    const status = String(
+      license.licenseStatus ||
+      license.status ||
+      existing.licenseStatus ||
+      "active"
+    ).toLowerCase();
+
+    const identity = Object.assign({}, existing, {
+      version: 22,
+      clientId,
+      clientName: license.clientName || license.companyName || existing.clientName || clientId,
+      licenseLevel: plan,
+      licenseStatus: status,
+      supportEmail: license.supportEmail || existing.supportEmail || "",
+      siteUrl: license.siteUrl || existing.siteUrl || "",
+      source: source || MARKER,
+      savedAt: new Date().toISOString()
+    });
+
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
+    return identity;
+  }
+
+  function normalizeLicense(clientId, data) {
+    data = data || {};
+    const raw = data.license || data.clientLicense || data.record || data.client || data || {};
+
+    const plan = String(
+      raw.licenseLevel ||
+      raw.plan ||
+      raw.licenseLabel ||
+      "trial"
+    ).toLowerCase();
+
+    const status = String(
+      raw.licenseStatus ||
+      raw.status ||
+      "active"
+    ).toLowerCase();
+
+    const license = Object.assign({}, raw, {
+      version: raw.version || "24B",
+      marker: raw.marker || "PB_SERVER_LICENSE_ROUTE_FIX_V24B",
+      clientId,
+      clientName: raw.clientName || raw.companyName || clientId,
+      licenseLevel: plan,
+      licenseLabel: raw.licenseLabel || (plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "Trial"),
+      licenseStatus: status,
+      playerLimit: Number(raw.playerLimit || raw.maxPlayers || (plan === "club" ? 40 : 16)),
+      adminSeats: Number(raw.adminSeats || (plan === "club" ? 2 : 1)),
+      source: MARKER,
+      updatedAt: raw.updatedAt || new Date().toISOString()
+    });
+
+    return license;
+  }
+
+  function clearStaleLicense(reason) {
+    try { localStorage.removeItem(LICENSE_KEY); } catch (e) {}
+    try { localStorage.removeItem(ONBOARDING_KEY); } catch (e) {}
+    try { sessionStorage.setItem("PB_CLIENT_URL_AUTHORITY_FIX_V32C_REASON", reason || "url-authority"); } catch (e) {}
+  }
+
+  function cleanUrlFor(clientId) {
+    let path = window.location.pathname || "/";
+    path = path.replace(/\/&.*$/i, "/");
+    if (!path.startsWith("/")) path = "/" + path;
+    if (!path) path = "/";
+    return window.location.origin + path + "?clientId=" + encodeURIComponent(clientId) + "&v=url-authority-v32c-" + Date.now();
+  }
+
+  async function fetchServerLicense(clientId) {
+    try {
+      const res = await fetch("/api/client-license?clientId=" + encodeURIComponent(clientId) + "&v=" + Date.now(), {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (!res.ok) throw new Error("HTTP " + res.status);
+
+      const data = await res.json();
+      const license = normalizeLicense(clientId, data);
+
+      localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+      writeIdentity(clientId, license, MARKER + "_SERVER");
+
+      return license;
+    } catch (e) {
+      console.warn(MARKER + " server sync failed", e);
+      return null;
+    }
+  }
+
+  async function applyUrlAuthority() {
+    const clientId = urlClientId();
+    if (!clientId) return;
+
+    const identity = readJson(IDENTITY_KEY);
+    const license = readJson(LICENSE_KEY);
+
+    const identityId = cleanClientId(identity.clientId || "");
+    const licenseId = cleanClientId(license.clientId || "");
+
+    if (identityId !== clientId || (licenseId && licenseId !== clientId)) {
+      clearStaleLicense("url-client-overrode-cache");
+      writeIdentity(clientId, { clientName: clientId, licenseStatus: "active" }, MARKER + "_URL");
+
+      const reloadKey = "PB_CLIENT_URL_AUTHORITY_FIX_V32C_RELOAD_" + clientId;
+      let alreadyReloaded = "";
+      try { alreadyReloaded = sessionStorage.getItem(reloadKey) || ""; } catch (e) {}
+
+      if (alreadyReloaded !== "1") {
+        try { sessionStorage.setItem(reloadKey, "1"); } catch (e) {}
+        window.location.replace(cleanUrlFor(clientId));
+        return;
+      }
+    }
+
+    const fresh = await fetchServerLicense(clientId);
+
+    try {
+      window.dispatchEvent(new CustomEvent("pb:client-url-authority-v32c", {
+        detail: { clientId, license: fresh }
+      }));
+    } catch (e) {}
+
+    [
+      "renderDashboard",
+      "renderAdminLock",
+      "renderPlayers",
+      "renderSchedule"
+    ].forEach(function(fn){
+      try {
+        if (typeof window[fn] === "function") window[fn]();
+      } catch (e) {}
+    });
+  }
+
+  window.pbClientUrlAuthorityFixV32C = applyUrlAuthority;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyUrlAuthority);
+  } else {
+    applyUrlAuthority();
+  }
+
+  window.addEventListener("load", function(){
+    setTimeout(applyUrlAuthority, 250);
+    setTimeout(applyUrlAuthority, 1000);
+  });
+})();
+
+
+
+
+
+/* PB_CLIENT_STRICT_ISOLATION_V33C */
+(function(){
+  const MARKER = "PB_CLIENT_STRICT_ISOLATION_V33C";
+  const IDENTITY_KEY = "PB_CLIENT_IDENTITY_V22";
+  const LICENSE_KEY = "PB_CLIENT_LICENSE_SERVER_V24";
+  const LAST_CLIENT_KEY = "PB_CLIENT_STRICT_ISOLATION_V33C_LAST_CLIENT";
+
+  if (window.__PB_CLIENT_STRICT_ISOLATION_V33C_INSTALLED__) return;
+  window.__PB_CLIENT_STRICT_ISOLATION_V33C_INSTALLED__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase() || "local-client";
+  }
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function currentClientId() {
+    const fromUrl = urlClientId();
+    if (fromUrl && fromUrl !== "local-client") return fromUrl;
+
+    const identity = readJson(IDENTITY_KEY);
+    if (identity.clientId) return cleanClientId(identity.clientId);
+
+    const license = readJson(LICENSE_KEY);
+    if (license.clientId) return cleanClientId(license.clientId);
+
+    return "local-client";
+  }
+
+  function baseAutoSaveKey() {
+    try {
+      if (typeof AUTO_SAVE_KEY !== "undefined" && AUTO_SAVE_KEY) return String(AUTO_SAVE_KEY);
+    } catch (e) {}
+    return "pickleball_autosave";
+  }
+
+  function liveKey(clientId) {
+    return baseAutoSaveKey() + "::client-live-v33c::" + cleanClientId(clientId || currentClientId());
+  }
+
+  function snapshotKeyV33B(clientId) {
+    return baseAutoSaveKey() + "::client-snapshot-v33b::" + cleanClientId(clientId || currentClientId()) + "::latest";
+  }
+
+  function stateSummaryFromData(data) {
+    const s = data && data.state ? data.state : {};
+    const players = Array.isArray(s.players) ? s.players.length : 0;
+    const rounds = Array.isArray(s.schedule) ? s.schedule.length : 0;
+    const matches = Array.isArray(s.schedule)
+      ? s.schedule.reduce((sum, round) => sum + ((round || []).length || 0), 0)
+      : 0;
+
+    return { players, rounds, matches };
+  }
+
+  function currentStateSummary() {
+    try {
+      return {
+        players: Array.isArray(state.players) ? state.players.length : 0,
+        rounds: Array.isArray(state.schedule) ? state.schedule.length : 0,
+        matches: Array.isArray(state.schedule)
+          ? state.schedule.reduce((sum, round) => sum + ((round || []).length || 0), 0)
+          : 0
+      };
+    } catch (e) {
+      return { players: 0, rounds: 0, matches: 0 };
+    }
+  }
+
+  function hasSessionData(data) {
+    const s = stateSummaryFromData(data);
+    return s.players > 0 || s.rounds > 0 || s.matches > 0;
+  }
+
+  function resetVisibleSession() {
+    if (!window.state || typeof state !== "object") return;
+
+    state.players = [];
+    state.waitlist = [];
+    state.teams = [];
+    state.roundTeams = [];
+    state.schedule = [];
+    state.activeMatchIdx = null;
+    state.roundHistory = [];
+    state.byeRounds = [];
+    state.notifiedRounds = new Set();
+    state.startedRounds = new Set();
+    state._skippedPods = [];
+    state._manualAdjustments = 0;
+    state.fixedTeams = [];
+    state.partnerLocks = [];
+  }
+
+  function renderAll() {
+    [
+      "renderPlayers",
+      "renderTeams",
+      "renderSchedule",
+      "renderCourtsGrid",
+      "updateCourtSelectorUI",
+      "updateProgress",
+      "renderStandings",
+      "renderPlayoffs",
+      "onModeChange",
+      "renderDashboard",
+      "renderAdminLock"
+    ].forEach(function(fn){
+      try {
+        if (typeof window[fn] === "function") window[fn]();
+      } catch (e) {}
+    });
+  }
+
+  function saveLiveForClient(reason) {
+    const clientId = currentClientId();
+
+    try {
+      if (typeof buildSaveData !== "function") return false;
+
+      const data = buildSaveData();
+      data.clientId = clientId;
+      data.clientIsolationVersion = MARKER;
+      data.clientIsolationSavedAt = new Date().toISOString();
+      data.clientIsolationReason = reason || "save";
+
+      localStorage.setItem(liveKey(clientId), JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.warn(MARKER + " scoped save failed", e);
+      return false;
+    }
+  }
+
+  function getBestSavedForClient(clientId) {
+    const keys = [
+      liveKey(clientId),
+      snapshotKeyV33B(clientId)
+    ];
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+
+        const data = JSON.parse(raw);
+        if (!hasSessionData(data)) continue;
+
+        return { key, data };
+      } catch (e) {}
+    }
+
+    return null;
+  }
+
+  function clearSharedAutoSave() {
+    try { localStorage.removeItem(baseAutoSaveKey()); } catch (e) {}
+  }
+
+  function applyClientBoundary(reason) {
+    const clientId = currentClientId();
+    if (!clientId || clientId === "local-client") return false;
+
+    const lastClient = cleanClientId(localStorage.getItem(LAST_CLIENT_KEY) || "");
+    const boundaryChange = lastClient && lastClient !== clientId;
+
+    if (!lastClient) {
+      localStorage.setItem(LAST_CLIENT_KEY, clientId);
+      saveLiveForClient("initial-client");
+      return true;
+    }
+
+    if (!boundaryChange) {
+      saveLiveForClient("same-client");
+      return true;
+    }
+
+    clearSharedAutoSave();
+
+    const saved = getBestSavedForClient(clientId);
+
+    if (saved && typeof restoreSaveData === "function") {
+      try {
+        restoreSaveData(saved.data);
+        renderAll();
+
+        try {
+          if (typeof toast === "function") {
+            toast("Loaded isolated session for " + clientId, "ok");
+          }
+        } catch (e) {}
+      } catch (e) {
+        console.warn(MARKER + " restore failed", e);
+        resetVisibleSession();
+        renderAll();
+      }
+    } else {
+      resetVisibleSession();
+      renderAll();
+
+      try {
+        if (typeof toast === "function") {
+          toast("Started fresh isolated session for " + clientId, "ok");
+        }
+      } catch (e) {}
+    }
+
+    localStorage.setItem(LAST_CLIENT_KEY, clientId);
+    saveLiveForClient("client-boundary-" + (reason || "switch"));
+
+    return true;
+  }
+
+  function installAutoSaveMirror() {
+    try {
+      const original = window.autoSave || autoSave;
+
+      if (typeof original !== "function") return;
+      if (original.__pbClientStrictIsolationV33C) return;
+
+      const wrapped = function(){
+        const result = original.apply(this, arguments);
+
+        setTimeout(function(){
+          saveLiveForClient("autosave-mirror");
+        }, 650);
+
+        return result;
+      };
+
+      wrapped.__pbClientStrictIsolationV33C = true;
+      wrapped.__pbOriginalAutoSaveV33C = original;
+
+      window.autoSave = wrapped;
+      try { autoSave = wrapped; } catch (e) {}
+    } catch (e) {
+      console.warn(MARKER + " autosave mirror install failed", e);
+    }
+  }
+
+  window.pbClientStrictIsolationV33CStatus = function(){
+    const clientId = currentClientId();
+    const result = {
+      marker: MARKER,
+      url: location.href,
+      currentClientId: clientId,
+      lastClient: localStorage.getItem(LAST_CLIENT_KEY) || null,
+      sharedAutoSaveKey: baseAutoSaveKey(),
+      sharedAutoSaveExists: !!localStorage.getItem(baseAutoSaveKey()),
+      liveKey: liveKey(clientId),
+      liveExists: !!localStorage.getItem(liveKey(clientId)),
+      v33bSnapshotKey: snapshotKeyV33B(clientId),
+      v33bSnapshotExists: !!localStorage.getItem(snapshotKeyV33B(clientId)),
+      currentState: currentStateSummary()
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch (e) {}
+    return result;
+  };
+
+  window.pbClientStrictIsolationV33CSaveNow = function(){
+    const ok = saveLiveForClient("manual");
+    console.log(ok ? "Saved V33C live client session." : "V33C live save failed.");
+    return ok;
+  };
+
+  function start() {
+    installAutoSaveMirror();
+    setTimeout(function(){ applyClientBoundary("start-50"); }, 50);
+    setTimeout(function(){ applyClientBoundary("start-500"); }, 500);
+    setTimeout(function(){ installAutoSaveMirror(); applyClientBoundary("start-1500"); }, 1500);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+
+  window.addEventListener("load", start);
+  window.addEventListener("pb:client-url-authority-v32c", start);
+})();
+
+
+
+/* PB_ADMIN_CONSOLE_CLEANUP_V34A */
+(function(){
+  const MARKER = "PB_ADMIN_CONSOLE_CLEANUP_V34A";
+  const OVERVIEW_ID = "pb-admin-overview-v34a";
+  const SHELL_ID = "pb-admin-cleanup-shell-v34a";
+  const STYLE_ID = "pb-admin-cleanup-style-v34a";
+
+  if (window.__PB_ADMIN_CONSOLE_CLEANUP_V34A_INSTALLED__) return;
+  window.__PB_ADMIN_CONSOLE_CLEANUP_V34A_INSTALLED__ = true;
+
+  function readJson(key) {
+    try { return JSON.parse(localStorage.getItem(key) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function esc(value) {
+    try {
+      if (typeof escHtml === "function") return escHtml(String(value ?? ""));
+    } catch(e) {}
+
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function adminRoot() {
+    return document.getElementById("sec-admin") ||
+      document.querySelector(".section#admin") ||
+      document.querySelector("[data-section='admin']") ||
+      document.querySelector("[data-tab='admin']") ||
+      null;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+      #${OVERVIEW_ID} {
+        border: 1px solid var(--border, rgba(255,255,255,.16));
+        border-radius: 18px;
+        padding: 1rem;
+        margin: 0 0 1rem;
+        background: rgba(255,255,255,.045);
+      }
+
+      #${OVERVIEW_ID} .pb-v34-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+        gap: .7rem;
+        margin-top: .85rem;
+      }
+
+      #${OVERVIEW_ID} .pb-v34-tile {
+        border: 1px solid var(--border, rgba(255,255,255,.12));
+        border-radius: 14px;
+        padding: .75rem;
+        background: rgba(0,0,0,.12);
+      }
+
+      #${OVERVIEW_ID} .pb-v34-label {
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--txt3, #9aa);
+        font-weight: 800;
+      }
+
+      #${OVERVIEW_ID} .pb-v34-value {
+        margin-top: .2rem;
+        font-weight: 850;
+        color: var(--txt, inherit);
+        word-break: break-word;
+      }
+
+      #${SHELL_ID} {
+        display: grid;
+        gap: .8rem;
+      }
+
+      #${SHELL_ID} details.pb-v34-section {
+        border: 1px solid var(--border, rgba(255,255,255,.14));
+        border-radius: 18px;
+        background: rgba(255,255,255,.03);
+        overflow: hidden;
+      }
+
+      #${SHELL_ID} details.pb-v34-section > summary {
+        cursor: pointer;
+        list-style: none;
+        padding: .9rem 1rem;
+        font-weight: 900;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        user-select: none;
+      }
+
+      #${SHELL_ID} details.pb-v34-section > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      #${SHELL_ID} .pb-v34-count {
+        font-size: .75rem;
+        color: var(--txt3, #9aa);
+        font-weight: 700;
+      }
+
+      #${SHELL_ID} .pb-v34-body {
+        padding: 0 1rem 1rem;
+        display: grid;
+        gap: .8rem;
+      }
+
+      #${SHELL_ID} .pb-v34-body > * {
+        margin-top: 0 !important;
+      }
+
+      .pb-v34-hidden-debug {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function currentStatus() {
+    const identity = readJson("PB_CLIENT_IDENTITY_V22");
+    const license = readJson("PB_CLIENT_LICENSE_SERVER_V24");
+    const clientId = urlClientId() || cleanClientId(identity.clientId || license.clientId || "");
+    const serverId = cleanClientId(license.clientId || "");
+    const browserId = cleanClientId(identity.clientId || "");
+
+    let lastBlocked = null;
+    try {
+      lastBlocked = sessionStorage.getItem("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2_LAST_BLOCKED") || null;
+    } catch(e) {}
+
+    return {
+      clientId: clientId || "—",
+      browserId: browserId || "—",
+      serverId: serverId || "—",
+      clientsMatch: !!clientId && clientId === browserId && clientId === serverId,
+      name: license.clientName || identity.clientName || clientId || "—",
+      plan: license.licenseLevel || license.licenseLabel || identity.licenseLevel || "—",
+      status: license.licenseStatus || identity.licenseStatus || "—",
+      playerLimit: license.playerLimit || "—",
+      adminSeats: license.adminSeats || "—",
+      v32c: document.documentElement.innerHTML.includes("PB_CLIENT_URL_AUTHORITY_FIX_V32C"),
+      v33c: document.documentElement.innerHTML.includes("PB_CLIENT_STRICT_ISOLATION_V33C"),
+      v33e2: document.documentElement.innerHTML.includes("PB_BLOCK_SHARED_RECOVERY_POPUP_V33E2"),
+      lastBlocked
+    };
+  }
+
+  function renderOverview(root) {
+    if (!root) return;
+
+    let card = document.getElementById(OVERVIEW_ID);
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = OVERVIEW_ID;
+      root.insertBefore(card, root.firstChild);
+    }
+
+    const s = currentStatus();
+    const matchBadge = s.clientsMatch ? "✅ Client Match" : "⚠️ Check Client";
+    const isolation = s.v32c && s.v33c && s.v33e2 ? "✅ Active" : "⚠️ Check";
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ball,#c6ff00);font-weight:900">Admin Overview</div>
+          <h3 style="margin:.18rem 0 0">Current client health</h3>
+          <div style="margin-top:.25rem;color:var(--txt2,#9aa)">Quick status first. Detailed tools are grouped below.</div>
+        </div>
+        <div style="font-weight:900;color:${s.clientsMatch ? "var(--lime,#c6ff00)" : "var(--red,#ff6b6b)"}">${esc(matchBadge)}</div>
+      </div>
+
+      <div class="pb-v34-grid">
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Client</div>
+          <div class="pb-v34-value">${esc(s.name)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Client ID</div>
+          <div class="pb-v34-value">${esc(s.clientId)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Plan / Status</div>
+          <div class="pb-v34-value">${esc(String(s.plan).toUpperCase())} · ${esc(String(s.status).toUpperCase())}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Limits</div>
+          <div class="pb-v34-value">${esc(s.playerLimit)} players · ${esc(s.adminSeats)} admins</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Isolation</div>
+          <div class="pb-v34-value">${esc(isolation)}</div>
+        </div>
+        <div class="pb-v34-tile">
+          <div class="pb-v34-label">Recovery Popup</div>
+          <div class="pb-v34-value">${s.v33e2 ? "✅ Protected" : "⚠️ Check"}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem">
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('client')">Client Setup</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('security')">Security</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('recovery')">Recovery</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34AOpen('developer')">Diagnostics</button>
+        <button class="btn btn-secondary btn-sm" onclick="pbAdminCleanupV34ARender()">Refresh</button>
+      </div>
+    `;
+  }
+
+  function sectionForElement(el) {
+    const text = String(el.innerText || el.textContent || "").toLowerCase();
+    const id = String(el.id || "").toLowerCase();
+
+    if (
+      text.includes("client onboarding") ||
+      text.includes("company / license") ||
+      text.includes("server license registry") ||
+      text.includes("advanced license admin") ||
+      text.includes("server license enforcement") ||
+      text.includes("plan limits") ||
+      id.includes("client-license") ||
+      id.includes("license-admin") ||
+      id.includes("onboarding")
+    ) return "client";
+
+    if (
+      text.includes("admin lock") ||
+      text.includes("access log") ||
+      text.includes("tos status") ||
+      text.includes("terms settings") ||
+      text.includes("security")
+    ) return "security";
+
+    if (
+      text.includes("round backup") ||
+      text.includes("backup completed") ||
+      text.includes("restore") ||
+      text.includes("score audit") ||
+      text.includes("score correction") ||
+      text.includes("recovery") ||
+      text.includes("backup / restore")
+    ) return "recovery";
+
+    if (
+      text.includes("pb_client_") ||
+      text.includes("pb_block_") ||
+      text.includes("diagnostic") ||
+      text.includes("marker") ||
+      text.includes("v32") ||
+      text.includes("v33") ||
+      text.includes("developer")
+    ) return "developer";
+
+    return "other";
+  }
+
+  const sectionMeta = {
+    client: { title: "🏢 Client Setup", open: true },
+    security: { title: "🔐 Security / Lock", open: false },
+    recovery: { title: "🧰 Tournament Recovery", open: false },
+    developer: { title: "🧪 Developer Diagnostics", open: false },
+    other: { title: "⚙️ Other Admin Tools", open: false }
+  };
+
+  function ensureShell(root) {
+    let shell = document.getElementById(SHELL_ID);
+
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.id = SHELL_ID;
+      root.appendChild(shell);
+    }
+
+    Object.keys(sectionMeta).forEach(key => {
+      let section = document.getElementById("pb-v34-section-" + key);
+
+      if (!section) {
+        section = document.createElement("details");
+        section.id = "pb-v34-section-" + key;
+        section.className = "pb-v34-section";
+        if (sectionMeta[key].open) section.open = true;
+
+        section.innerHTML = `
+          <summary>
+            <span>${sectionMeta[key].title}</span>
+            <span class="pb-v34-count" id="pb-v34-count-${key}">0 items</span>
+          </summary>
+          <div class="pb-v34-body" id="pb-v34-body-${key}"></div>
+        `;
+
+        shell.appendChild(section);
+      }
+    });
+
+    return shell;
+  }
+
+  function groupAdminCards(root) {
+    if (!root) return;
+
+    const shell = ensureShell(root);
+    const candidates = Array.from(root.children).filter(el => {
+      if (!el || !el.id && !el.className) return false;
+      if (el.id === OVERVIEW_ID || el.id === SHELL_ID) return false;
+      if (el.closest && el.closest("#" + SHELL_ID)) return false;
+      if (el.tagName === "SCRIPT" || el.tagName === "STYLE") return false;
+      if (el.dataset && el.dataset.pbV34Skip === "1") return false;
+
+      const text = String(el.innerText || el.textContent || "").trim();
+      if (!text) return false;
+
+      return true;
+    });
+
+    candidates.forEach(el => {
+      const key = sectionForElement(el);
+      const body = document.getElementById("pb-v34-body-" + key);
+      if (!body) return;
+
+      el.dataset.pbV34Grouped = key;
+      body.appendChild(el);
+    });
+
+    Object.keys(sectionMeta).forEach(key => {
+      const body = document.getElementById("pb-v34-body-" + key);
+      const count = document.getElementById("pb-v34-count-" + key);
+      const section = document.getElementById("pb-v34-section-" + key);
+
+      const n = body ? body.children.length : 0;
+
+      if (count) count.textContent = n + (n === 1 ? " item" : " items");
+      if (section) section.style.display = n ? "" : "none";
+    });
+  }
+
+  function render() {
+    ensureStyle();
+
+    const root = adminRoot();
+    if (!root) return;
+
+    renderOverview(root);
+    groupAdminCards(root);
+  }
+
+  window.pbAdminCleanupV34ARender = render;
+
+  window.pbAdminCleanupV34AOpen = function(key) {
+    render();
+
+    Object.keys(sectionMeta).forEach(k => {
+      const section = document.getElementById("pb-v34-section-" + k);
+      if (section) section.open = k === key;
+    });
+
+    const target = document.getElementById("pb-v34-section-" + key);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  window.pbAdminCleanupV34AStatus = function(){
+    const status = currentStatus();
+    status.marker = MARKER;
+    status.overviewExists = !!document.getElementById(OVERVIEW_ID);
+    status.shellExists = !!document.getElementById(SHELL_ID);
+
+    console.log(JSON.stringify(status, null, 2));
+    try { copy(JSON.stringify(status, null, 2)); } catch(e) {}
+    return status;
+  };
+
+  function scheduleRender() {
+    setTimeout(render, 50);
+    setTimeout(render, 400);
+    setTimeout(render, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleRender);
+  } else {
+    scheduleRender();
+  }
+
+  window.addEventListener("load", scheduleRender);
+  window.addEventListener("pb:client-url-authority-v32c", scheduleRender);
+
+  try {
+    const originalShowTab = window.showTab || showTab;
+    if (typeof originalShowTab === "function" && !originalShowTab.__pbAdminCleanupV34A) {
+      const wrappedShowTab = function(){
+        const result = originalShowTab.apply(this, arguments);
+        try {
+          const tab = arguments && arguments.length ? String(arguments[0]) : "";
+          if (tab === "admin") scheduleRender();
+        } catch(e) {}
+        return result;
+      };
+
+      wrappedShowTab.__pbAdminCleanupV34A = true;
+      window.showTab = wrappedShowTab;
+      try { showTab = wrappedShowTab; } catch(e) {}
+    }
+  } catch(e) {}
+})();
+
+
 
 </script>
 

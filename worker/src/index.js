@@ -1,3 +1,230 @@
+
+/* PB_CLIENT_ACCESS_KEY_GATE_V36E */
+function pbV36EExtractClientAccessKey(request) {
+  const url = new URL(request.url);
+
+  return String(
+    url.searchParams.get("clientKey") ||
+    url.searchParams.get("clientAccessKey") ||
+    url.searchParams.get("accessKey") ||
+    request.headers.get("x-client-key") ||
+    request.headers.get("x-client-access-key") ||
+    request.headers.get("x-access-key") ||
+    ""
+  ).trim();
+}
+
+async function pbV36EValidateClientAccess(request, env, clientId) {
+  /* PB_CLOUDFLARE_ACCESS_CLIENTID_ISOLATION_V36I_WORKER */
+  const cleanClientId = typeof pbV36ACleanClientId === "function"
+    ? pbV36ACleanClientId(clientId)
+    : String(clientId || "").trim().toLowerCase();
+
+  if (!cleanClientId) {
+    return {
+      ok: false,
+      response: pbV36AJson({
+        ok: false,
+        marker: "PB_CLOUDFLARE_ACCESS_CLIENTID_ISOLATION_V36I_WORKER",
+        error: "Missing clientId."
+      }, 400)
+    };
+  }
+
+  return {
+    ok: true,
+    marker: "PB_CLOUDFLARE_ACCESS_CLIENTID_ISOLATION_V36I_WORKER",
+    clientId: cleanClientId,
+    role: "cloudflare-access-user",
+    accessKey: null
+  };
+}
+
+
+/* PB_SERVER_CLIENT_STATE_V36A */
+function pbV36ACleanClientId(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+}
+
+function pbV36AJson(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    }
+  });
+}
+
+function pbV36AClientStateKey(clientId) {
+  return "client-state::" + pbV36ACleanClientId(clientId) + "::current";
+}
+
+function pbV36APlayersOf(state) {
+  if (!state || typeof state !== "object") return [];
+  if (Array.isArray(state.players)) return state.players;
+  if (state.state && Array.isArray(state.state.players)) return state.state.players;
+  return [];
+}
+
+function pbV36ASummary(state) {
+  const players = pbV36APlayersOf(state);
+  const schedule = Array.isArray(state && state.schedule)
+    ? state.schedule
+    : state && state.state && Array.isArray(state.state.schedule)
+      ? state.state.schedule
+      : [];
+
+  return {
+    players: players.length,
+    rounds: schedule.length,
+    bytesApprox: JSON.stringify(state || {}).length
+  };
+}
+
+async function pbV36AHandleClientState(request, env) {
+  const url = new URL(request.url);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET,POST,OPTIONS",
+        "access-control-allow-headers": "content-type,x-admin-token,x-admin-license-token"
+      }
+    });
+  }
+
+  if (!env || !env.USAGE) {
+    return pbV36AJson({
+      ok: false,
+      marker: "PB_SERVER_CLIENT_STATE_V36A",
+      error: "USAGE KV binding is not available."
+    }, 500);
+  }
+
+  let clientId = pbV36ACleanClientId(url.searchParams.get("clientId") || "");
+
+  if (!clientId) {
+    return pbV36AJson({
+      ok: false,
+      marker: "PB_SERVER_CLIENT_STATE_V36A",
+      error: "Missing clientId."
+    }, 400);
+  }
+
+  const key = pbV36AClientStateKey(clientId);
+
+  /* PB_CLIENT_ACCESS_KEY_GATE_V36E_CALL */
+  if (typeof pbV36EValidateClientAccess === "function") {
+    const pbV36EAccess = await pbV36EValidateClientAccess(request, env, clientId);
+    if (!pbV36EAccess || !pbV36EAccess.ok) {
+      return pbV36EAccess.response;
+    }
+  }
+
+
+  if (request.method === "GET") {
+    const record = await env.USAGE.get(key, "json");
+
+    return pbV36AJson({
+      ok: true,
+      marker: "PB_SERVER_CLIENT_STATE_V36A",
+      found: !!record,
+      clientId,
+      key,
+      savedAt: record && record.savedAt || null,
+      summary: record && record.summary || null,
+      state: record && record.state || null
+    });
+  }
+
+  if (request.method === "POST") {
+    const envName = String(env.ENVIRONMENT || "").toLowerCase();
+    const isProduction = envName === "production" || envName === "prod" || envName === "rally";
+
+    if (isProduction) {
+      const provided = request.headers.get("x-admin-token") || request.headers.get("x-admin-license-token") || "";
+      const expected = env.CLIENT_STATE_WRITE_TOKEN || env.ADMIN_LICENSE_TOKEN || "";
+
+      if (!expected || provided !== expected) {
+        return pbV36AJson({
+          ok: false,
+          marker: "PB_SERVER_CLIENT_STATE_V36A",
+          error: "Production client-state writes require an owner token."
+        }, 403);
+      }
+    }
+
+    const raw = await request.text();
+
+    if (!raw || raw.length > 900000) {
+      return pbV36AJson({
+        ok: false,
+        marker: "PB_SERVER_CLIENT_STATE_V36A",
+        error: "Invalid or too-large client state payload."
+      }, 413);
+    }
+
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch (e) {
+      return pbV36AJson({
+        ok: false,
+        marker: "PB_SERVER_CLIENT_STATE_V36A",
+        error: "Invalid JSON."
+      }, 400);
+    }
+
+    const bodyClientId = pbV36ACleanClientId(body.clientId || clientId);
+    if (bodyClientId !== clientId) {
+      return pbV36AJson({
+        ok: false,
+        marker: "PB_SERVER_CLIENT_STATE_V36A",
+        error: "clientId mismatch."
+      }, 400);
+    }
+
+    const state = body.state && typeof body.state === "object" ? body.state : body;
+
+    const record = {
+      version: "36A",
+      marker: "PB_SERVER_CLIENT_STATE_V36A",
+      clientId,
+      key,
+      savedAt: new Date().toISOString(),
+      source: body.source || "client",
+      summary: pbV36ASummary(state),
+      state
+    };
+
+    await env.USAGE.put(key, JSON.stringify(record));
+
+    return pbV36AJson({
+      ok: true,
+      marker: "PB_SERVER_CLIENT_STATE_V36A",
+      clientId,
+      key,
+      savedAt: record.savedAt,
+      summary: record.summary
+    });
+  }
+
+  return pbV36AJson({
+    ok: false,
+    marker: "PB_SERVER_CLIENT_STATE_V36A",
+    error: "Method not allowed."
+  }, 405);
+}
+
 /**
  * Pickleball Pro — App + Relay Worker
  *
@@ -803,6 +1030,37 @@ async function pbServerLicenseClientLicenseV29Api(request, env, url) {
 
 export default {
   async fetch(request, env, ctx) {
+
+    /* PB_ACCESS_KEY_PRESERVE_RELAY_V36F4_ROUTE */
+    {
+      const pbV36F4Url = new URL(request.url);
+      if (pbV36F4Url.pathname === "/api/client-access") {
+        const pbV36F4ClientId = pbV36F4Url.searchParams.get("clientId") || "";
+        const pbV36F4Access = await pbV36EValidateClientAccess(request, env, pbV36F4ClientId);
+
+        if (!pbV36F4Access || !pbV36F4Access.ok) {
+          return pbV36F4Access.response;
+        }
+
+        return pbV36AJson({
+          ok: true,
+          marker: "PB_ACCESS_KEY_PRESERVE_RELAY_V36F4_WORKER",
+          clientId: pbV36F4Access.clientId,
+          role: pbV36F4Access.role,
+          accessKey: pbV36F4Access.accessKey || null
+        });
+      }
+    }
+
+
+    /* PB_SERVER_CLIENT_STATE_V36A_ROUTE */
+    {
+      const pbV36AUrl = new URL(request.url);
+      if (pbV36AUrl.pathname === "/api/client-state") {
+        return pbV36AHandleClientState(request, env);
+      }
+    }
+
     if (request.method === 'OPTIONS') {
       return cors(new Response(null, { status: 204 }), env);
     }
