@@ -73,6 +73,89 @@ function pbV36APlayersOf(state) {
   return [];
 }
 
+
+/* PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P */
+function pbV37PActivePlayersOf(state) {
+  return pbV36APlayersOf(state).filter(function(player) {
+    return player && player.active !== false && player.waitlist !== true;
+  });
+}
+
+function pbV37PLicenseLevelLimitV37P(level) {
+  const normalized = String(level || "club").toLowerCase();
+  const limits = {
+    trial: 16,
+    club: 40,
+    pro: 96,
+    enterprise: 250
+  };
+  return limits[normalized] || limits.club;
+}
+
+function pbV37PPlayerLimitOfLicense(license) {
+  const explicit = Number(
+    license && (
+      license.playerLimit ||
+      license.maxPlayers ||
+      license.playersLimit ||
+      license.allowedPlayers
+    )
+  );
+
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+
+  return pbV37PLicenseLevelLimitV37P(
+    license && (license.licenseLevel || license.level || license.plan)
+  );
+}
+
+async function pbV37PCheckClientStateLicense(env, clientId, state) {
+  const license = await pbServerLicenseGetV24B(env, clientId);
+  const activePlayers = pbV37PActivePlayersOf(state).length;
+  const playerLimit = pbV37PPlayerLimitOfLicense(license);
+  const licenseLevel = String(license && (license.licenseLevel || license.level || "club")).toLowerCase();
+  const licenseStatus = String(license && (license.licenseStatus || license.status || "active")).toLowerCase();
+  const isActive = licenseStatus === "active" || licenseStatus === "trial";
+
+  if (!isActive) {
+    return {
+      ok: false,
+      marker: "PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P",
+      error: "Client license is not active.",
+      clientId,
+      licenseLevel,
+      licenseStatus,
+      activePlayers,
+      playerLimit
+    };
+  }
+
+  if (activePlayers > playerLimit) {
+    return {
+      ok: false,
+      marker: "PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P",
+      error: "Player limit exceeded.",
+      reason: licenseLevel + " plan allows up to " + playerLimit + " active players. Incoming save has " + activePlayers + ".",
+      clientId,
+      licenseLevel,
+      licenseStatus,
+      activePlayers,
+      playerLimit
+    };
+  }
+
+  return {
+    ok: true,
+    marker: "PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P",
+    clientId,
+    licenseLevel,
+    licenseStatus,
+    activePlayers,
+    playerLimit
+  };
+}
+
+
 function pbV36ASummary(state) {
   const players = pbV36APlayersOf(state);
   const schedule = Array.isArray(state && state.schedule)
@@ -204,6 +287,17 @@ async function pbV36AHandleClientState(request, env) {
     }
 
     const state = body.state && typeof body.state === "object" ? body.state : body;
+
+    const pbV37PCheck = await pbV37PCheckClientStateLicense(env, clientId, state);
+    if (!pbV37PCheck || pbV37PCheck.ok !== true) {
+      return pbV36AJson(Object.assign({
+        ok: false,
+        marker: "PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P"
+      }, pbV37PCheck || {
+        error: "Client license check failed.",
+        clientId
+      }), 403);
+    }
 
     const record = {
       version: "36A",
