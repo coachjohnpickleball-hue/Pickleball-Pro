@@ -55506,6 +55506,139 @@ function exportEndSessionSummary(){
 
 
 
+
+;/* PB_LICENSE_ACTION_ENFORCEMENT_V37O */
+(function(){
+  "use strict";
+
+  var MARKER = "PB_LICENSE_ACTION_ENFORCEMENT_V37O";
+
+  function notifyV37O(message) {
+    message = String(message || "This action is blocked by the current license.");
+    try {
+      if (typeof window.toast === "function") {
+        window.toast(message, "warn");
+        return;
+      }
+    } catch(e) {}
+    try { alert(message); } catch(e) {}
+  }
+
+  function checkV37O(action) {
+    try {
+      if (typeof window.pbLicenseV23Can === "function") {
+        var result = window.pbLicenseV23Can(action);
+        if (result && result.ok === false) {
+          return {
+            ok: false,
+            reason: result.reason || "Blocked by license policy.",
+            result: result
+          };
+        }
+      }
+    } catch(e) {
+      console.warn(MARKER + " license check failed open", e);
+    }
+
+    return { ok: true, reason: "Allowed" };
+  }
+
+  function blockIfNeededV37O(action) {
+    var check = checkV37O(action);
+    if (check && check.ok === false) {
+      console.warn(MARKER + " blocked action", {
+        action: action,
+        reason: check.reason
+      });
+      notifyV37O(check.reason);
+      return true;
+    }
+    return false;
+  }
+
+  function wrapFunctionV37O(name, action) {
+    try {
+      var original = window[name];
+      if (typeof original !== "function") return false;
+      if (original.__pbLicenseActionEnforcementV37O) return true;
+
+      var wrapped = function() {
+        if (blockIfNeededV37O(action)) return false;
+        return original.apply(this, arguments);
+      };
+
+      wrapped.__pbLicenseActionEnforcementV37O = true;
+      wrapped.__pbOriginal = original;
+      window[name] = wrapped;
+
+      console.log(MARKER + " wrapped " + name + " -> " + action);
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " failed to wrap " + name, e);
+      return false;
+    }
+  }
+
+  function installV37O() {
+    var installed = [];
+
+    [
+      ["addPlayer", "add-player"],
+      ["generateSchedule", "generate-schedule"],
+      ["generateNextDraftRound", "generate-schedule"],
+      ["regenerateDraftRoundsOnly", "generate-schedule"],
+      ["setupMobileSync", "mobile-scoring"],
+      ["openMobileSync", "mobile-scoring"],
+      ["exportOfficialResults", "official-results"]
+    ].forEach(function(pair) {
+      if (wrapFunctionV37O(pair[0], pair[1])) installed.push(pair[0]);
+    });
+
+    window.pbLicenseActionEnforcementV37OStatus = function() {
+      var policy = null;
+      var addPlayer = null;
+      var generateSchedule = null;
+      var mobileScoring = null;
+      var officialResults = null;
+
+      try {
+        if (typeof window.pbLicenseV23CurrentPolicy === "function") {
+          policy = window.pbLicenseV23CurrentPolicy();
+        }
+      } catch(e) {}
+
+      try {
+        if (typeof window.pbLicenseV23Can === "function") {
+          addPlayer = window.pbLicenseV23Can("add-player");
+          generateSchedule = window.pbLicenseV23Can("generate-schedule");
+          mobileScoring = window.pbLicenseV23Can("mobile-scoring");
+          officialResults = window.pbLicenseV23Can("official-results");
+        }
+      } catch(e) {}
+
+      return {
+        marker: MARKER,
+        installed: true,
+        wrapped: installed.slice(),
+        policy: policy,
+        checks: {
+          addPlayer: addPlayer,
+          generateSchedule: generateSchedule,
+          mobileScoring: mobileScoring,
+          officialResults: officialResults
+        }
+      };
+    };
+
+    console.log(MARKER + " installed", window.pbLicenseActionEnforcementV37OStatus());
+  }
+
+  installV37O();
+  setTimeout(installV37O, 500);
+  setTimeout(installV37O, 1500);
+  setTimeout(installV37O, 3000);
+})();
+
 </script>
 
 </body>
