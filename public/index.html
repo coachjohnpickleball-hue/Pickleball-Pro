@@ -4,6 +4,200 @@
 
 <script>
 
+/* PB_NO_CLIENT_ID_GUARD_V36C */
+(function(){
+  const MARKER = "PB_NO_CLIENT_ID_GUARD_V36C";
+
+  if (window.__PB_NO_CLIENT_ID_GUARD_V36C__) return;
+  window.__PB_NO_CLIENT_ID_GUARD_V36C__ = true;
+
+  const originalGetItem = Storage.prototype.getItem;
+  const originalSetItem = Storage.prototype.setItem;
+  const originalRemoveItem = Storage.prototype.removeItem;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function noClientIdMode() {
+    return !urlClientId();
+  }
+
+  function isTournamentDataKey(key) {
+    key = String(key || "");
+
+    return (
+      key === "PB_CLIENT_IDENTITY_V22" ||
+      key === "PB_CLIENT_LICENSE_SERVER_V24" ||
+      key === "PB_CLIENT_LICENSE_SERVER_V24_LAST" ||
+      key === "PB_SERVER_LICENSE_ENFORCEMENT_UI_V29_LAST" ||
+      key === "PB_CLIENT_STRICT_ISOLATION_V33C_LAST_CLIENT" ||
+      key === "pickleball_autosave" ||
+      key === "pb_live_sync" ||
+      key.includes("pickleball_autosave::client") ||
+      key.includes("PB_SERVER_CLIENT_STATE_CACHE_V36B") ||
+      key.includes("PB_BACKUP_BEFORE") ||
+      key.includes("client-snapshot-v33b")
+    );
+  }
+
+  // If no clientId is in the URL, do not allow old browser memory to choose a client.
+  Storage.prototype.getItem = function(key) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      return null;
+    }
+
+    return originalGetItem.apply(this, arguments);
+  };
+
+  Storage.prototype.setItem = function(key, value) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      console.warn(MARKER + " blocked local write without clientId", { key });
+      return;
+    }
+
+    return originalSetItem.apply(this, arguments);
+  };
+
+  Storage.prototype.removeItem = function(key) {
+    if (this === localStorage && noClientIdMode() && isTournamentDataKey(key)) {
+      console.warn(MARKER + " blocked local remove without clientId", { key });
+      return;
+    }
+
+    return originalRemoveItem.apply(this, arguments);
+  };
+
+  function clearVisibleTournamentState() {
+    if (!noClientIdMode()) return false;
+    if (!window.state || typeof state !== "object") return false;
+
+    try {
+      state.players = [];
+      state.waitlist = [];
+      state.teams = [];
+      state.roundTeams = [];
+      state.schedule = [];
+      state.roundHistory = [];
+      state.byeRounds = [];
+      state.partnerLocks = [];
+      state.fixedTeams = [];
+      state.activeMatchIdx = null;
+
+      try { state.notifiedRounds = new Set(); } catch(e) {}
+      try { state.startedRounds = new Set(); } catch(e) {}
+      try { state.selectedCourts = new Set(); } catch(e) {}
+
+      try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+      try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " clear state failed", e);
+      return false;
+    }
+  }
+
+  function renderGuard() {
+    if (!noClientIdMode()) return;
+
+    try {
+      document.documentElement.setAttribute("data-pb-no-clientid-v36c", "true");
+      document.body && document.body.setAttribute("data-pb-no-clientid-v36c", "true");
+    } catch(e) {}
+
+    if (document.getElementById("pb-no-clientid-guard-v36c")) return;
+
+    const box = document.createElement("div");
+    box.id = "pb-no-clientid-guard-v36c";
+    box.style.cssText = [
+      "position:fixed",
+      "z-index:2147483647",
+      "top:12px",
+      "left:12px",
+      "right:12px",
+      "background:#111827",
+      "color:#fff",
+      "border:1px solid rgba(255,255,255,.18)",
+      "box-shadow:0 18px 48px rgba(0,0,0,.35)",
+      "border-radius:16px",
+      "padding:16px",
+      "font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "line-height:1.35"
+    ].join(";");
+
+    const base = location.origin + location.pathname;
+
+    box.innerHTML = `
+      <div style="font-weight:800;font-size:18px;margin-bottom:6px">PickleBall Pro: Select a Client</div>
+      <div style="font-size:14px;color:#d1d5db;margin-bottom:12px">
+        This page was opened without a clientId, so tournament data is blocked to prevent client mixing.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a style="background:#22c55e;color:#052e16;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=rally-stage-original&v=v36c-select">Rally Stage Original</a>
+        <a style="background:#60a5fa;color:#082f49;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=burloak-pickleball&v=v36c-select">Burloak</a>
+        <a style="background:#a78bfa;color:#2e1065;text-decoration:none;font-weight:800;padding:9px 12px;border-radius:10px" href="${base}?clientId=blue-zone-pickleball&v=v36c-select">Blue Zone</a>
+      </div>
+    `;
+
+    document.body.appendChild(box);
+  }
+
+  window.pbNoClientIdGuardV36CStatus = function() {
+    const result = {
+      marker: MARKER,
+      urlClientId: urlClientId() || null,
+      noClientIdMode: noClientIdMode(),
+      visiblePlayers: window.state && Array.isArray(state.players) ? state.players.length : null,
+      guardVisible: !!document.getElementById("pb-no-clientid-guard-v36c"),
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function schedule() {
+    if (!noClientIdMode()) return;
+
+    setTimeout(clearVisibleTournamentState, 0);
+    setTimeout(clearVisibleTournamentState, 100);
+    setTimeout(clearVisibleTournamentState, 500);
+    setTimeout(clearVisibleTournamentState, 1200);
+    setTimeout(renderGuard, 0);
+    setTimeout(renderGuard, 250);
+    setTimeout(renderGuard, 900);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule);
+  } else {
+    schedule();
+  }
+
+  window.addEventListener("load", schedule);
+})();
+
+
+
 /* PB_SERVER_FIRST_HARD_ISOLATION_V36B */
 (function(){
   const MARKER = "PB_SERVER_FIRST_HARD_ISOLATION_V36B";
