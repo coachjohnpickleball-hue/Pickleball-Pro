@@ -28,7 +28,7 @@ while true; do
   clear || true
 
   echo "=============================================="
-  echo " PickleBall Pro Client Manager V37L"
+  echo " PickleBall Pro Client Manager V37N"
   echo "=============================================="
   echo ""
   echo "Read-only:"
@@ -42,14 +42,16 @@ while true; do
   echo "Staging operations:"
   echo "  7) Create STAGING client"
   echo "  8) Delete STAGING client"
+  echo "  9) Update STAGING license"
   echo ""
   echo "Production operations:"
-  echo "  9) Create PRODUCTION client"
-  echo " 10) Delete PRODUCTION client"
+  echo " 10) Create PRODUCTION client"
+  echo " 11) Delete PRODUCTION client"
+  echo " 12) Update PRODUCTION license"
   echo ""
   echo "Other:"
-  echo " 11) Show installed tools"
-  echo " 12) Quit"
+  echo " 13) Show installed tools"
+  echo " 14) Quit"
   echo ""
   read -r -p "Choose option: " CHOICE
 
@@ -81,6 +83,9 @@ while true; do
       run_tool "delete-staging-client-v37d3.sh"
       ;;
     9)
+      run_tool "update-staging-license-v37m.sh"
+      ;;
+    10)
       echo ""
       echo "WARNING: This creates a live PRODUCTION client."
       read -r -p "Continue? Type YES: " CONFIRM
@@ -90,7 +95,7 @@ while true; do
         echo "Cancelled."
       fi
       ;;
-    10)
+    11)
       echo ""
       echo "WARNING: This deletes a PRODUCTION client and writes a tombstone."
       read -r -p "Continue? Type YES: " CONFIRM
@@ -100,12 +105,22 @@ while true; do
         echo "Cancelled."
       fi
       ;;
-    11)
+    12)
+      echo ""
+      echo "WARNING: This updates a live PRODUCTION client license."
+      read -r -p "Continue? Type YES: " CONFIRM
+      if [ "$CONFIRM" = "YES" ]; then
+        run_tool "update-production-license-v37m.sh"
+      else
+        echo "Cancelled."
+      fi
+      ;;
+    13)
       echo ""
       echo "Installed client manager tools:"
       ls -l "$SCRIPT_DIR"
       ;;
-    12|q|Q|quit|exit)
+    14|q|Q|quit|exit)
       echo "Done."
       exit 0
       ;;
