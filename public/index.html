@@ -2,7 +2,1196 @@
 <html lang="en">
 <head>
 
-<script>window.__CLIENT__={"client":{"id":"coachjohn","name":"Coach John Pickleball","adminEmail":"coachjohnpickleball@gmail.com"},"branding":{"appName":"Pickleball Pro","logoEmoji":"\ud83c\udfd3","primaryColor":"#C6FF00","accentColor":"#FF9800"},"worker":{"name":"pickleball-relay","kvNamespaceId":"faac1bcc30ef4711a9377e60ef70636d"},"limits":{"maxSmsPerDay":200,"maxEmailPerDay":500},"features":{"sms":true,"email":true,"mobileSync":true,"playoffs":true,"season":true,"duprExport":true}};
+<script>
+
+/* PB_SERVER_FIRST_HARD_ISOLATION_V36B */
+(function(){
+  const MARKER = "PB_SERVER_FIRST_HARD_ISOLATION_V36B";
+  const CACHE_PREFIX = "PB_SERVER_CLIENT_STATE_CACHE_V36B::";
+
+  if (window.__PB_SERVER_FIRST_HARD_ISOLATION_V36B__) return;
+  window.__PB_SERVER_FIRST_HARD_ISOLATION_V36B__ = true;
+
+  const originalGetItem = Storage.prototype.getItem;
+  const originalSetItem = Storage.prototype.setItem;
+  const originalRemoveItem = Storage.prototype.removeItem;
+
+  let serverLoaded = false;
+  let serverLoadStarted = false;
+  let lastServerLoad = null;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const raw = originalGetItem.call(localStorage, "PB_CLIENT_IDENTITY_V22");
+      const identity = JSON.parse(raw || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function hasClientMode() {
+    return !!getClientId();
+  }
+
+  function clientLiveKey(id) {
+    return "pickleball_autosave::client-live-v33c::" + id;
+  }
+
+  function clientLegacyKey(id) {
+    return "pickleball_autosave::client::" + id;
+  }
+
+  function serverCacheKey(id) {
+    return CACHE_PREFIX + id;
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function arrFromMaybeSet(value) {
+    try {
+      if (value instanceof Set) return Array.from(value);
+      if (Array.isArray(value)) return value;
+    } catch(e) {}
+    return [];
+  }
+
+  function stateOf(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.state && typeof obj.state === "object") return obj.state;
+    return obj;
+  }
+
+  function playersOf(obj) {
+    if (!obj || typeof obj !== "object") return [];
+    if (Array.isArray(obj.players)) return obj.players;
+    if (obj.state && Array.isArray(obj.state.players)) return obj.state.players;
+    return [];
+  }
+
+  function playerCount(value) {
+    const obj = typeof value === "string" ? parse(value) : value;
+    return playersOf(obj).length;
+  }
+
+  function compatibleState(s) {
+    s = s || {};
+
+    return {
+      players: clone(s.players || []),
+      waitlist: clone(s.waitlist || []),
+      teams: clone(s.teams || []),
+      roundTeams: clone(s.roundTeams || []),
+      schedule: clone(s.schedule || []),
+      roundHistory: clone(s.roundHistory || []),
+      byeRounds: clone(s.byeRounds || []),
+      notifiedRounds: clone(arrFromMaybeSet(s.notifiedRounds)),
+      startedRounds: clone(arrFromMaybeSet(s.startedRounds)),
+      selectedCourts: clone(arrFromMaybeSet(s.selectedCourts)),
+      partnerLocks: clone(s.partnerLocks || []),
+      fixedTeams: clone(s.fixedTeams || []),
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: clone(s.riverState || { enabled: false, numCourts: 0, partners: [] })
+    };
+  }
+
+  function makeSave(s, source) {
+    const now = new Date().toISOString();
+    const c = compatibleState(s);
+
+    return {
+      version: "36B",
+      savedAt: now,
+      source: source || MARKER,
+
+      players: c.players,
+      waitlist: c.waitlist,
+      teams: c.teams,
+      roundTeams: c.roundTeams,
+      schedule: c.schedule,
+      roundHistory: c.roundHistory,
+      byeRounds: c.byeRounds,
+      notifiedRounds: c.notifiedRounds,
+      startedRounds: c.startedRounds,
+      selectedCourts: c.selectedCourts,
+      partnerLocks: c.partnerLocks,
+      fixedTeams: c.fixedTeams,
+      activeMatchIdx: c.activeMatchIdx,
+      riverState: c.riverState,
+
+      state: c
+    };
+  }
+
+  function getServerBackedCacheText(id) {
+    const cacheText = originalGetItem.call(localStorage, serverCacheKey(id));
+    if (playerCount(cacheText) > 0) return cacheText;
+
+    const liveText = originalGetItem.call(localStorage, clientLiveKey(id));
+    if (serverLoaded && playerCount(liveText) > 0) return liveText;
+
+    return null;
+  }
+
+  function isHiddenLocalSourceKey(key) {
+    key = String(key || "");
+
+    return (
+      key === "pb_live_sync" ||
+      key.includes("PB_BACKUP_BEFORE") ||
+      key.includes("client-snapshot-v33b") ||
+      key.includes("client-live-v33c::burloak-pickleball") && getClientId() !== "burloak-pickleball" ||
+      key.includes("client-live-v33c::blue-zone-pickleball") && getClientId() !== "blue-zone-pickleball" ||
+      key.includes("pickleball_autosave::client::burloak-pickleball") && getClientId() !== "burloak-pickleball" ||
+      key.includes("pickleball_autosave::client::blue-zone-pickleball") && getClientId() !== "blue-zone-pickleball"
+    );
+  }
+
+  function isProtectedSaveKey(key) {
+    const id = getClientId();
+    if (!id) return false;
+
+    key = String(key || "");
+
+    return (
+      key === "pickleball_autosave" ||
+      key === clientLiveKey(id) ||
+      key === clientLegacyKey(id)
+    );
+  }
+
+  // Hard rule: while clientId is present, the old app must not read shared or cross-client browser data as truth.
+  Storage.prototype.getItem = function(key) {
+    if (this === localStorage && hasClientMode()) {
+      const id = getClientId();
+      key = String(key || "");
+
+      if (key === "pickleball_autosave" || key === clientLiveKey(id) || key === clientLegacyKey(id)) {
+        const cacheText = getServerBackedCacheText(id);
+
+        if (cacheText) return cacheText;
+
+        // Until the server is loaded, old local recovery sees nothing.
+        return null;
+      }
+
+      if (isHiddenLocalSourceKey(key)) {
+        return null;
+      }
+    }
+
+    return originalGetItem.apply(this, arguments);
+  };
+
+  // Hard rule: during startup, old autosave cannot write blank or cross-client browser state.
+  Storage.prototype.setItem = function(key, value) {
+    if (this === localStorage && hasClientMode()) {
+      const id = getClientId();
+      key = String(key || "");
+
+      if (isProtectedSaveKey(key)) {
+        const newCount = playerCount(String(value || ""));
+        const cacheText = getServerBackedCacheText(id);
+        const oldCount = playerCount(cacheText);
+
+        if (!serverLoaded) {
+          console.warn(MARKER + " blocked pre-server local write", {
+            key,
+            newCount
+          });
+          return;
+        }
+
+        if (oldCount > 0 && newCount === 0) {
+          console.warn(MARKER + " blocked empty overwrite", {
+            key,
+            oldCount,
+            newCount
+          });
+          return;
+        }
+
+        // Never physically write the shared key in client mode.
+        // Redirect it to the current client's scoped key.
+        if (key === "pickleball_autosave") {
+          key = clientLiveKey(id);
+        }
+      }
+
+      if (isHiddenLocalSourceKey(key)) {
+        console.warn(MARKER + " blocked hidden/cross-client local write", { key });
+        return;
+      }
+    }
+
+    return originalSetItem.call(this, key, value);
+  };
+
+  Storage.prototype.removeItem = function(key) {
+    if (this === localStorage && hasClientMode()) {
+      key = String(key || "");
+
+      if (isProtectedSaveKey(key) || isHiddenLocalSourceKey(key)) {
+        console.warn(MARKER + " blocked local remove in server-first mode", { key });
+        return;
+      }
+    }
+
+    return originalRemoveItem.apply(this, arguments);
+  };
+
+  function writeServerCache(id, s, source) {
+    const save = makeSave(s, source || "server-load-v36b");
+    const text = JSON.stringify(save);
+
+    originalSetItem.call(localStorage, serverCacheKey(id), text);
+    originalSetItem.call(localStorage, clientLiveKey(id), text);
+    originalSetItem.call(localStorage, clientLegacyKey(id), text);
+
+    // Clear the physical shared key so it cannot contaminate the next client.
+    try { originalRemoveItem.call(localStorage, "pickleball_autosave"); } catch(e) {}
+
+    return save;
+  }
+
+  function applyState(s, source) {
+    if (!window.state || !s || !Array.isArray(s.players)) return false;
+
+    const c = compatibleState(s);
+
+    state.players = clone(c.players);
+    state.waitlist = clone(c.waitlist);
+    state.teams = clone(c.teams);
+    state.roundTeams = clone(c.roundTeams);
+    state.schedule = clone(c.schedule);
+    state.roundHistory = clone(c.roundHistory);
+    state.byeRounds = clone(c.byeRounds);
+    state.partnerLocks = clone(c.partnerLocks);
+    state.fixedTeams = clone(c.fixedTeams);
+
+    try { state.notifiedRounds = new Set(c.notifiedRounds || []); } catch(e) {}
+    try { state.startedRounds = new Set(c.startedRounds || []); } catch(e) {}
+    try { state.selectedCourts = new Set(c.selectedCourts || []); } catch(e) {}
+
+    writeServerCache(getClientId(), c, source || "applied-v36b");
+
+    try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+    return true;
+  }
+
+  async function loadFromServer(reason) {
+    const id = getClientId();
+    if (!id) return false;
+
+    if (serverLoadStarted && serverLoaded) return true;
+    serverLoadStarted = true;
+
+    try {
+      const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id) + "&v=v36b-" + Date.now(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      const data = await res.json();
+
+      const serverState = data && data.state ? data.state : null;
+      const count = playerCount(serverState);
+
+      lastServerLoad = {
+        ok: !!(data && data.ok),
+        found: !!(data && data.found),
+        clientId: id,
+        players: count,
+        savedAt: data && data.savedAt || null,
+        reason: reason || null,
+        loadedAt: new Date().toISOString()
+      };
+
+      if (data && data.ok && data.found && serverState && count > 0) {
+        serverLoaded = true;
+        applyState(serverState, "server-first-load-v36b");
+        console.warn(MARKER + " loaded server state", lastServerLoad);
+        return true;
+      }
+
+      serverLoaded = true;
+      console.warn(MARKER + " no server state found", lastServerLoad);
+      return false;
+    } catch(e) {
+      lastServerLoad = {
+        ok: false,
+        clientId: id,
+        error: String(e && e.message || e),
+        reason: reason || null,
+        loadedAt: new Date().toISOString()
+      };
+
+      console.warn(MARKER + " server load failed", lastServerLoad);
+      serverLoaded = true;
+      return false;
+    }
+  }
+
+  function visibleStateSnapshot() {
+    if (!window.state || typeof state !== "object") return null;
+    return compatibleState(state);
+  }
+
+  window.pbServerFirstHardIsolationV36BLoad = async function() {
+    const result = await loadFromServer("manual");
+    const status = await window.pbServerFirstHardIsolationV36BStatus();
+    return { loaded: result, status };
+  };
+
+  window.pbServerFirstHardIsolationV36BSaveVisibleToServer = async function() {
+    const id = getClientId();
+    const s = visibleStateSnapshot();
+
+    if (!id || !s || !Array.isArray(s.players)) {
+      const result = { ok: false, error: "Missing clientId or visible state." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        clientId: id,
+        source: "manual-visible-save-v36b",
+        state: s
+      })
+    });
+
+    const data = await res.json();
+    if (data && data.ok) {
+      serverLoaded = true;
+      writeServerCache(id, s, "manual-visible-save-v36b");
+    }
+
+    console.log(JSON.stringify(data, null, 2));
+    try { copy(JSON.stringify(data, null, 2)); } catch(e) {}
+    return data;
+  };
+
+  window.pbServerFirstHardIsolationV36BStatus = async function() {
+    const id = getClientId();
+    const liveText = originalGetItem.call(localStorage, clientLiveKey(id));
+    const legacyText = originalGetItem.call(localStorage, clientLegacyKey(id));
+    const sharedText = originalGetItem.call(localStorage, "pickleball_autosave");
+    const cacheText = originalGetItem.call(localStorage, serverCacheKey(id));
+
+    let server = null;
+
+    try {
+      const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id) + "&v=status-" + Date.now(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+      server = await res.json();
+    } catch(e) {
+      server = { ok: false, error: String(e && e.message || e) };
+    }
+
+    const result = {
+      marker: MARKER,
+      clientId: id,
+      serverLoaded,
+      visiblePlayers: window.state && Array.isArray(state.players) ? state.players.length : 0,
+      serverFound: !!(server && server.found),
+      serverPlayers: server && server.summary ? server.summary.players : 0,
+      serverSavedAt: server && server.savedAt || null,
+      cachePlayers: playerCount(cacheText),
+      clientLivePlayers: playerCount(liveText),
+      clientLegacyPlayers: playerCount(legacyText),
+      physicalSharedPlayers: playerCount(sharedText),
+      lastServerLoad,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function scheduleLoads() {
+    setTimeout(() => loadFromServer("early"), 0);
+    setTimeout(() => loadFromServer("after-old-autosave"), 250);
+    setTimeout(() => loadFromServer("after-render"), 900);
+    setTimeout(() => loadFromServer("late-confirm"), 1800);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleLoads);
+  } else {
+    scheduleLoads();
+  }
+
+  window.addEventListener("load", scheduleLoads);
+})();
+
+
+
+/* PB_SERVER_CLIENT_STATE_CLIENT_V36A */
+(function(){
+  const MARKER = "PB_SERVER_CLIENT_STATE_CLIENT_V36A";
+  const CARD_ID = "pb-server-client-state-v36a-card";
+
+  if (window.__PB_SERVER_CLIENT_STATE_CLIENT_V36A__) return;
+  window.__PB_SERVER_CLIENT_STATE_CLIENT_V36A__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function clientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function apiUrl() {
+    const id = clientId();
+    return "/api/client-state?clientId=" + encodeURIComponent(id);
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function arrFromMaybeSet(value) {
+    try {
+      if (value instanceof Set) return Array.from(value);
+      if (Array.isArray(value)) return value;
+    } catch(e) {}
+
+    return [];
+  }
+
+  function playersOf(obj) {
+    if (!obj || typeof obj !== "object") return [];
+    if (Array.isArray(obj.players)) return obj.players;
+    if (obj.state && Array.isArray(obj.state.players)) return obj.state.players;
+    return [];
+  }
+
+  function stateOf(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.type === "score_update" && obj.state) return obj.state;
+    if (obj.state && typeof obj.state === "object") return obj.state;
+    return obj;
+  }
+
+  function compatibleStateFromState(s) {
+    s = s || {};
+
+    return {
+      players: clone(s.players || []),
+      waitlist: clone(s.waitlist || []),
+      teams: clone(s.teams || []),
+      roundTeams: clone(s.roundTeams || []),
+      schedule: clone(s.schedule || []),
+      roundHistory: clone(s.roundHistory || []),
+      byeRounds: clone(s.byeRounds || []),
+      notifiedRounds: clone(arrFromMaybeSet(s.notifiedRounds)),
+      startedRounds: clone(arrFromMaybeSet(s.startedRounds)),
+      selectedCourts: clone(arrFromMaybeSet(s.selectedCourts)),
+      partnerLocks: clone(s.partnerLocks || []),
+      fixedTeams: clone(s.fixedTeams || []),
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: clone(s.riverState || { enabled: false, numCourts: 0, partners: [] })
+    };
+  }
+
+  function snapshotVisibleState() {
+    if (!window.state || typeof state !== "object") {
+      return null;
+    }
+
+    return compatibleStateFromState(state);
+  }
+
+  function localClientKeys(id) {
+    return [
+      "pickleball_autosave::client-live-v33c::" + id,
+      "pickleball_autosave::client::" + id,
+      "pickleball_autosave"
+    ];
+  }
+
+  function localStateCandidates(id) {
+    const keys = [];
+
+    localClientKeys(id).forEach(k => keys.push(k));
+
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (
+          key.includes(id) ||
+          key.includes("PB_BACKUP_BEFORE") ||
+          key.includes("client-snapshot-v33b")
+        ) {
+          keys.push(key);
+        }
+      });
+    } catch(e) {}
+
+    // Only use pb_live_sync as a fallback source after client-specific backups.
+    keys.push("pb_live_sync");
+
+    return [...new Set(keys)]
+      .map(key => {
+        const obj = parse(localStorage.getItem(key));
+        const s = stateOf(obj);
+        const players = playersOf(obj && obj.type === "score_update" ? { state: s } : obj);
+        return {
+          key,
+          obj,
+          state: s,
+          players,
+          count: players.length
+        };
+      })
+      .filter(c => c.obj && c.state && c.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  function writeLocalCache(id, s, source) {
+    const now = new Date().toISOString();
+    const compatible = compatibleStateFromState(s);
+
+    const save = {
+      version: "36A",
+      savedAt: now,
+      source: source || MARKER,
+      players: compatible.players,
+      waitlist: compatible.waitlist,
+      teams: compatible.teams,
+      roundTeams: compatible.roundTeams,
+      schedule: compatible.schedule,
+      roundHistory: compatible.roundHistory,
+      byeRounds: compatible.byeRounds,
+      notifiedRounds: compatible.notifiedRounds,
+      startedRounds: compatible.startedRounds,
+      selectedCourts: compatible.selectedCourts,
+      partnerLocks: compatible.partnerLocks,
+      fixedTeams: compatible.fixedTeams,
+      activeMatchIdx: compatible.activeMatchIdx,
+      riverState: compatible.riverState,
+      state: compatible
+    };
+
+    const text = JSON.stringify(save);
+
+    localClientKeys(id).forEach(key => {
+      try { localStorage.setItem(key, text); } catch(e) {}
+    });
+
+    return save;
+  }
+
+  function applyState(s, source) {
+    if (!window.state || !s || !Array.isArray(s.players)) return false;
+
+    const compatible = compatibleStateFromState(s);
+
+    state.players = clone(compatible.players);
+    state.waitlist = clone(compatible.waitlist);
+    state.teams = clone(compatible.teams);
+    state.roundTeams = clone(compatible.roundTeams);
+    state.schedule = clone(compatible.schedule);
+    state.roundHistory = clone(compatible.roundHistory);
+    state.byeRounds = clone(compatible.byeRounds);
+    state.partnerLocks = clone(compatible.partnerLocks);
+    state.fixedTeams = clone(compatible.fixedTeams);
+
+    try { state.notifiedRounds = new Set(compatible.notifiedRounds || []); } catch(e) {}
+    try { state.startedRounds = new Set(compatible.startedRounds || []); } catch(e) {}
+    try { state.selectedCourts = new Set(compatible.selectedCourts || []); } catch(e) {}
+
+    writeLocalCache(clientId(), compatible, source || MARKER);
+
+    try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+    try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+    try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+    try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+    try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+    return true;
+  }
+
+  async function saveStateToServer(s, source) {
+    const id = clientId();
+
+    if (!id) {
+      return { ok: false, error: "Missing clientId." };
+    }
+
+    const compatible = compatibleStateFromState(s || snapshotVisibleState());
+
+    const res = await fetch(apiUrl(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        clientId: id,
+        source: source || MARKER,
+        state: compatible
+      })
+    });
+
+    const data = await res.json().catch(() => ({
+      ok: false,
+      error: "Invalid server response."
+    }));
+
+    return data;
+  }
+
+  window.pbServerClientStateV36ASave = async function(){
+    const id = clientId();
+    const s = snapshotVisibleState();
+
+    if (!s || !Array.isArray(s.players)) {
+      const result = { ok: false, clientId: id, error: "No visible app state found." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const result = await saveStateToServer(s, "manual-save-current-visible-state");
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  window.pbServerClientStateV36ALoad = async function(){
+    const id = clientId();
+
+    const res = await fetch(apiUrl(), {
+      method: "GET",
+      headers: { "cache-control": "no-store" }
+    });
+
+    const data = await res.json().catch(() => ({
+      ok: false,
+      error: "Invalid server response."
+    }));
+
+    if (data && data.ok && data.found && data.state) {
+      applyState(data.state, "server-load-v36a");
+    }
+
+    console.log(JSON.stringify(data, null, 2));
+    try { copy(JSON.stringify(data, null, 2)); } catch(e) {}
+    return data;
+  };
+
+  window.pbServerClientStateV36ABootstrapFromBestLocal = async function(){
+    const id = clientId();
+
+    if (!id) {
+      const result = { ok: false, error: "Missing clientId." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const candidates = localStateCandidates(id);
+
+    console.table(candidates.map(c => ({
+      key: c.key,
+      players: c.count,
+      names: c.players.map(p => p.name || p.playerName || p.fullName || "").filter(Boolean).slice(0, 5).join(", ")
+    })));
+
+    if (!candidates.length) {
+      const result = { ok: false, clientId: id, error: "No local candidate with players found." };
+      console.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
+    const best = candidates[0];
+    const compatible = compatibleStateFromState(best.state);
+
+    applyState(compatible, "bootstrap-from-" + best.key);
+
+    const serverResult = await saveStateToServer(compatible, "bootstrap-from-" + best.key);
+
+    const result = {
+      ok: !!serverResult.ok,
+      clientId: id,
+      sourceKey: best.key,
+      players: compatible.players.length,
+      serverResult
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  window.pbServerClientStateV36AStatus = async function(){
+    const id = clientId();
+    const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+    const localCandidates = localStateCandidates(id).map(c => ({
+      key: c.key,
+      players: c.count
+    }));
+
+    let server = null;
+
+    try {
+      const res = await fetch(apiUrl(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      server = await res.json();
+    } catch(e) {
+      server = { ok: false, error: String(e && e.message || e) };
+    }
+
+    const result = {
+      marker: MARKER,
+      clientId: id,
+      visiblePlayers,
+      localCandidates,
+      serverFound: !!(server && server.found),
+      serverPlayers: server && server.summary ? server.summary.players : 0,
+      serverSavedAt: server && server.savedAt || null,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  async function autoRecoverFromServerIfEmpty() {
+    try {
+      const id = clientId();
+      if (!id) return false;
+
+      const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+      if (visiblePlayers > 0) return true;
+
+      const res = await fetch(apiUrl(), {
+        method: "GET",
+        headers: { "cache-control": "no-store" }
+      });
+
+      const data = await res.json();
+
+      if (data && data.ok && data.found && data.state) {
+        const serverPlayers = playersOf(data.state).length;
+
+        if (serverPlayers > 0) {
+          applyState(data.state, "auto-recover-from-server-v36a");
+          console.warn(MARKER + " auto recovered from server", {
+            clientId: id,
+            players: serverPlayers
+          });
+          return true;
+        }
+      }
+    } catch(e) {
+      console.warn(MARKER + " auto recover failed", e);
+    }
+
+    return false;
+  }
+
+  function renderAdminCard() {
+    try {
+      if (document.getElementById(CARD_ID)) return;
+
+      const root = document.getElementById("sec-admin") ||
+        document.getElementById("admin") ||
+        document.querySelector("[data-section='admin']");
+
+      if (!root) return;
+
+      const card = document.createElement("div");
+      card.id = CARD_ID;
+      card.className = "card";
+      card.style.marginTop = "1rem";
+
+      card.innerHTML = `
+        <div class="card-title">Server Client State V36A</div>
+        <p style="color:var(--txt2)">Cloud save/load for the current client. Use this to make the server the source of truth.</p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary btn-sm" onclick="pbServerClientStateV36ABootstrapFromBestLocal()">Bootstrap Best Local → Server</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36ASave()">Save Current → Server</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36ALoad()">Load Server → App</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pbServerClientStateV36AStatus()">Status</button>
+        </div>
+      `;
+
+      root.appendChild(card);
+    } catch(e) {}
+  }
+
+  function schedule() {
+    setTimeout(autoRecoverFromServerIfEmpty, 700);
+    setTimeout(autoRecoverFromServerIfEmpty, 1800);
+    setTimeout(renderAdminCard, 800);
+    setTimeout(renderAdminCard, 1800);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule);
+  } else {
+    schedule();
+  }
+
+  window.addEventListener("load", schedule);
+})();
+
+
+
+/* PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B */
+(function(){
+  const MARKER = "PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B";
+  if (window.__PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B__) return;
+  window.__PB_CLIENT_SAVE_OVERWRITE_GUARD_V35B__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId() {
+    try {
+      const fromUrl = cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+      if (fromUrl) return fromUrl;
+    } catch(e) {}
+
+    try {
+      const identity = JSON.parse(localStorage.getItem("PB_CLIENT_IDENTITY_V22") || "{}");
+      return cleanClientId(identity.clientId || "");
+    } catch(e) {}
+
+    return "";
+  }
+
+  function parse(value) {
+    try { return JSON.parse(value || "null"); } catch(e) { return null; }
+  }
+
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value || null)); } catch(e) { return value; }
+  }
+
+  function playersOf(save) {
+    if (!save || typeof save !== "object") return [];
+    if (Array.isArray(save.players)) return save.players;
+    if (save.state && Array.isArray(save.state.players)) return save.state.players;
+    return [];
+  }
+
+  function playerCount(value) {
+    const save = typeof value === "string" ? parse(value) : value;
+    return playersOf(save).length;
+  }
+
+  function stateOf(save) {
+    if (!save || typeof save !== "object") return null;
+    if (save.type === "score_update" && save.state) return save.state;
+    if (save.state && typeof save.state === "object") return save.state;
+    return save;
+  }
+
+  function isClientSaveKey(key) {
+    const clientId = getClientId();
+    if (!clientId) return false;
+
+    key = String(key || "");
+
+    return (
+      key === "pickleball_autosave" ||
+      key === "pickleball_autosave::client-live-v33c::" + clientId ||
+      key === "pickleball_autosave::client::" + clientId
+    );
+  }
+
+  function buildCompatibleSave(sourceState, sourceKey) {
+    const s = clone(sourceState || {});
+    const now = new Date().toISOString();
+
+    const fixed = {
+      version: "2.0",
+      savedAt: now,
+
+      players: s.players || [],
+      waitlist: s.waitlist || [],
+      teams: s.teams || [],
+      roundTeams: s.roundTeams || [],
+      schedule: s.schedule || [],
+      roundHistory: s.roundHistory || [],
+      byeRounds: s.byeRounds || [],
+      notifiedRounds: Array.isArray(s.notifiedRounds) ? s.notifiedRounds : [],
+      startedRounds: Array.isArray(s.startedRounds) ? s.startedRounds : [],
+      selectedCourts: Array.isArray(s.selectedCourts) ? s.selectedCourts : [],
+      partnerLocks: s.partnerLocks || [],
+      fixedTeams: s.fixedTeams || [],
+      activeMatchIdx: s.activeMatchIdx ?? null,
+      riverState: s.riverState || { enabled: false, numCourts: 0, partners: [] },
+
+      state: {
+        players: s.players || [],
+        waitlist: s.waitlist || [],
+        teams: s.teams || [],
+        roundTeams: s.roundTeams || [],
+        schedule: s.schedule || [],
+        roundHistory: s.roundHistory || [],
+        byeRounds: s.byeRounds || [],
+        notifiedRounds: Array.isArray(s.notifiedRounds) ? s.notifiedRounds : [],
+        startedRounds: Array.isArray(s.startedRounds) ? s.startedRounds : [],
+        selectedCourts: Array.isArray(s.selectedCourts) ? s.selectedCourts : [],
+        partnerLocks: s.partnerLocks || [],
+        fixedTeams: s.fixedTeams || [],
+        activeMatchIdx: s.activeMatchIdx ?? null,
+        riverState: s.riverState || { enabled: false, numCourts: 0, partners: [] }
+      },
+
+      source: MARKER,
+      recoveredFrom: sourceKey || null,
+      recoveredAt: now
+    };
+
+    return fixed;
+  }
+
+  function clientKeys(clientId) {
+    return [
+      "pickleball_autosave::client-live-v33c::" + clientId,
+      "pickleball_autosave::client::" + clientId,
+      "pickleball_autosave"
+    ];
+  }
+
+  function findBestSource(clientId) {
+    const keys = [];
+
+    clientKeys(clientId).forEach(k => keys.push(k));
+    keys.push("pb_live_sync");
+
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (
+          key.includes(clientId) ||
+          key.includes("PB_BACKUP_BEFORE") ||
+          key.includes("client-snapshot-v33b")
+        ) {
+          keys.push(key);
+        }
+      });
+    } catch(e) {}
+
+    const candidates = [...new Set(keys)]
+      .map(key => {
+        const obj = parse(localStorage.getItem(key));
+        const state = stateOf(obj);
+        const count = playerCount(obj);
+        return { key, obj, state, count };
+      })
+      .filter(c => c.obj && c.state && c.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return candidates[0] || null;
+  }
+
+  const originalSetItem = Storage.prototype.setItem;
+
+  Storage.prototype.setItem = function(key, value) {
+    try {
+      if (this === localStorage && isClientSaveKey(key)) {
+        const oldValue = localStorage.getItem(key);
+        const oldCount = playerCount(oldValue);
+        const newCount = playerCount(String(value || ""));
+
+        if (oldCount > 0 && newCount === 0) {
+          console.warn(MARKER + " blocked empty save overwrite", {
+            key,
+            oldCount,
+            newCount
+          });
+
+          try {
+            sessionStorage.setItem(MARKER + "_LAST_BLOCKED", JSON.stringify({
+              key,
+              oldCount,
+              newCount,
+              blockedAt: new Date().toISOString()
+            }));
+          } catch(e) {}
+
+          return;
+        }
+      }
+    } catch(e) {}
+
+    return originalSetItem.apply(this, arguments);
+  };
+
+  function applyStateFromSave(save) {
+    if (!window.state || !save) return false;
+
+    const s = stateOf(save);
+    if (!s || !Array.isArray(s.players) || !s.players.length) return false;
+
+    try {
+      state.players = clone(s.players || []);
+      state.waitlist = clone(s.waitlist || []);
+      state.teams = clone(s.teams || []);
+      state.roundTeams = clone(s.roundTeams || []);
+      state.schedule = clone(s.schedule || []);
+      state.roundHistory = clone(s.roundHistory || []);
+      state.byeRounds = clone(s.byeRounds || []);
+      state.partnerLocks = clone(s.partnerLocks || []);
+      state.fixedTeams = clone(s.fixedTeams || []);
+
+      try { state.notifiedRounds = new Set(s.notifiedRounds || []); } catch(e) {}
+      try { state.startedRounds = new Set(s.startedRounds || []); } catch(e) {}
+      try { state.selectedCourts = new Set(s.selectedCourts || []); } catch(e) {}
+
+      try { if (typeof renderPlayers === "function") renderPlayers(); } catch(e) {}
+      try { if (typeof renderDashboard === "function") renderDashboard(); } catch(e) {}
+      try { if (typeof renderStandings === "function") renderStandings(); } catch(e) {}
+      try { if (typeof renderSchedule === "function") renderSchedule(); } catch(e) {}
+      try { if (typeof updateProgress === "function") updateProgress(); } catch(e) {}
+
+      return true;
+    } catch(e) {
+      console.warn(MARKER + " applyState failed", e);
+      return false;
+    }
+  }
+
+  function recoverIfEmpty() {
+    const clientId = getClientId();
+    if (!clientId) return false;
+
+    const visibleCount = window.state && Array.isArray(state.players) ? state.players.length : 0;
+    const currentKey = "pickleball_autosave::client-live-v33c::" + clientId;
+    const currentCount = playerCount(localStorage.getItem(currentKey));
+
+    if (visibleCount > 0 && currentCount > 0) return true;
+
+    const best = findBestSource(clientId);
+    if (!best || best.count <= 0) return false;
+
+    const fixed = buildCompatibleSave(best.state, best.key);
+    const fixedText = JSON.stringify(fixed);
+
+    clientKeys(clientId).forEach(key => {
+      try { originalSetItem.call(localStorage, key, fixedText); } catch(e) {}
+    });
+
+    applyStateFromSave(fixed);
+
+    console.warn(MARKER + " restored client players", {
+      clientId,
+      players: fixed.players.length,
+      sourceKey: best.key
+    });
+
+    return true;
+  }
+
+  window.pbClientSaveOverwriteGuardV35BStatus = function() {
+    const clientId = getClientId();
+    const key = "pickleball_autosave::client-live-v33c::" + clientId;
+    const save = parse(localStorage.getItem(key)) || {};
+    const topPlayers = Array.isArray(save.players) ? save.players.length : 0;
+    const statePlayers = save.state && Array.isArray(save.state.players) ? save.state.players.length : 0;
+    const visiblePlayers = window.state && Array.isArray(state.players) ? state.players.length : 0;
+
+    let lastBlocked = null;
+    try { lastBlocked = sessionStorage.getItem(MARKER + "_LAST_BLOCKED"); } catch(e) {}
+
+    const result = {
+      marker: MARKER,
+      clientId,
+      key,
+      topPlayers,
+      statePlayers,
+      visiblePlayers,
+      source: save.source || null,
+      lastBlocked,
+      installed: true
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function scheduleRecover() {
+    setTimeout(recoverIfEmpty, 25);
+    setTimeout(recoverIfEmpty, 150);
+    setTimeout(recoverIfEmpty, 500);
+    setTimeout(recoverIfEmpty, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleRecover);
+  } else {
+    scheduleRecover();
+  }
+
+  window.addEventListener("load", scheduleRecover);
+})();
+
+window.__CLIENT__={"client":{"id":"coachjohn","name":"Coach John Pickleball","adminEmail":"coachjohnpickleball@gmail.com"},"branding":{"appName":"Pickleball Pro","logoEmoji":"\ud83c\udfd3","primaryColor":"#C6FF00","accentColor":"#FF9800"},"worker":{"name":"pickleball-relay","kvNamespaceId":"faac1bcc30ef4711a9377e60ef70636d"},"limits":{"maxSmsPerDay":200,"maxEmailPerDay":500},"features":{"sms":true,"email":true,"mobileSync":true,"playoffs":true,"season":true,"duprExport":true}};
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -53344,6 +54533,8 @@ function exportEndSessionSummary(){
     }
   } catch(e) {}
 })();
+
+
 
 </script>
 
