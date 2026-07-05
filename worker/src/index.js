@@ -120,6 +120,16 @@ async function pbV36AHandleClientState(request, env) {
     }, 400);
   }
 
+  const pbV37DTombstoneForState = await pbClientTombstoneGetV37D(env, clientId);
+  if (pbV37DTombstoneForState) {
+    return pbClientTombstoneResponseV37D(clientId, pbV37DTombstoneForState);
+  }
+
+  const pbV37D2TombstoneForState = await pbClientTombstoneGetV37D2(env, clientId);
+  if (pbV37D2TombstoneForState) {
+    return pbClientTombstoneResponseV37D2(clientId, pbV37D2TombstoneForState);
+  }
+
   const key = pbV36AClientStateKey(clientId);
 
   /* PB_CLIENT_ACCESS_KEY_GATE_V36E_CALL */
@@ -555,8 +565,139 @@ function pbServerLicenseNormalizeV24B(input, env) {
   };
 }
 
+
+/* PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D */
+async function pbClientTombstoneGetV37D(env, clientId) {
+  const clean = typeof pbServerLicenseSlugV24B === 'function'
+    ? pbServerLicenseSlugV24B(clientId || '')
+    : String(clientId || '')
+        .trim()
+        .replace(/^["']+|["']+$/g, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+
+  if (!clean || !env || !env.USAGE) return null;
+
+  const raw = await env.USAGE.get('client-deleted:' + clean);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Object.assign({}, parsed, {
+      ok: true,
+      marker: parsed.marker || 'PB_CLIENT_TOMBSTONE_V37D',
+      clientId: clean,
+      deleted: true
+    });
+  } catch (e) {
+    return {
+      ok: true,
+      marker: 'PB_CLIENT_TOMBSTONE_V37D',
+      clientId: clean,
+      deleted: true,
+      raw: String(raw || '').slice(0, 300)
+    };
+  }
+}
+
+function pbClientTombstoneResponseV37D(clientId, tombstone) {
+  return new Response(JSON.stringify({
+    ok: false,
+    marker: 'PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D',
+    error: 'Client has been deleted.',
+    deleted: true,
+    clientId: clientId,
+    tombstone: tombstone || null
+  }, null, 2), {
+    status: 410,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+
+
+/* PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D2 */
+async function pbClientTombstoneGetV37D2(env, clientId) {
+  const clean = typeof pbServerLicenseSlugV24B === 'function'
+    ? pbServerLicenseSlugV24B(clientId || '')
+    : String(clientId || '')
+        .trim()
+        .replace(/^["']+|["']+$/g, '')
+        .replace(/[^a-zA-Z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+
+  if (!clean || !env || !env.USAGE) return null;
+
+  const raw = await env.USAGE.get('client-deleted:' + clean);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Object.assign({}, parsed, {
+      ok: true,
+      marker: parsed.marker || 'PB_CLIENT_TOMBSTONE_V37D2',
+      clientId: clean,
+      deleted: true
+    });
+  } catch (e) {
+    return {
+      ok: true,
+      marker: 'PB_CLIENT_TOMBSTONE_V37D2',
+      clientId: clean,
+      deleted: true
+    };
+  }
+}
+
+function pbClientTombstoneResponseV37D2(clientId, tombstone) {
+  return new Response(JSON.stringify({
+    ok: false,
+    marker: 'PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D2',
+    error: 'Client has been deleted.',
+    deleted: true,
+    clientId,
+    tombstone: tombstone || null
+  }, null, 2), {
+    status: 410,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+
 async function pbServerLicenseGetV24B(env, clientId) {
   const id = pbServerLicenseSlugV24B(clientId || 'default');
+
+  const pbV37D2TombstoneForLicense = await pbClientTombstoneGetV37D2(env, id);
+  if (pbV37D2TombstoneForLicense) {
+    const deletedLicense = pbServerLicenseDefaultsV24B(id, env);
+    deletedLicense.marker = 'PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D2';
+    deletedLicense.clientId = id;
+    deletedLicense.clientName = id;
+    deletedLicense.licenseLevel = 'deleted';
+    deletedLicense.licenseLabel = 'Deleted';
+    deletedLicense.licenseStatus = 'deleted';
+    deletedLicense.playerLimit = 0;
+    deletedLicense.mobileScoring = false;
+    deletedLicense.officialResults = false;
+    deletedLicense.support = 'Client has been deleted';
+    deletedLicense.source = 'deleted-tombstone-v37d2';
+    deletedLicense.deleted = true;
+    deletedLicense.deletedAt = pbV37D2TombstoneForLicense.deletedAt || null;
+    return deletedLicense;
+  }
+
+
+
 
   if (!env || !env.USAGE) {
     return pbServerLicenseDefaultsV24B(id, env);
@@ -1057,6 +1198,15 @@ export default {
     {
       const pbV36AUrl = new URL(request.url);
       if (pbV36AUrl.pathname === "/api/client-state") {
+        /* PB_CLIENT_TOMBSTONE_ROUTE_GATE_V37D3 */
+        const pbV37D3ClientId = pbV36ACleanClientId(pbV36AUrl.searchParams.get("clientId") || "");
+        if (pbV37D3ClientId) {
+          const pbV37D3Tombstone = await pbClientTombstoneGetV37D2(env, pbV37D3ClientId);
+          if (pbV37D3Tombstone) {
+            return pbClientTombstoneResponseV37D2(pbV37D3ClientId, pbV37D3Tombstone);
+          }
+        }
+
         return pbV36AHandleClientState(request, env);
       }
     }

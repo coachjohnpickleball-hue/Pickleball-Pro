@@ -4,6 +4,463 @@
 
 <script>
 
+/* PB_CLIENT_TOMBSTONE_UI_V37D2 */
+(function(){
+  const MARKER = "PB_CLIENT_TOMBSTONE_UI_V37D2";
+
+  if (window.__PB_CLIENT_TOMBSTONE_UI_V37D2__) return;
+  window.__PB_CLIENT_TOMBSTONE_UI_V37D2__ = true;
+
+  function clean(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function clientId() {
+    try {
+      return clean(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function clearClientStorage(id) {
+    const removed = [];
+
+    [localStorage, sessionStorage].forEach(function(storage) {
+      for (let i = storage.length - 1; i >= 0; i--) {
+        const key = storage.key(i);
+        let val = "";
+        try { val = storage.getItem(key) || ""; } catch(e) {}
+
+        if (
+          String(key || "").toLowerCase().includes(id) ||
+          String(val || "").toLowerCase().includes(id)
+        ) {
+          removed.push(key);
+          try { storage.removeItem(key); } catch(e) {}
+        }
+      }
+    });
+
+    return removed;
+  }
+
+  function showDeleted(id, data) {
+    const removed = clearClientStorage(id);
+
+    window.__PB_CLIENT_TOMBSTONE_V37D2_LAST__ = {
+      marker: MARKER,
+      clientId: id,
+      deleted: true,
+      removedKeys: removed,
+      data: data || null
+    };
+
+    document.documentElement.setAttribute("data-pb-client-deleted-v37d2", id);
+
+    document.body.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101418;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px">
+        <div style="max-width:560px;width:100%;border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:26px;background:rgba(255,255,255,.06);box-shadow:0 18px 60px rgba(0,0,0,.35)">
+          <div style="font-size:2rem;margin-bottom:.75rem">🏓 PickleBall Pro</div>
+          <div style="font-weight:900;font-size:1.35rem;margin-bottom:.5rem;color:#C6FF00">Client deleted</div>
+          <div style="line-height:1.55;color:rgba(255,255,255,.78);font-size:.98rem">
+            This private client link is no longer active. Please contact your organizer, club, or coach for a new link.
+          </div>
+          <div style="margin-top:1rem;font-family:monospace;font-size:.82rem;color:rgba(255,255,255,.55);word-break:break-all">${id}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function check() {
+    const id = clientId();
+    if (!id) return false;
+
+    try {
+      const res = await fetch("/api/client-state?clientId=" + encodeURIComponent(id) + "&v=v37d2-" + Date.now(), {
+        credentials: "include",
+        cache: "no-store"
+      });
+
+      let data = {};
+      try { data = await res.json(); } catch(e) {}
+
+      if (res.status === 410 || data.deleted === true || data.marker === "PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D2") {
+        showDeleted(id, data);
+        return true;
+      }
+    } catch(e) {
+      console.warn(MARKER + " warning", e);
+    }
+
+    return false;
+  }
+
+  window.pbClientTombstoneV37D2Status = async function(){
+    const deleted = await check();
+
+    const result = {
+      marker: MARKER,
+      installed: true,
+      clientId: clientId() || null,
+      deletedDetected: !!deleted,
+      last: window.__PB_CLIENT_TOMBSTONE_V37D2_LAST__ || null
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", check);
+  } else {
+    check();
+  }
+
+  setTimeout(check, 150);
+  setTimeout(check, 600);
+  setTimeout(check, 1500);
+})();
+
+
+
+/* PB_CLIENT_TOMBSTONE_UI_V37D */
+(function(){
+  const MARKER = "PB_CLIENT_TOMBSTONE_UI_V37D";
+
+  if (window.__PB_CLIENT_TOMBSTONE_UI_V37D__) return;
+  window.__PB_CLIENT_TOMBSTONE_UI_V37D__ = true;
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function urlClientId() {
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function clearClientStorage(clientId) {
+    const removed = [];
+
+    [localStorage, sessionStorage].forEach(function(storage) {
+      for (let i = storage.length - 1; i >= 0; i--) {
+        const key = storage.key(i);
+        let value = "";
+
+        try { value = storage.getItem(key) || ""; } catch(e) {}
+
+        if (
+          String(key || "").toLowerCase().includes(clientId) ||
+          String(value || "").toLowerCase().includes(clientId)
+        ) {
+          removed.push(key);
+          try { storage.removeItem(key); } catch(e) {}
+        }
+      }
+    });
+
+    return removed;
+  }
+
+  function showDeletedClient(clientId, data) {
+    clearClientStorage(clientId);
+
+    document.documentElement.setAttribute("data-pb-client-deleted-v37d", clientId);
+
+    const html = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101418;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px">
+        <div style="max-width:560px;width:100%;border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:26px;background:rgba(255,255,255,.06);box-shadow:0 18px 60px rgba(0,0,0,.35)">
+          <div style="font-size:2rem;margin-bottom:.75rem">🏓 PickleBall Pro</div>
+          <div style="font-weight:900;font-size:1.35rem;margin-bottom:.5rem;color:#C6FF00">Client deleted</div>
+          <div style="line-height:1.55;color:rgba(255,255,255,.78);font-size:.98rem">
+            This private client link is no longer active. Please contact your organizer, club, or coach for a new link.
+          </div>
+          <div style="margin-top:1rem;font-family:monospace;font-size:.82rem;color:rgba(255,255,255,.55);word-break:break-all">
+            ${clientId}
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      document.body.innerHTML = html;
+    } catch(e) {}
+
+    window.__PB_CLIENT_TOMBSTONE_V37D_LAST__ = {
+      marker: MARKER,
+      clientId,
+      deleted: true,
+      data: data || null,
+      removedLocalStorage: true
+    };
+  }
+
+  async function checkDeletedClient() {
+    const clientId = urlClientId();
+    if (!clientId) return false;
+
+    try {
+      const response = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v37d-" + Date.now(), {
+        credentials: "include",
+        cache: "no-store"
+      });
+
+      let data = {};
+      try { data = await response.json(); } catch(e) {}
+
+      if (response.status === 410 || data.deleted === true || data.marker === "PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D") {
+        showDeletedClient(clientId, data);
+        return true;
+      }
+    } catch(e) {
+      console.warn(MARKER + " check warning", e);
+    }
+
+    return false;
+  }
+
+  window.pbClientTombstoneV37DStatus = async function(){
+    const clientId = urlClientId();
+    const deleted = await checkDeletedClient();
+
+    const result = {
+      marker: MARKER,
+      installed: true,
+      clientId: clientId || null,
+      deletedDetected: !!deleted,
+      last: window.__PB_CLIENT_TOMBSTONE_V37D_LAST__ || null
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", checkDeletedClient);
+  } else {
+    checkDeletedClient();
+  }
+
+  setTimeout(checkDeletedClient, 250);
+  setTimeout(checkDeletedClient, 900);
+  setTimeout(checkDeletedClient, 1800);
+})();
+
+
+
+/* PB_CLIENT_VIEWER_UI_ONLY_V37B */
+(function(){
+  const MARKER = "PB_CLIENT_VIEWER_UI_ONLY_V37B";
+
+  if (window.__PB_CLIENT_VIEWER_UI_ONLY_V37B__) return;
+  window.__PB_CLIENT_VIEWER_UI_ONLY_V37B__ = true;
+
+  function isAdmin() {
+    return !!(window.__ACCESS__ && window.__ACCESS__.isAdmin);
+  }
+
+  function cleanClientId(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function linkFor(clientId) {
+    return location.origin + "/?clientId=" + encodeURIComponent(clientId);
+  }
+
+  function setStatus(message, good) {
+    const el = document.getElementById("pb-client-viewer-v37b-status");
+    if (!el) return;
+    el.style.color = good ? "var(--lime)" : "var(--txt3)";
+    el.textContent = message || "";
+  }
+
+  async function fetchJson(url) {
+    const res = await fetch(url, {
+      credentials: "include",
+      cache: "no-store"
+    });
+
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; }
+    catch(e) { data = { ok:false, error:"Invalid JSON", raw:text.slice(0, 300) }; }
+
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  async function loadClients() {
+    const data = await fetchJson("/admin/clients?v=v37b-" + Date.now());
+    return Array.isArray(data.clients) ? data.clients : [];
+  }
+
+  function renderClients(clients) {
+    if (!clients.length) {
+      return '<div style="color:var(--txt3);font-size:.85rem">No clients returned from /admin/clients.</div>';
+    }
+
+    return clients.map(c => {
+      const clientId = cleanClientId(c.clientId || c.id || c.clientName || "");
+      if (!clientId) return "";
+
+      const link = linkFor(clientId);
+
+      return `
+        <div style="border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:.75rem;margin:.55rem 0;background:rgba(255,255,255,.035)">
+          <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap">
+            <div>
+              <div style="font-weight:900;color:var(--txt);font-size:.98rem">${esc(c.clientName || clientId)}</div>
+              <div style="font-family:monospace;font-size:.78rem;color:var(--txt3);margin-top:.2rem">${esc(clientId)}</div>
+              <div style="font-size:.78rem;color:var(--txt3);margin-top:.35rem">
+                Plan: ${esc(c.licenseLevel || "—")} · Status: ${esc(c.licenseStatus || "—")} · Limit: ${esc(c.playerLimit || "—")}
+              </div>
+            </div>
+            <div style="text-align:right;font-size:.8rem;color:var(--txt3)">
+              <div>Admin seats: <b style="color:var(--txt)">${esc(c.adminSeats || "—")}</b></div>
+              <div>${esc(c.environment || "")}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.65rem">
+            <button class="btn btn-secondary btn-sm" onclick="pbClientViewerV37BCopy('${esc(clientId)}')">Copy private link</button>
+            <button class="btn btn-secondary btn-sm" onclick="pbClientViewerV37BOpen('${esc(clientId)}')">Open</button>
+          </div>
+
+          <div style="font-family:monospace;font-size:.72rem;color:var(--txt3);margin-top:.45rem;word-break:break-all">${esc(link)}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function refresh() {
+    if (!isAdmin()) return;
+
+    setStatus("Loading clients from /admin/clients...", false);
+
+    const clients = await loadClients();
+    const body = document.getElementById("pb-client-viewer-v37b-body");
+    if (body) body.innerHTML = renderClients(clients);
+
+    setStatus("Loaded " + clients.length + " client(s). UI-only; no KV writes.", true);
+    return clients;
+  }
+
+  function ensureCard() {
+    if (!isAdmin()) return false;
+    if (document.getElementById("pb-client-viewer-v37b-card")) return true;
+
+    const root = document.getElementById("sec-admin") ||
+      document.getElementById("admin") ||
+      document.querySelector("[data-section='admin']");
+
+    if (!root) return false;
+
+    const card = document.createElement("div");
+    card.id = "pb-client-viewer-v37b-card";
+    card.className = "card";
+    card.setAttribute("data-admin-only", "true");
+    card.style.marginTop = "1rem";
+
+    card.innerHTML = `
+      <div class="card-title">🏢 Client Viewer <span style="font-size:.75rem;color:var(--txt3);font-weight:700">V37B UI-only</span></div>
+      <div style="color:var(--txt3);font-size:.85rem;line-height:1.45;margin-bottom:.7rem">
+        Admin-only client viewer. Lists existing licensed clients and gives private links. No reset, no seed, no KV writes.
+      </div>
+
+      <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.7rem">
+        <button class="btn btn-primary btn-sm" onclick="pbClientViewerV37BRefresh()">Refresh clients</button>
+      </div>
+
+      <div id="pb-client-viewer-v37b-status" style="font-size:.8rem;color:var(--txt3);margin-bottom:.6rem">Ready.</div>
+      <div id="pb-client-viewer-v37b-body"></div>
+    `;
+
+    root.appendChild(card);
+    setTimeout(function(){ pbClientViewerV37BRefresh(); }, 250);
+    return true;
+  }
+
+  window.pbClientViewerV37BRefresh = function(){
+    refresh().catch(e => setStatus("Error: " + e.message, false));
+  };
+
+  window.pbClientViewerV37BCopy = async function(clientId){
+    const link = linkFor(clientId);
+    try {
+      await navigator.clipboard.writeText(link);
+      setStatus("Copied private link for " + clientId, true);
+    } catch(e) {
+      prompt("Copy private link:", link);
+    }
+  };
+
+  window.pbClientViewerV37BOpen = function(clientId){
+    window.open(linkFor(clientId), "_blank");
+  };
+
+  window.pbClientViewerV37BStatus = function(){
+    const result = {
+      marker: MARKER,
+      installed: true,
+      isAdmin: isAdmin(),
+      hasCard: !!document.getElementById("pb-client-viewer-v37b-card"),
+      email: window.__ACCESS__ && window.__ACCESS__.email || "",
+      workerRouteChanges: false,
+      kvWrites: false
+    };
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  const timer = setInterval(function(){
+    if (ensureCard()) clearInterval(timer);
+  }, 300);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", ensureCard);
+  } else {
+    ensureCard();
+  }
+
+  setTimeout(ensureCard, 800);
+  setTimeout(ensureCard, 1800);
+})();
+
+
+
 /* PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J */
 (function(){
   const MARKER = "PB_PRIVATE_LINK_CLIENTID_AUTHORITY_V36J";
