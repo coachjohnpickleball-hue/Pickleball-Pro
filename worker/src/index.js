@@ -786,6 +786,7 @@ async function pbServerLicenseAdminClientsV24B(request, env) {
   }
 
   const clients = [];
+  const tombstonedClients = [];
 
   try {
     if (env && env.USAGE) {
@@ -798,7 +799,17 @@ async function pbServerLicenseAdminClientsV24B(request, env) {
         for (const key of page.keys || []) {
           try {
             const raw = await env.USAGE.get(key.name);
-            if (raw) clients.push(pbServerLicenseNormalizeV24B(JSON.parse(raw), env));
+            if (raw) {
+              /* PB_ADMIN_CLIENTS_TOMBSTONE_FILTER_V37D4 */
+              const parsed = JSON.parse(raw);
+              const normalized = pbServerLicenseNormalizeV24B(parsed, env);
+              const tombstone = await pbClientTombstoneGetV37D2(env, normalized.clientId || String(key.name || '').replace(/^client-license:/, ''));
+              if (tombstone) {
+                tombstonedClients.push(normalized.clientId || String(key.name || '').replace(/^client-license:/, ''));
+                continue;
+              }
+              clients.push(normalized);
+            }
           } catch (e) {}
         }
       } while (cursor);
@@ -809,6 +820,9 @@ async function pbServerLicenseAdminClientsV24B(request, env) {
     ok: true,
     marker: 'PB_SERVER_LICENSE_ROUTE_FIX_V24B',
     count: clients.length,
+    tombstoneFilterMarker: 'PB_ADMIN_CLIENTS_TOMBSTONE_FILTER_V37D4',
+    hiddenDeletedClients: tombstonedClients.length,
+    tombstonedClients,
     clients
   }, 200, env);
 }
