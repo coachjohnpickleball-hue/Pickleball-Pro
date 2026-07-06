@@ -55639,6 +55639,208 @@ function exportEndSessionSummary(){
   setTimeout(installV37O, 3000);
 })();
 
+
+/* PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C */
+(function(){
+  var MARKER = "PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C";
+  if (window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C__) return;
+  window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C__ = true;
+
+  function cleanClientId(value){
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId(){
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function esc(value){
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function activePlayers(){
+    try {
+      if (!window.state || !Array.isArray(state.players)) return 0;
+      return state.players.filter(function(p){
+        return p && p.active !== false && p.waitlist !== true;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function totalPlayers(){
+    try {
+      return window.state && Array.isArray(state.players) ? state.players.length : 0;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  async function getServerSummary(clientId){
+    try {
+      var r = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v39c-" + Date.now(), {
+        credentials: "include",
+        cache: "no-store"
+      });
+      var data = await r.json().catch(function(){ return {}; });
+      return {
+        httpStatus: r.status,
+        ok: !!data.ok,
+        found: !!data.found,
+        savedAt: data.savedAt || "",
+        summary: data.summary || {}
+      };
+    } catch(e) {
+      return { ok:false, found:false, error:String(e && e.message || e) };
+    }
+  }
+
+  function findTarget(){
+    return (
+      document.getElementById("sec-home") ||
+      document.getElementById("home") ||
+      document.querySelector("[data-section='home']") ||
+      document.querySelector("main") ||
+      document.body
+    );
+  }
+
+  function privateLink(clientId){
+    return location.origin + location.pathname + "?clientId=" + encodeURIComponent(clientId);
+  }
+
+  async function refresh(){
+    var clientId = getClientId();
+    if (!clientId) return false;
+
+    var server = await getServerSummary(clientId);
+
+    var panel = document.getElementById("pb-client-account-status-v39c");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-client-account-status-v39c";
+      panel.className = "card";
+      panel.style.marginTop = "1rem";
+
+      var target = findTarget();
+      if (target.firstChild) {
+        target.insertBefore(panel, target.firstChild);
+      } else {
+        target.appendChild(panel);
+      }
+    }
+
+    var link = privateLink(clientId);
+    var serverStatusColor = server.found ? "var(--lime)" : "var(--orange)";
+    var serverStatusText = server.found ? "Found" : "No State Yet";
+
+    panel.innerHTML = [
+      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
+        '<div>',
+          '<div class="card-title">🏢 Client Account</div>',
+          '<div style="font-size:.85rem;color:var(--txt3);line-height:1.45">Current client link, player usage, and server status.</div>',
+        '</div>',
+        '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
+      '</div>',
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.65rem;margin-top:.85rem">',
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Client ID</div>',
+          '<div style="font-family:monospace;font-size:.8rem;color:var(--txt);word-break:break-all;margin-top:.25rem">' + esc(clientId) + '</div>',
+        '</div>',
+
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Players</div>',
+          '<div style="font-size:1.15rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + activePlayers() + '</div>',
+          '<div style="font-size:.78rem;color:var(--txt3)">Total records: ' + totalPlayers() + '</div>',
+        '</div>',
+
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Server State</div>',
+          '<div style="font-size:1.15rem;font-weight:900;color:' + serverStatusColor + ';margin-top:.15rem">' + serverStatusText + '</div>',
+          '<div style="font-size:.78rem;color:var(--txt3)">Saved: ' + esc(server.savedAt || "—") + '</div>',
+        '</div>',
+      '</div>',
+
+      '<div style="margin-top:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.025)">',
+        '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-bottom:.25rem">Private Client Link</div>',
+        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">',
+          '<code style="font-size:.75rem;color:var(--txt2);word-break:break-all;flex:1">' + esc(link) + '</code>',
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbClientAccountStatusV39CCopyLink()">Copy</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+
+    window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ = {
+      marker: MARKER,
+      clientId: clientId,
+      server: server,
+      activePlayers: activePlayers(),
+      totalPlayers: totalPlayers()
+    };
+
+    return window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__;
+  }
+
+  window.pbClientAccountStatusV39CRefresh = refresh;
+
+  window.pbClientAccountStatusV39CCopyLink = async function(){
+    var clientId = getClientId();
+    var link = privateLink(clientId);
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("Private client link copied.");
+    } catch(e) {
+      prompt("Copy private client link:", link);
+    }
+  };
+
+  window.pbClientAccountStatusV39CStatus = async function(){
+    var refreshed = await refresh();
+    var result = {
+      marker: MARKER,
+      installed: true,
+      clientId: getClientId() || null,
+      hasPanel: !!document.getElementById("pb-client-account-status-v39c"),
+      refreshed: !!refreshed,
+      last: window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ || null
+    };
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function boot(){
+    refresh();
+    setTimeout(refresh, 700);
+    setTimeout(refresh, 1800);
+    setTimeout(refresh, 3500);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
+
 </script>
 
 </body>
