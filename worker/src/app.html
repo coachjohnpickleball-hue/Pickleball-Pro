@@ -2449,6 +2449,59 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
   display: none !important;
 }
 </style>
+
+<style id="pb-admin-static-header-v39k-style">
+/* PB_ADMIN_STATIC_HEADER_V39K */
+/* Static HTML/CSS only. No JavaScript. No refresh loop. */
+
+#pb-admin-static-header-v39k {
+  border: 1px solid rgba(198,255,0,.24);
+  background: linear-gradient(135deg, rgba(198,255,0,.075), rgba(255,255,255,.035));
+  margin-bottom: 1rem;
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-grid-v39k {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: .65rem;
+  margin-top: .85rem;
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-tile-v39k {
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  padding: .7rem;
+  background: rgba(255,255,255,.035);
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-label-v39k {
+  font-size: .72rem;
+  color: var(--txt3);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-value-v39k {
+  font-size: .92rem;
+  color: var(--txt);
+  font-weight: 900;
+  margin-top: .2rem;
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-actions-v39k {
+  display: flex;
+  gap: .45rem;
+  flex-wrap: wrap;
+  margin-top: .85rem;
+}
+
+#pb-admin-static-header-v39k .pb-admin-static-note-v39k {
+  color: var(--txt3);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+</style>
+
 </head>
 <body>
 <script id="admin-hard-hide-early">!function(){function t(){if(!window.__ACCESS__||!window.__ACCESS__.isAdmin)try{var t=document.getElementById("pb-hard-admin-css");t||((t=document.createElement("style")).id="pb-hard-admin-css",t.textContent='[data-admin-only],#sec-admin,button[onclick*="showTab(\\\'admin\\\'"],button[onclick*="showTab(\\"admin\\""],button[onclick*="/admin/"],a[href^="/admin/"]{display:none!important;visibility:hidden!important;}',document.head.appendChild(t)),document.querySelectorAll("[data-admin-only],#sec-admin,button,a").forEach(function(t){var e=t.getAttribute&&t.getAttribute("onclick")||"",n=t.getAttribute&&t.getAttribute("href")||"",i=(t.textContent||"").trim().toLowerCase();(t.hasAttribute&&t.hasAttribute("data-admin-only")||"sec-admin"===t.id||0===n.indexOf("/admin/")||e.indexOf("/admin/")>=0||e.indexOf("showTab('admin'")>=0||e.indexOf('showTab("admin"')>=0||"admin"===i||"admin lock"===i)&&(t.style.setProperty("display","none","important"),t.style.setProperty("visibility","hidden","important"),t.setAttribute("aria-hidden","true"))})}catch(t){}}t(),document.addEventListener("DOMContentLoaded",t),setTimeout(t,50),setTimeout(t,250),setTimeout(t,1e3),setInterval(t,2e3)}();</script>
@@ -3443,6 +3496,46 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 
 <!-- ══════════════════ ADMIN LOCK ══════════════════ -->
 <div id="sec-admin" class="section" data-admin-only>
+
+  <div id="pb-admin-static-header-v39k" class="card" data-admin-only>
+    <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <div class="card-title">⚙️ Admin Center</div>
+        <div class="pb-admin-static-note-v39k">
+          Admin tools for locking the event, reviewing access, terms, player portal, check-in, playoffs, stats, and history.
+        </div>
+      </div>
+      <div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">PB_ADMIN_STATIC_HEADER_V39K</div>
+    </div>
+
+    <div class="pb-admin-static-grid-v39k">
+      <div class="pb-admin-static-tile-v39k">
+        <div class="pb-admin-static-label-v39k">Safety</div>
+        <div class="pb-admin-static-value-v39k">Admin Lock</div>
+      </div>
+      <div class="pb-admin-static-tile-v39k">
+        <div class="pb-admin-static-label-v39k">Reports</div>
+        <div class="pb-admin-static-value-v39k">Access / TOS</div>
+      </div>
+      <div class="pb-admin-static-tile-v39k">
+        <div class="pb-admin-static-label-v39k">Event Tools</div>
+        <div class="pb-admin-static-value-v39k">Portal / Check-In</div>
+      </div>
+      <div class="pb-admin-static-tile-v39k">
+        <div class="pb-admin-static-label-v39k">Competition</div>
+        <div class="pb-admin-static-value-v39k">Playoffs / Stats</div>
+      </div>
+    </div>
+
+    <div class="pb-admin-static-actions-v39k">
+      <a class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only href="/admin/access-log" target="_blank">🔐 Access Log</a>
+      <a class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only href="/admin/tos-status" target="_blank">📄 TOS Status</a>
+      <a class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only href="/admin/terms-settings" target="_blank">⚙️ Terms Settings</a>
+      <a class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only href="/admin/clients" target="_blank">🏢 Client List</a>
+    </div>
+  </div>
+  <!-- /PB_ADMIN_STATIC_HEADER_V39K -->
+
   <div class="card">
     <div class="card-title">🔒 Admin Lock Mode</div>
     <p style="color:var(--txt2);margin-top:-.35rem">Turn this on during live play to reduce accidental roster, court, schedule, and score edits.</p>
