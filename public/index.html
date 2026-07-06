@@ -55967,6 +55967,366 @@ function exportEndSessionSummary(){
   window.addEventListener("load", boot);
 })();
 
+
+/* PB_ADMIN_LAYOUT_POLISH_V39E */
+(function(){
+  var MARKER = "PB_ADMIN_LAYOUT_POLISH_V39E";
+  if (window.__PB_ADMIN_LAYOUT_POLISH_V39E__) return;
+  window.__PB_ADMIN_LAYOUT_POLISH_V39E__ = true;
+
+  function text(el){
+    return String(el && (el.innerText || el.textContent) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function findAdminTarget(){
+    return (
+      document.getElementById("sec-admin") ||
+      document.querySelector("[data-section='admin']") ||
+      document.getElementById("admin")
+    );
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+    try {
+      var s = getComputedStyle(el);
+      if (s.display === "none" || s.visibility === "hidden") return false;
+      var r = el.getBoundingClientRect();
+      return r.width > 0 || r.height > 0;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function isAdminActive(){
+    var admin = findAdminTarget();
+    return !!(admin && isVisible(admin));
+  }
+
+  function ensureStyle(){
+    if (document.getElementById("pb-admin-layout-polish-v39e-style")) return;
+
+    var style = document.createElement("style");
+    style.id = "pb-admin-layout-polish-v39e-style";
+    style.textContent = `
+      #pb-admin-layout-v39e {
+        border: 1px solid rgba(198,255,0,.22);
+        background: linear-gradient(135deg, rgba(198,255,0,.08), rgba(255,255,255,.035));
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-actions {
+        display: flex;
+        gap: .45rem;
+        flex-wrap: wrap;
+        margin-top: .85rem;
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: .65rem;
+        margin-top: .85rem;
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-stat {
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 12px;
+        padding: .7rem;
+        background: rgba(255,255,255,.035);
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-label {
+        font-size: .72rem;
+        color: var(--txt3);
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-value {
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: var(--txt);
+        margin-top: .15rem;
+      }
+
+      #pb-admin-layout-v39e .pb-admin-v39e-note {
+        font-size: .82rem;
+        color: var(--txt3);
+        line-height: 1.45;
+      }
+
+      #pb-admin-layout-v39e button {
+        white-space: nowrap;
+      }
+
+      #sec-admin > .card,
+      #admin > .card,
+      [data-section='admin'] > .card {
+        scroll-margin-top: 90px;
+      }
+
+      #sec-admin .card-title,
+      #admin .card-title,
+      [data-section='admin'] .card-title {
+        letter-spacing: -.01em;
+      }
+
+      #sec-admin [data-pb-admin-compact-v39e="true"],
+      #admin [data-pb-admin-compact-v39e="true"],
+      [data-section='admin'] [data-pb-admin-compact-v39e="true"] {
+        margin-top: .8rem;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function activePlayerCount(){
+    try {
+      if (!window.state || !Array.isArray(state.players)) return 0;
+      return state.players.filter(function(p){
+        return p && p.active !== false && p.waitlist !== true;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function roundCount(){
+    try {
+      return window.state && Array.isArray(state.schedule) ? state.schedule.length : 0;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function clientId(){
+    try {
+      return String(new URLSearchParams(location.search || "").get("clientId") || "").trim();
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function findCardByWords(words){
+    var admin = findAdminTarget();
+    if (!admin) return null;
+
+    var cards = Array.prototype.slice.call(admin.querySelectorAll(".card, section, div"));
+    for (var i = 0; i < cards.length; i++) {
+      var t = text(cards[i]).toLowerCase();
+      var ok = true;
+
+      for (var j = 0; j < words.length; j++) {
+        if (t.indexOf(words[j].toLowerCase()) < 0) {
+          ok = false;
+          break;
+        }
+      }
+
+      if (ok && cards[i].id !== "pb-admin-layout-v39e") return cards[i];
+    }
+
+    return null;
+  }
+
+  function scrollToTarget(kind){
+    var target = null;
+
+    if (kind === "client") {
+      target = document.getElementById("pb-client-account-status-v39c") || findCardByWords(["client"]);
+    } else if (kind === "viewer") {
+      target = document.getElementById("pb-client-viewer-v37b-card") || findCardByWords(["client", "viewer"]);
+    } else if (kind === "backup") {
+      target = document.getElementById("pb-snapshot-save-panel") || findCardByWords(["backup"]);
+    } else if (kind === "terms") {
+      target = findCardByWords(["terms"]) || findCardByWords(["tos"]);
+    } else if (kind === "access") {
+      target = findCardByWords(["access", "log"]);
+    }
+
+    if (target && target.scrollIntoView) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      try {
+        target.style.outline = "2px solid rgba(198,255,0,.65)";
+        target.style.outlineOffset = "3px";
+        setTimeout(function(){
+          target.style.outline = "";
+          target.style.outlineOffset = "";
+        }, 1200);
+      } catch(e) {}
+      return true;
+    }
+
+    try {
+      if (typeof toast === "function") toast("Admin section not found yet. Try opening Admin again.", "err");
+    } catch(e) {}
+
+    return false;
+  }
+
+  function compactAdminCards(){
+    var admin = findAdminTarget();
+    if (!admin) return;
+
+    Array.prototype.slice.call(admin.querySelectorAll(".card")).forEach(function(card){
+      if (card.id === "pb-admin-layout-v39e") return;
+      card.setAttribute("data-pb-admin-compact-v39e", "true");
+
+      try {
+        var title = card.querySelector(".card-title");
+        if (title && !title.getAttribute("data-pb-admin-title-v39e")) {
+          title.setAttribute("data-pb-admin-title-v39e", "true");
+        }
+      } catch(e) {}
+    });
+  }
+
+  function render(){
+    ensureStyle();
+
+    var admin = findAdminTarget();
+    if (!admin) return false;
+
+    var panel = document.getElementById("pb-admin-layout-v39e");
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-admin-layout-v39e";
+      panel.className = "card";
+      panel.setAttribute("data-admin-only", "true");
+      panel.style.marginTop = "1rem";
+    }
+
+    if (panel.parentNode !== admin) {
+      admin.insertBefore(panel, admin.firstChild || null);
+    }
+
+    panel.style.display = isAdminActive() ? "" : "none";
+
+    var client = clientId() || "—";
+    var players = activePlayerCount();
+    var rounds = roundCount();
+
+    panel.innerHTML = [
+      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
+        '<div>',
+          '<div class="card-title">⚙️ Admin Command Center</div>',
+          '<div class="pb-admin-v39e-note">Admin-only shortcuts and account tools. Nothing here changes client data unless you click an existing admin action.</div>',
+        '</div>',
+        '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
+      '</div>',
+
+      '<div class="pb-admin-v39e-stat-grid">',
+        '<div class="pb-admin-v39e-stat">',
+          '<div class="pb-admin-v39e-label">Client</div>',
+          '<div class="pb-admin-v39e-value" style="font-size:.86rem;font-family:monospace;word-break:break-all">' + client + '</div>',
+        '</div>',
+        '<div class="pb-admin-v39e-stat">',
+          '<div class="pb-admin-v39e-label">Players</div>',
+          '<div class="pb-admin-v39e-value">' + players + '</div>',
+        '</div>',
+        '<div class="pb-admin-v39e-stat">',
+          '<div class="pb-admin-v39e-label">Rounds</div>',
+          '<div class="pb-admin-v39e-value">' + rounds + '</div>',
+        '</div>',
+      '</div>',
+
+      '<div class="pb-admin-v39e-actions">',
+        '<button type="button" class="btn btn-primary btn-sm" onclick="pbAdminLayoutV39EJump(\'client\')">🏢 Client Account</button>',
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbAdminLayoutV39EJump(\'viewer\')">🔗 Client Viewer</button>',
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbAdminLayoutV39EJump(\'backup\')">💾 Backups</button>',
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbAdminLayoutV39EJump(\'terms\')">📜 Terms</button>',
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbAdminLayoutV39EJump(\'access\')">🧾 Access Log</button>',
+      '</div>'
+    ].join("");
+
+    compactAdminCards();
+
+    window.__PB_ADMIN_LAYOUT_POLISH_V39E_LAST__ = {
+      marker: MARKER,
+      installed: true,
+      adminTargetId: admin.id || null,
+      visible: panel.style.display !== "none",
+      clientId: clientId() || null,
+      players: players,
+      rounds: rounds
+    };
+
+    return true;
+  }
+
+  function removeGhostGameDayPanel(){
+    var ghost = document.getElementById("pb-game-day-control-center-v39d");
+    if (ghost) ghost.remove();
+  }
+
+  function installShowTabHook(){
+    if (typeof window.showTab !== "function") return false;
+    if (window.showTab.__pbAdminLayoutPolishV39E) return true;
+
+    var original = window.showTab;
+
+    window.showTab = function(tab){
+      var result = original.apply(this, arguments);
+      setTimeout(function(){
+        removeGhostGameDayPanel();
+        render();
+      }, 80);
+      return result;
+    };
+
+    window.showTab.__pbAdminLayoutPolishV39E = true;
+    return true;
+  }
+
+  window.pbAdminLayoutV39EJump = scrollToTarget;
+  window.pbAdminLayoutV39ERefresh = render;
+
+  window.pbAdminLayoutV39EStatus = function(){
+    installShowTabHook();
+    removeGhostGameDayPanel();
+    render();
+
+    var panel = document.getElementById("pb-admin-layout-v39e");
+    var admin = findAdminTarget();
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      hasPanel: !!panel,
+      inAdmin: !!(panel && admin && panel.parentNode === admin),
+      visible: !!(panel && panel.style.display !== "none"),
+      adminTargetId: admin ? admin.id || null : null,
+      last: window.__PB_ADMIN_LAYOUT_POLISH_V39E_LAST__ || null
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function boot(){
+    installShowTabHook();
+    removeGhostGameDayPanel();
+    render();
+    setTimeout(function(){ installShowTabHook(); removeGhostGameDayPanel(); render(); }, 700);
+    setTimeout(function(){ installShowTabHook(); removeGhostGameDayPanel(); render(); }, 1800);
+    setTimeout(function(){ installShowTabHook(); removeGhostGameDayPanel(); render(); }, 3500);
+    setInterval(function(){
+      removeGhostGameDayPanel();
+      render();
+    }, 3000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
+
 </script>
 
 </body>
