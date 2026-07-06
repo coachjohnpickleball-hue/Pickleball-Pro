@@ -55640,11 +55640,12 @@ function exportEndSessionSummary(){
 })();
 
 
-/* PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C */
+
+/* PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2 */
 (function(){
-  var MARKER = "PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C";
-  if (window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C__) return;
-  window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C__ = true;
+  var MARKER = "PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2";
+  if (window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2__) return;
+  window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2__ = true;
 
   function cleanClientId(value){
     return String(value || "")
@@ -55693,7 +55694,7 @@ function exportEndSessionSummary(){
 
   async function getServerSummary(clientId){
     try {
-      var r = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v39c-" + Date.now(), {
+      var r = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v39c2-" + Date.now(), {
         credentials: "include",
         cache: "no-store"
       });
@@ -55710,13 +55711,11 @@ function exportEndSessionSummary(){
     }
   }
 
-  function findTarget(){
+  function findAdminTarget(){
     return (
-      document.getElementById("sec-home") ||
-      document.getElementById("home") ||
-      document.querySelector("[data-section='home']") ||
-      document.querySelector("main") ||
-      document.body
+      document.getElementById("sec-admin") ||
+      document.getElementById("admin") ||
+      document.querySelector("[data-section='admin']")
     );
   }
 
@@ -55726,23 +55725,26 @@ function exportEndSessionSummary(){
 
   async function refresh(){
     var clientId = getClientId();
-    if (!clientId) return false;
+    var adminTarget = findAdminTarget();
+
+    if (!clientId || !adminTarget) return false;
 
     var server = await getServerSummary(clientId);
 
     var panel = document.getElementById("pb-client-account-status-v39c");
+
     if (!panel) {
       panel = document.createElement("div");
       panel.id = "pb-client-account-status-v39c";
       panel.className = "card";
       panel.style.marginTop = "1rem";
+      panel.setAttribute("data-admin-only", "true");
+    }
 
-      var target = findTarget();
-      if (target.firstChild) {
-        target.insertBefore(panel, target.firstChild);
-      } else {
-        target.appendChild(panel);
-      }
+    panel.setAttribute("data-pb-admin-only-v39c2", "true");
+
+    if (panel.parentNode !== adminTarget) {
+      adminTarget.insertBefore(panel, adminTarget.firstChild || null);
     }
 
     var link = privateLink(clientId);
@@ -55753,7 +55755,7 @@ function exportEndSessionSummary(){
       '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
         '<div>',
           '<div class="card-title">🏢 Client Account</div>',
-          '<div style="font-size:.85rem;color:var(--txt3);line-height:1.45">Current client link, player usage, and server status.</div>',
+          '<div style="font-size:.85rem;color:var(--txt3);line-height:1.45">Admin-only client status, private link, player usage, and server state.</div>',
         '</div>',
         '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
       '</div>',
@@ -55791,7 +55793,8 @@ function exportEndSessionSummary(){
       clientId: clientId,
       server: server,
       activePlayers: activePlayers(),
-      totalPlayers: totalPlayers()
+      totalPlayers: totalPlayers(),
+      location: "admin"
     };
 
     return window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__;
@@ -55812,14 +55815,19 @@ function exportEndSessionSummary(){
 
   window.pbClientAccountStatusV39CStatus = async function(){
     var refreshed = await refresh();
+    var panel = document.getElementById("pb-client-account-status-v39c");
+    var adminTarget = findAdminTarget();
+
     var result = {
       marker: MARKER,
       installed: true,
       clientId: getClientId() || null,
-      hasPanel: !!document.getElementById("pb-client-account-status-v39c"),
+      hasPanel: !!panel,
+      inAdmin: !!(panel && adminTarget && panel.parentNode === adminTarget),
       refreshed: !!refreshed,
       last: window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ || null
     };
+
     console.log(JSON.stringify(result, null, 2));
     try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
     return result;
