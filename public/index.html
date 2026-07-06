@@ -5071,7 +5071,7 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
     <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:0.4rem">
       <span>👥 Roster</span>
       <span style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
-        <input type="text" id="players-search" placeholder="🔍 Search players…" oninput="renderPlayers()"
+        <input type="text" id="players-search" placeholder="🔍 Search name, club, phone, email, rating…" oninput="renderPlayers()"
           style="font-size:0.82rem;padding:0.3rem 0.6rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--txt);width:175px">
         <button class="btn btn-secondary btn-sm" onclick="checkInAllPlayers(true)" title="Mark everyone on the roster as checked in">✓ Check In All</button>
         <button class="btn btn-secondary btn-sm" onclick="checkInAllPlayers(false)" title="Mark everyone on the roster as not checked in yet">✗ Check Out All</button>
@@ -5079,6 +5079,31 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
         <button class="btn btn-danger btn-sm" onclick="clearPlayers()">Clear All</button>
       </span>
     </div>
+
+    <div id="players-advanced-filter-v39n" style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin:.45rem 0 .65rem 0;padding:.6rem;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.035)">
+      <span style="font-size:.78rem;color:var(--txt3);font-weight:800">Filter</span>
+
+      <select id="players-quick-filter-v39n" onchange="pbPlayerSearchFilterV39NApply()" style="font-size:.82rem;padding:.35rem .55rem;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--txt)">
+        <option value="all">All players</option>
+        <option value="checked-in">Checked in</option>
+        <option value="not-checked-in">Not checked in</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="missing-dupr">Missing DUPR</option>
+        <option value="missing-contact">Missing contact</option>
+        <option value="missing-email">Missing email</option>
+        <option value="missing-phone">Missing phone</option>
+      </select>
+
+      <input id="players-min-dupr-v39n" type="number" min="1" max="8" step="0.01" placeholder="Min DUPR" oninput="pbPlayerSearchFilterV39NApply()" style="width:90px;font-size:.82rem;padding:.35rem .55rem;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--txt)">
+      <input id="players-max-dupr-v39n" type="number" min="1" max="8" step="0.01" placeholder="Max DUPR" oninput="pbPlayerSearchFilterV39NApply()" style="width:90px;font-size:.82rem;padding:.35rem .55rem;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--txt)">
+
+      <button type="button" class="btn btn-secondary btn-sm" onclick="pbPlayerSearchFilterV39NClear()">Clear</button>
+      <span style="font-family:monospace;font-size:.68rem;color:var(--txt3)">PB_PLAYER_SEARCH_FILTER_V39N</span>
+    </div>
+    <!-- /PB_PLAYER_SEARCH_FILTER_V39N -->
     <div id="players-filter-summary" style="font-size:0.75rem;color:var(--txt3);padding:0 0 0.4rem 0;display:none"></div>
     <div class="tbl-wrap">
       <table id="players-table">
@@ -56319,6 +56344,287 @@ function exportEndSessionSummary(){
   window.addEventListener("load", wrapImportFile);
 })();
 /* /PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M */
+
+
+/* PB_PLAYER_SEARCH_FILTER_V39N */
+(function(){
+  var MARKER = "PB_PLAYER_SEARCH_FILTER_V39N";
+  if (window.__PB_PLAYER_SEARCH_FILTER_V39N__) return;
+  window.__PB_PLAYER_SEARCH_FILTER_V39N__ = true;
+
+  var KEY = "pb_player_search_filter_v39n";
+
+  function $(id){ return document.getElementById(id); }
+
+  function clean(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function norm(v){
+    return clean(v).toLowerCase();
+  }
+
+  function players(){
+    try {
+      return window.state && Array.isArray(state.players) ? state.players : [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function rosterPlayers(){
+    return players().filter(function(p){ return p && p.waitlist !== true; });
+  }
+
+  function readSettings(){
+    var fallback = { quick:"all", min:"", max:"" };
+
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (saved && typeof saved === "object") {
+        return {
+          quick: saved.quick || "all",
+          min: saved.min || "",
+          max: saved.max || ""
+        };
+      }
+    } catch(e) {}
+
+    return fallback;
+  }
+
+  function saveSettings(){
+    var s = {
+      quick: $("players-quick-filter-v39n")?.value || "all",
+      min: $("players-min-dupr-v39n")?.value || "",
+      max: $("players-max-dupr-v39n")?.value || ""
+    };
+
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {}
+    return s;
+  }
+
+  function hydrateControls(){
+    var s = readSettings();
+
+    if ($("players-quick-filter-v39n")) $("players-quick-filter-v39n").value = s.quick || "all";
+    if ($("players-min-dupr-v39n")) $("players-min-dupr-v39n").value = s.min || "";
+    if ($("players-max-dupr-v39n")) $("players-max-dupr-v39n").value = s.max || "";
+  }
+
+  function playerIdFromRow(row){
+    if (!row) return null;
+
+    var idMatch = null;
+    var byId = row.querySelector("[id*='edit-name-'],[id*='edit-dupr-'],[id*='edit-gender-'],[id*='edit-club-'],[id*='edit-phone-'],[id*='edit-email-']");
+    if (byId && byId.id) idMatch = byId.id.match(/-([0-9]+(?:\.[0-9]+)?)$/);
+
+    if (idMatch) return idMatch[1];
+
+    var html = row.innerHTML || "";
+    idMatch = html.match(/edit-[a-zA-Z]+-([0-9]+(?:\.[0-9]+)?)/);
+    return idMatch ? idMatch[1] : null;
+  }
+
+  function rowPlayer(row){
+    var list = rosterPlayers();
+    var id = playerIdFromRow(row);
+
+    if (id != null) {
+      var exact = list.find(function(p){ return String(p.id) === String(id); });
+      if (exact) return exact;
+    }
+
+    var text = norm(row && row.textContent);
+    if (!text) return null;
+
+    var names = list
+      .filter(function(p){ return clean(p.name); })
+      .sort(function(a,b){ return clean(b.name).length - clean(a.name).length; });
+
+    return names.find(function(p){ return text.indexOf(norm(p.name)) >= 0; }) || null;
+  }
+
+  function duprValue(p){
+    if (!p || p.dupr === null || p.dupr === undefined || p.dupr === "") return null;
+    var n = parseFloat(p.dupr);
+    return isNaN(n) ? null : n;
+  }
+
+  function hasContact(p){
+    return !!(clean(p && p.phone) || clean(p && p.email));
+  }
+
+  function matchesQuick(p, quick){
+    if (!p) return true;
+
+    quick = quick || "all";
+
+    if (quick === "all") return true;
+    if (quick === "checked-in") return p.checkedIn !== false && p.active !== false && p.waitlist !== true;
+    if (quick === "not-checked-in") return p.checkedIn === false;
+    if (quick === "active") return p.active !== false;
+    if (quick === "inactive") return p.active === false;
+    if (quick === "male") return norm(p.gender) === "male";
+    if (quick === "female") return norm(p.gender) === "female";
+    if (quick === "missing-dupr") return duprValue(p) === null;
+    if (quick === "missing-contact") return !hasContact(p);
+    if (quick === "missing-email") return !clean(p.email);
+    if (quick === "missing-phone") return !clean(p.phone);
+
+    return true;
+  }
+
+  function matchesDupr(p, minRaw, maxRaw){
+    var min = minRaw === "" ? null : parseFloat(minRaw);
+    var max = maxRaw === "" ? null : parseFloat(maxRaw);
+
+    if ((min !== null && isNaN(min)) || (max !== null && isNaN(max))) return true;
+    if (min === null && max === null) return true;
+
+    var d = duprValue(p);
+    if (d === null) return false;
+
+    if (min !== null && d < min) return false;
+    if (max !== null && d > max) return false;
+
+    return true;
+  }
+
+  function filterLabel(quick){
+    return {
+      "all": "All",
+      "checked-in": "Checked In",
+      "not-checked-in": "Not Checked In",
+      "active": "Active",
+      "inactive": "Inactive",
+      "male": "Male",
+      "female": "Female",
+      "missing-dupr": "Missing DUPR",
+      "missing-contact": "Missing Contact",
+      "missing-email": "Missing Email",
+      "missing-phone": "Missing Phone"
+    }[quick || "all"] || quick;
+  }
+
+  function apply(){
+    var body = $("players-body");
+    if (!body) return false;
+
+    var settings = saveSettings();
+    var rows = Array.from(body.querySelectorAll("tr"));
+    var totalRows = rows.length;
+    var shown = 0;
+    var hidden = 0;
+
+    rows.forEach(function(row){
+      var p = rowPlayer(row);
+      var visible = matchesQuick(p, settings.quick) && matchesDupr(p, settings.min, settings.max);
+
+      row.style.display = visible ? "" : "none";
+      row.setAttribute("data-pb-v39n-filtered", visible ? "0" : "1");
+
+      if (visible) shown++;
+      else hidden++;
+    });
+
+    var summary = $("players-filter-summary");
+    if (summary) {
+      var activeBits = [];
+
+      if ((settings.quick || "all") !== "all") activeBits.push(filterLabel(settings.quick));
+      if (settings.min !== "") activeBits.push("DUPR ≥ " + settings.min);
+      if (settings.max !== "") activeBits.push("DUPR ≤ " + settings.max);
+
+      if (hidden || activeBits.length) {
+        summary.style.display = "";
+        summary.innerHTML =
+          "Showing <strong>" + shown + "</strong> of <strong>" + totalRows + "</strong> visible roster row(s)" +
+          (activeBits.length ? " · Filter: <strong>" + activeBits.join(" · ") + "</strong>" : "") +
+          ' <button type="button" class="btn btn-secondary btn-sm" style="margin-left:.45rem;padding:.22rem .5rem;font-size:.72rem" onclick="pbPlayerSearchFilterV39NClear()">Clear Filters</button>';
+      } else {
+        summary.style.display = "none";
+        summary.innerHTML = "";
+      }
+    }
+
+    return true;
+  }
+
+  function clearFilters(){
+    if ($("players-quick-filter-v39n")) $("players-quick-filter-v39n").value = "all";
+    if ($("players-min-dupr-v39n")) $("players-min-dupr-v39n").value = "";
+    if ($("players-max-dupr-v39n")) $("players-max-dupr-v39n").value = "";
+
+    try { localStorage.removeItem(KEY); } catch(e) {}
+
+    apply();
+  }
+
+  function wrapRenderPlayers(){
+    var original = window.renderPlayers;
+
+    if (typeof original !== "function") return false;
+    if (original.__pbPlayerSearchFilterV39N) return true;
+
+    var wrapped = function(){
+      var result = original.apply(this, arguments);
+
+      try { apply(); } catch(e) {
+        console.warn(MARKER + " apply warning", e);
+      }
+
+      return result;
+    };
+
+    wrapped.__pbPlayerSearchFilterV39N = true;
+    window.renderPlayers = wrapped;
+
+    try { renderPlayers = wrapped; } catch(e) {}
+
+    return true;
+  }
+
+  function status(){
+    wrapRenderPlayers();
+    hydrateControls();
+    apply();
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      hasPanel: !!$("players-advanced-filter-v39n"),
+      hasSearch: !!$("players-search"),
+      wrappedRenderPlayers: !!(window.renderPlayers && window.renderPlayers.__pbPlayerSearchFilterV39N),
+      settings: readSettings(),
+      rosterPlayers: rosterPlayers().length,
+      visibleRows: Array.from(document.querySelectorAll("#players-body tr")).filter(function(r){ return r.style.display !== "none"; }).length,
+      hiddenRows: Array.from(document.querySelectorAll("#players-body tr")).filter(function(r){ return r.style.display === "none"; }).length
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  }
+
+  window.pbPlayerSearchFilterV39NApply = apply;
+  window.pbPlayerSearchFilterV39NClear = clearFilters;
+  window.pbPlayerSearchFilterV39NStatus = status;
+
+  function boot(){
+    hydrateControls();
+    wrapRenderPlayers();
+    apply();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
 
 </script>
 
