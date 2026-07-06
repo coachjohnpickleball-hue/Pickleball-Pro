@@ -399,3 +399,24 @@ It only lists clients needing attention:
 
 Each row includes a suggested action.
 
+## Billing Email Drafts
+
+V38P adds read-only billing email draft generation:
+
+./ops/client-manager/billing-email-drafts-v38p.sh staging
+./ops/client-manager/billing-email-drafts-v38p.sh production
+
+It uses the V38O billing follow-up report and creates local TXT drafts under:
+
+ops/client-manager/reports/
+
+No emails are sent automatically.
+
+Drafts are generated for clients needing follow-up:
+- EXPIRED
+- EXPIRING_SOON
+- SUSPENDED
+- INACTIVE
+- OVER_LIMIT
+- NO_RENEWAL_DATE
+
