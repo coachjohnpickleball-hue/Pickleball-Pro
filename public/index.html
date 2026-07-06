@@ -55850,19 +55850,12 @@ function exportEndSessionSummary(){
 })();
 
 
-/* PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D */
-(function(){
-  var MARKER = "PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D";
-  if (window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D__) return;
-  window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D__ = true;
 
-  function getClientId(){
-    try {
-      return String(new URLSearchParams(location.search || "").get("clientId") || "").trim();
-    } catch(e) {
-      return "";
-    }
-  }
+/* PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2 */
+(function(){
+  var MARKER = "PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2";
+  if (window.__PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2__) return;
+  window.__PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2__ = true;
 
   function activePlayers(){
     try {
@@ -55891,9 +55884,7 @@ function exportEndSessionSummary(){
         var matches = Array.isArray(round.matches) ? round.matches : [];
         matches.forEach(function(m){
           if (!m) return;
-          if (m.completed || m.done || m.scoreA != null || m.scoreB != null || m.score1 != null || m.score2 != null) {
-            total++;
-          }
+          if (m.completed || m.done || m.scoreA != null || m.scoreB != null || m.score1 != null || m.score2 != null) total++;
         });
       });
       return total;
@@ -55902,24 +55893,77 @@ function exportEndSessionSummary(){
     }
   }
 
-  function nextAction(){
-    var players = activePlayers();
-    var rounds = roundCount();
-    var complete = completedMatches();
+  function clientId(){
+    try {
+      return String(new URLSearchParams(location.search || "").get("clientId") || "").trim();
+    } catch(e) {
+      return "";
+    }
+  }
 
-    if (!getClientId()) return "Open the app with a private client link.";
-    if (players === 0) return "Add players to start building the tournament.";
-    if (rounds === 0) return "Generate the first draft round.";
-    if (complete === 0) return "Send round details and start scoring.";
+  function nextAction(){
+    if (!clientId()) return "Open the app with a private client link.";
+    if (activePlayers() === 0) return "Add players to start building the tournament.";
+    if (roundCount() === 0) return "Generate the first draft round.";
+    if (completedMatches() === 0) return "Send round details and start scoring.";
     return "Keep scoring, notify players, and monitor standings.";
   }
 
+  function extractHomeTabName(){
+    try {
+      var buttons = Array.prototype.slice.call(document.querySelectorAll("button,a"));
+      for (var i = 0; i < buttons.length; i++) {
+        var b = buttons[i];
+        var txt = String(b.textContent || "").trim().toLowerCase();
+        var onclick = String(b.getAttribute("onclick") || "");
+        if (txt === "home" || txt.indexOf("home") === 0) {
+          var m = onclick.match(/showTab\(['"]([^'"]+)['"]/);
+          if (m && m[1]) return m[1];
+        }
+      }
+    } catch(e) {}
+    return "";
+  }
+
   function homeTarget(){
-    return (
-      document.getElementById("sec-home") ||
-      document.getElementById("home") ||
-      document.querySelector("[data-section='home']")
-    );
+    var tab = extractHomeTabName();
+
+    var candidates = [];
+
+    if (tab) {
+      candidates.push("sec-" + tab);
+      candidates.push(tab);
+    }
+
+    candidates.push("sec-home");
+    candidates.push("home");
+    candidates.push("sec-dashboard");
+    candidates.push("dashboard");
+    candidates.push("sec-main");
+    candidates.push("main");
+
+    for (var i = 0; i < candidates.length; i++) {
+      var el = document.getElementById(candidates[i]);
+      if (el) return el;
+    }
+
+    try {
+      if (tab) {
+        var byData = document.querySelector("[data-section='" + tab + "']");
+        if (byData) return byData;
+      }
+    } catch(e) {}
+
+    try {
+      var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+      var nonAdmin = sections.filter(function(s){
+        var id = String(s.id || "").toLowerCase();
+        return id.indexOf("admin") === -1;
+      });
+      if (nonAdmin.length) return nonAdmin[0];
+    } catch(e) {}
+
+    return null;
   }
 
   function go(tab){
@@ -55931,7 +55975,7 @@ function exportEndSessionSummary(){
     } catch(e) {}
 
     try {
-      var el = document.getElementById("sec-" + tab);
+      var el = document.getElementById("sec-" + tab) || document.getElementById(tab);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch(e) {}
   }
@@ -55939,7 +55983,7 @@ function exportEndSessionSummary(){
   function summaryText(){
     return [
       "PickleBall Pro Game Day Summary",
-      "Client: " + (getClientId() || "—"),
+      "Client: " + (clientId() || "—"),
       "Players: " + activePlayers(),
       "Rounds: " + roundCount(),
       "Completed matches: " + completedMatches(),
@@ -55971,8 +56015,8 @@ function exportEndSessionSummary(){
     var target = homeTarget();
 
     if (!target) {
-      var existing = document.getElementById("pb-game-day-control-center-v39d");
-      if (existing) existing.remove();
+      var old = document.getElementById("pb-game-day-control-center-v39d");
+      if (old) old.remove();
       return false;
     }
 
@@ -56030,14 +56074,15 @@ function exportEndSessionSummary(){
       '</div>'
     ].join("");
 
-    window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D_LAST__ = {
+    window.__PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2_LAST__ = {
       marker: MARKER,
-      clientId: getClientId() || null,
+      clientId: clientId() || null,
       players: activePlayers(),
       rounds: roundCount(),
       completedMatches: completedMatches(),
       nextAction: nextAction(),
-      location: "home"
+      homeTargetId: target.id || null,
+      homeTabName: extractHomeTabName() || null
     };
 
     return true;
@@ -56058,7 +56103,9 @@ function exportEndSessionSummary(){
       installed: true,
       hasPanel: !!card,
       inHome: !!(card && target && card.parentNode === target),
-      last: window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D_LAST__ || null
+      homeTargetId: target ? target.id || null : null,
+      homeTabName: extractHomeTabName() || null,
+      last: window.__PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2_LAST__ || null
     };
 
     console.log(JSON.stringify(result, null, 2));
