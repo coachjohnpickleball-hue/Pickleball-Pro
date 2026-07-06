@@ -174,3 +174,28 @@ The same check is available in the Client Manager menu as:
 
 15) Health Check ALL
 
+## Client Backup / Export
+
+V37X adds local read-only backups:
+
+./ops/client-manager/backup-clients-v37x.sh staging
+./ops/client-manager/backup-clients-v37x.sh production
+
+The backups include:
+1) client-license keys
+2) client-state keys
+3) client-deleted tombstone keys
+4) manifest.json
+5) summary.txt
+
+Backup files are written under:
+
+ops/client-manager/backups/
+
+The backup folder is ignored by Git so private client data is not pushed to GitHub.
+
+The same backup options are available in the Client Manager menu:
+
+15) Backup STAGING clients
+16) Backup PRODUCTION clients
+
