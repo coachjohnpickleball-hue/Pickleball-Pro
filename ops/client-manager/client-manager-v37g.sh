@@ -54,24 +54,26 @@ while true; do
   echo " 12)  Delete STAGING client"
   echo " 13)  Update STAGING license"
   echo " 14)  Suspend / Reactivate STAGING client"
+  echo " 15)  Set STAGING renewal / expiry date"
   echo ""
   echo "Production operations"
-  echo " 15)  Create PRODUCTION client"
-  echo " 16)  Delete PRODUCTION client"
-  echo " 17)  Update PRODUCTION license"
-  echo " 18)  Suspend / Reactivate PRODUCTION client"
+  echo " 16)  Create PRODUCTION client"
+  echo " 17)  Delete PRODUCTION client"
+  echo " 18)  Update PRODUCTION license"
+  echo " 19)  Suspend / Reactivate PRODUCTION client"
+  echo " 20)  Set PRODUCTION renewal / expiry date"
   echo ""
   echo "Backups"
-  echo " 19)  Backup STAGING clients"
-  echo " 20)  Backup PRODUCTION clients"
-  echo " 21)  Backup inventory"
-  echo " 22)  Restore STAGING client from backup"
-  echo " 23)  Restore PRODUCTION client from backup"
+  echo " 21)  Backup STAGING clients"
+  echo " 22)  Backup PRODUCTION clients"
+  echo " 23)  Backup inventory"
+  echo " 24)  Restore STAGING client from backup"
+  echo " 25)  Restore PRODUCTION client from backup"
   echo ""
   echo "Other"
-  echo " 24)  Health Check ALL"
-  echo " 25)  Show installed tools"
-  echo " 26)  Quit"
+  echo " 26)  Health Check ALL"
+  echo " 27)  Show installed tools"
+  echo " 28)  Quit"
   echo ""
 
   read -r -p "Choose an option: " choice
@@ -91,24 +93,26 @@ while true; do
     12) run_tool "delete-staging-client-v37d3.sh" ;;
     13) run_tool "update-staging-license-v37m.sh" ;;
     14) run_tool "update-staging-status-v38c.sh" ;;
-    15) run_tool "create-production-client-v37e.sh" ;;
-    16) run_tool "delete-production-client-v37d3.sh" ;;
-    17) run_tool "update-production-license-v37m.sh" ;;
-    18) run_tool "update-production-status-v38c.sh" ;;
-    19) run_tool "backup-clients-v37x.sh" staging ;;
-    20) run_tool "backup-clients-v37x.sh" production ;;
-    21) run_tool "backup-inventory-v38b.sh" ;;
-    22) run_tool "restore-client-menu-v38a.sh" staging ;;
-    23) run_tool "restore-client-menu-v38a.sh" production ;;
-    24) run_tool "health-check-all-v37w.sh" ;;
-    25)
+    15) run_tool "update-staging-renewal-v38j.sh" ;;
+    16) run_tool "create-production-client-v37e.sh" ;;
+    17) run_tool "delete-production-client-v37d3.sh" ;;
+    18) run_tool "update-production-license-v37m.sh" ;;
+    19) run_tool "update-production-status-v38c.sh" ;;
+    20) run_tool "update-production-renewal-v38j.sh" ;;
+    21) run_tool "backup-clients-v37x.sh" staging ;;
+    22) run_tool "backup-clients-v37x.sh" production ;;
+    23) run_tool "backup-inventory-v38b.sh" ;;
+    24) run_tool "restore-client-menu-v38a.sh" staging ;;
+    25) run_tool "restore-client-menu-v38a.sh" production ;;
+    26) run_tool "health-check-all-v37w.sh" ;;
+    27)
       echo ""
       echo "Installed client-manager tools:"
       echo "----------------------------------------"
       ls -1 "$TOOL_DIR"
       pause_menu
       ;;
-    26|q|Q|quit|exit)
+    28|q|Q|quit|exit)
       echo "Goodbye."
       exit 0
       ;;

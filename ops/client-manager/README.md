@@ -312,3 +312,20 @@ It reports:
 - NO_RENEWAL_DATE
 - TOMBSTONED
 
+## Set Renewal / Expiry Date
+
+V38J adds guarded renewal / expiry date tools:
+
+./ops/client-manager/update-staging-renewal-v38j.sh <clientId> <YYYY-MM-DD|clear> [renewalDate|expiresAt|subscriptionEndsAt|trialEndsAt]
+./ops/client-manager/update-production-renewal-v38j.sh <clientId> <YYYY-MM-DD|clear> [renewalDate|expiresAt|subscriptionEndsAt|trialEndsAt]
+
+Default field is renewalDate.
+
+Production confirmation phrase:
+RENEWAL PRODUCTION <clientId> <field> <YYYY-MM-DD|clear>
+
+Staging confirmation phrase:
+RENEWAL <clientId> <field> <YYYY-MM-DD|clear>
+
+Production renewal date changes automatically create a backup before writing.
+
