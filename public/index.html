@@ -5022,6 +5022,25 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
       <input type="file" id="csv-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
     </div>
     <div class="text-muted mt-1">Accepts <strong>.xlsx / .xls</strong> or <strong>.csv</strong> — columns: <code style="background:rgba(198,255,0,0.1);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.75rem">Name, Gender, DUPR, ClubRating, Club, Phone, Email</code> — columns after Gender are optional. Header row auto-detected. First sheet is used for Excel files.</div>
+    <div id="pb-player-import-export-cleanup-v39m" style="margin-top:.8rem;padding:.75rem;border:1px solid rgba(198,255,0,.18);border-radius:12px;background:rgba(198,255,0,.045)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:900;color:var(--txt);margin-bottom:.25rem">Player Import / Export</div>
+          <div style="color:var(--txt3);font-size:.82rem;line-height:1.4">
+            Export the current roster, download a clean import template, or restore the roster backup saved before the last import.
+          </div>
+        </div>
+        <div style="font-family:monospace;font-size:.7rem;color:var(--txt3)">PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M</div>
+      </div>
+      <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.65rem">
+        <button type="button" class="btn btn-secondary btn-sm" data-pb-v39m="export-csv" onclick="pbPlayerRosterExportV39MCSV()">⬇ Export Players CSV</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-pb-v39m="export-json" onclick="pbPlayerRosterExportV39MJSON()">⬇ Export Players JSON</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-pb-v39m="template" onclick="pbPlayerRosterTemplateV39M()">📄 Import Template</button>
+        <button type="button" class="btn btn-danger btn-sm" data-pb-v39m="restore" onclick="pbPlayerRosterRestoreLastImportBackupV39M()">↺ Restore Last Import Backup</button>
+      </div>
+    </div>
+    <!-- /PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M -->
+
   </div>
 
 <!-- Waitlist: players saved for later, not part of tonight's schedule until promoted -->
@@ -56000,6 +56019,306 @@ function exportEndSessionSummary(){
 
   window.addEventListener("load", boot);
 })();
+
+
+/* PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M */
+(function(){
+  var MARKER = "PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M";
+  var BACKUP_KEY = "pb_player_import_last_backup_v39m";
+
+  if (window.__PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M__) return;
+  window.__PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M__ = true;
+
+  function getState(){
+    try {
+      if (window.state && typeof state === "object") return state;
+    } catch(e) {}
+    return null;
+  }
+
+  function getPlayers(){
+    var s = getState();
+    return s && Array.isArray(s.players) ? s.players : [];
+  }
+
+  function cleanText(v){
+    return String(v == null ? "" : v).replace(/\s+/g, " ").trim();
+  }
+
+  function cleanPhone(v){
+    return cleanText(v);
+  }
+
+  function cleanEmail(v){
+    return cleanText(v).toLowerCase();
+  }
+
+  function numOrBlank(v){
+    if (v === null || v === undefined || v === "") return "";
+    var n = parseFloat(v);
+    return isNaN(n) ? "" : n;
+  }
+
+  function csvEscape(v){
+    var s = String(v == null ? "" : v);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function tournamentName(){
+    try {
+      if (typeof getTournamentName === "function") return cleanText(getTournamentName());
+    } catch(e) {}
+
+    try {
+      var el = document.getElementById("tournament-name") || document.querySelector("[id*='tournament'][id*='name']");
+      if (el && el.value) return cleanText(el.value);
+    } catch(e) {}
+
+    return "Pickleball Tournament";
+  }
+
+  function filePart(v){
+    return cleanText(v || "pickleball").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "pickleball";
+  }
+
+  function normalizedPlayers(){
+    return getPlayers().map(function(p, i){
+      return {
+        number: i + 1,
+        name: cleanText(p.name || p.playerName || p.fullName),
+        gender: cleanText(p.gender || ""),
+        dupr: numOrBlank(p.dupr),
+        clubRating: cleanText(p.clubRating || p.rating || ""),
+        club: cleanText(p.club || ""),
+        phone: cleanPhone(p.phone || p.mobile || ""),
+        email: cleanEmail(p.email || ""),
+        checkedIn: p.checkedIn === false ? "No" : "Yes",
+        active: p.active === false ? "No" : "Yes",
+        waitlist: p.waitlist === true ? "Yes" : "No"
+      };
+    });
+  }
+
+  function downloadText(filename, mime, text){
+    var blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      try { URL.revokeObjectURL(url); } catch(e) {}
+      try { a.remove(); } catch(e) {}
+    }, 250);
+  }
+
+  function toastMsg(msg, type){
+    try {
+      if (typeof toast === "function") return toast(msg, type || "ok");
+    } catch(e) {}
+    alert(msg);
+  }
+
+  function renderAfterPlayerChange(){
+    ["renderPlayers","renderDashboard","renderTeams","renderSchedule","renderStandings","updateProgress"].forEach(function(name){
+      try {
+        if (typeof window[name] === "function") window[name]();
+      } catch(e) {}
+    });
+
+    try {
+      if (typeof autoSave === "function") autoSave();
+    } catch(e) {}
+
+    try {
+      if (typeof window.pbServerFirstHardIsolationV36BSaveVisibleToServer === "function") {
+        var result = window.pbServerFirstHardIsolationV36BSaveVisibleToServer();
+        if (result && typeof result.catch === "function") result.catch(function(){});
+      }
+    } catch(e) {}
+  }
+
+  function saveImportBackup(source){
+    var s = getState();
+    var players = getPlayers();
+
+    var backup = {
+      marker: MARKER,
+      source: source || "manual",
+      createdAt: new Date().toISOString(),
+      tournament: tournamentName(),
+      count: players.length,
+      players: JSON.parse(JSON.stringify(players || []))
+    };
+
+    try {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+      return backup;
+    } catch(e) {
+      console.warn(MARKER + " backup failed", e);
+      return null;
+    }
+  }
+
+  function exportCSV(){
+    var rows = normalizedPlayers();
+    var header = ["Name","Gender","DUPR","ClubRating","Club","Phone","Email","CheckedIn","Active","Waitlist"];
+    var csv = [header.map(csvEscape).join(",")];
+
+    rows.forEach(function(p){
+      csv.push([
+        p.name,
+        p.gender,
+        p.dupr,
+        p.clubRating,
+        p.club,
+        p.phone,
+        p.email,
+        p.checkedIn,
+        p.active,
+        p.waitlist
+      ].map(csvEscape).join(","));
+    });
+
+    var filename = filePart(tournamentName()) + "-players-" + new Date().toISOString().slice(0,10) + ".csv";
+    downloadText(filename, "text/csv;charset=utf-8", csv.join("\n"));
+    toastMsg("Exported " + rows.length + " player(s) to CSV.", "ok");
+  }
+
+  function exportJSON(){
+    var players = getPlayers();
+    var payload = {
+      marker: MARKER,
+      exportedAt: new Date().toISOString(),
+      tournament: tournamentName(),
+      count: players.length,
+      players: players
+    };
+
+    var filename = filePart(tournamentName()) + "-players-" + new Date().toISOString().slice(0,10) + ".json";
+    downloadText(filename, "application/json;charset=utf-8", JSON.stringify(payload, null, 2));
+    toastMsg("Exported " + players.length + " player(s) to JSON.", "ok");
+  }
+
+  function downloadTemplate(){
+    var rows = [
+      ["Name","Gender","DUPR","ClubRating","Club","Phone","Email"],
+      ["Jane Smith","Female","3.75","3.5","Blue Zone","416-555-0100","jane@example.com"],
+      ["John Smith","Male","4.10","4.0","Burloak","416-555-0101","john@example.com"]
+    ];
+
+    var csv = rows.map(function(row){ return row.map(csvEscape).join(","); }).join("\n");
+    downloadText("pickleball-player-import-template.csv", "text/csv;charset=utf-8", csv);
+    toastMsg("Downloaded player import template.", "ok");
+  }
+
+  function restoreLastBackup(){
+    var raw = null;
+    try { raw = localStorage.getItem(BACKUP_KEY); } catch(e) {}
+
+    if (!raw) {
+      toastMsg("No player import backup found.", "err");
+      return false;
+    }
+
+    var backup;
+    try { backup = JSON.parse(raw); } catch(e) {
+      toastMsg("Backup is not readable.", "err");
+      return false;
+    }
+
+    if (!backup || !Array.isArray(backup.players)) {
+      toastMsg("Backup does not contain players.", "err");
+      return false;
+    }
+
+    var msg = "Restore " + backup.players.length + " player(s) from the last import backup?\n\nCreated: " + (backup.createdAt || "unknown") + "\nTournament: " + (backup.tournament || "unknown");
+    if (!confirm(msg)) return false;
+
+    var s = getState();
+    if (!s) {
+      toastMsg("Tournament state not found.", "err");
+      return false;
+    }
+
+    s.players = JSON.parse(JSON.stringify(backup.players));
+    renderAfterPlayerChange();
+    toastMsg("Restored " + s.players.length + " player(s) from backup.", "ok");
+    return true;
+  }
+
+  function wrapImportFile(){
+    if (typeof window.importFile !== "function") return false;
+    if (window.importFile.__pbPlayerImportExportCleanupV39M) return true;
+
+    var original = window.importFile;
+
+    var wrapped = function(){
+      saveImportBackup("before-importFile");
+      return original.apply(this, arguments);
+    };
+
+    wrapped.__pbPlayerImportExportCleanupV39M = true;
+    window.importFile = wrapped;
+
+    try { importFile = wrapped; } catch(e) {}
+
+    return true;
+  }
+
+  function status(){
+    wrapImportFile();
+
+    var raw = null;
+    var backup = null;
+
+    try { raw = localStorage.getItem(BACKUP_KEY); } catch(e) {}
+    try { backup = raw ? JSON.parse(raw) : null; } catch(e) {}
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      hasPanel: !!document.getElementById("pb-player-import-export-cleanup-v39m"),
+      players: getPlayers().length,
+      importFileWrapped: !!(window.importFile && window.importFile.__pbPlayerImportExportCleanupV39M),
+      backup: backup ? {
+        createdAt: backup.createdAt,
+        tournament: backup.tournament,
+        count: backup.count
+      } : null,
+      buttons: {
+        csv: !!document.querySelector("[data-pb-v39m='export-csv']"),
+        json: !!document.querySelector("[data-pb-v39m='export-json']"),
+        template: !!document.querySelector("[data-pb-v39m='template']"),
+        restore: !!document.querySelector("[data-pb-v39m='restore']")
+      }
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  }
+
+  window.pbPlayerRosterExportV39MCSV = exportCSV;
+  window.pbPlayerRosterExportV39MJSON = exportJSON;
+  window.pbPlayerRosterTemplateV39M = downloadTemplate;
+  window.pbPlayerRosterBackupV39M = saveImportBackup;
+  window.pbPlayerRosterRestoreLastImportBackupV39M = restoreLastBackup;
+  window.pbPlayerImportExportV39MStatus = status;
+
+  wrapImportFile();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wrapImportFile);
+  } else {
+    setTimeout(wrapImportFile, 0);
+  }
+
+  window.addEventListener("load", wrapImportFile);
+})();
+/* /PB_PLAYER_IMPORT_EXPORT_CLEANUP_V39M */
 
 </script>
 
