@@ -55641,216 +55641,6 @@ function exportEndSessionSummary(){
 
 
 
-/* PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2 */
-(function(){
-  var MARKER = "PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2";
-  if (window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2__) return;
-  window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_ONLY_V39C2__ = true;
-
-  function cleanClientId(value){
-    return String(value || "")
-      .trim()
-      .replace(/^["']+|["']+$/g, "")
-      .replace(/[^a-zA-Z0-9_-]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .toLowerCase();
-  }
-
-  function getClientId(){
-    try {
-      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
-    } catch(e) {
-      return "";
-    }
-  }
-
-  function esc(value){
-    return String(value == null ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function activePlayers(){
-    try {
-      if (!window.state || !Array.isArray(state.players)) return 0;
-      return state.players.filter(function(p){
-        return p && p.active !== false && p.waitlist !== true;
-      }).length;
-    } catch(e) {
-      return 0;
-    }
-  }
-
-  function totalPlayers(){
-    try {
-      return window.state && Array.isArray(state.players) ? state.players.length : 0;
-    } catch(e) {
-      return 0;
-    }
-  }
-
-  async function getServerSummary(clientId){
-    try {
-      var r = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v39c2-" + Date.now(), {
-        credentials: "include",
-        cache: "no-store"
-      });
-      var data = await r.json().catch(function(){ return {}; });
-      return {
-        httpStatus: r.status,
-        ok: !!data.ok,
-        found: !!data.found,
-        savedAt: data.savedAt || "",
-        summary: data.summary || {}
-      };
-    } catch(e) {
-      return { ok:false, found:false, error:String(e && e.message || e) };
-    }
-  }
-
-  function findAdminTarget(){
-    return (
-      document.getElementById("sec-admin") ||
-      document.getElementById("admin") ||
-      document.querySelector("[data-section='admin']")
-    );
-  }
-
-  function privateLink(clientId){
-    return location.origin + location.pathname + "?clientId=" + encodeURIComponent(clientId);
-  }
-
-  async function refresh(){
-    var clientId = getClientId();
-    var adminTarget = findAdminTarget();
-
-    if (!clientId || !adminTarget) return false;
-
-    var server = await getServerSummary(clientId);
-
-    var panel = document.getElementById("pb-client-account-status-v39c");
-
-    if (!panel) {
-      panel = document.createElement("div");
-      panel.id = "pb-client-account-status-v39c";
-      panel.className = "card";
-      panel.style.marginTop = "1rem";
-      panel.setAttribute("data-admin-only", "true");
-    }
-
-    panel.setAttribute("data-pb-admin-only-v39c2", "true");
-
-    if (panel.parentNode !== adminTarget) {
-      adminTarget.insertBefore(panel, adminTarget.firstChild || null);
-    }
-
-    var link = privateLink(clientId);
-    var serverStatusColor = server.found ? "var(--lime)" : "var(--orange)";
-    var serverStatusText = server.found ? "Found" : "No State Yet";
-
-    panel.innerHTML = [
-      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
-        '<div>',
-          '<div class="card-title">🏢 Client Account</div>',
-          '<div style="font-size:.85rem;color:var(--txt3);line-height:1.45">Admin-only client status, private link, player usage, and server state.</div>',
-        '</div>',
-        '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
-      '</div>',
-
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.65rem;margin-top:.85rem">',
-        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
-          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Client ID</div>',
-          '<div style="font-family:monospace;font-size:.8rem;color:var(--txt);word-break:break-all;margin-top:.25rem">' + esc(clientId) + '</div>',
-        '</div>',
-
-        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
-          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Players</div>',
-          '<div style="font-size:1.15rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + activePlayers() + '</div>',
-          '<div style="font-size:.78rem;color:var(--txt3)">Total records: ' + totalPlayers() + '</div>',
-        '</div>',
-
-        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
-          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Server State</div>',
-          '<div style="font-size:1.15rem;font-weight:900;color:' + serverStatusColor + ';margin-top:.15rem">' + serverStatusText + '</div>',
-          '<div style="font-size:.78rem;color:var(--txt3)">Saved: ' + esc(server.savedAt || "—") + '</div>',
-        '</div>',
-      '</div>',
-
-      '<div style="margin-top:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.025)">',
-        '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-bottom:.25rem">Private Client Link</div>',
-        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">',
-          '<code style="font-size:.75rem;color:var(--txt2);word-break:break-all;flex:1">' + esc(link) + '</code>',
-          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbClientAccountStatusV39CCopyLink()">Copy</button>',
-        '</div>',
-      '</div>'
-    ].join("");
-
-    window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ = {
-      marker: MARKER,
-      clientId: clientId,
-      server: server,
-      activePlayers: activePlayers(),
-      totalPlayers: totalPlayers(),
-      location: "admin"
-    };
-
-    return window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__;
-  }
-
-  window.pbClientAccountStatusV39CRefresh = refresh;
-
-  window.pbClientAccountStatusV39CCopyLink = async function(){
-    var clientId = getClientId();
-    var link = privateLink(clientId);
-    try {
-      await navigator.clipboard.writeText(link);
-      alert("Private client link copied.");
-    } catch(e) {
-      prompt("Copy private client link:", link);
-    }
-  };
-
-  window.pbClientAccountStatusV39CStatus = async function(){
-    var refreshed = await refresh();
-    var panel = document.getElementById("pb-client-account-status-v39c");
-    var adminTarget = findAdminTarget();
-
-    var result = {
-      marker: MARKER,
-      installed: true,
-      clientId: getClientId() || null,
-      hasPanel: !!panel,
-      inAdmin: !!(panel && adminTarget && panel.parentNode === adminTarget),
-      refreshed: !!refreshed,
-      last: window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ || null
-    };
-
-    console.log(JSON.stringify(result, null, 2));
-    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
-    return result;
-  };
-
-  function boot(){
-    refresh();
-    setTimeout(refresh, 700);
-    setTimeout(refresh, 1800);
-    setTimeout(refresh, 3500);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-
-  window.addEventListener("load", boot);
-})();
-
-
-
 /* PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2 */
 (function(){
   var MARKER = "PB_GAME_DAY_CONTROL_CENTER_HOME_LOCATOR_V39D2";
@@ -56119,6 +55909,333 @@ function exportEndSessionSummary(){
     setTimeout(render, 1800);
     setTimeout(render, 3500);
     setInterval(render, 5000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
+
+
+/* PB_CLIENT_ACCOUNT_STATUS_ADMIN_LOCK_V39C3 */
+(function(){
+  var MARKER = "PB_CLIENT_ACCOUNT_STATUS_ADMIN_LOCK_V39C3";
+  if (window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_LOCK_V39C3__) return;
+  window.__PB_CLIENT_ACCOUNT_STATUS_ADMIN_LOCK_V39C3__ = true;
+
+  function cleanClientId(value){
+    return String(value || "")
+      .trim()
+      .replace(/^["']+|["']+$/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+  }
+
+  function getClientId(){
+    try {
+      return cleanClientId(new URLSearchParams(location.search || "").get("clientId") || "");
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function esc(value){
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function activePlayers(){
+    try {
+      if (!window.state || !Array.isArray(state.players)) return 0;
+      return state.players.filter(function(p){
+        return p && p.active !== false && p.waitlist !== true;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function totalPlayers(){
+    try {
+      return window.state && Array.isArray(state.players) ? state.players.length : 0;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  async function getServerSummary(clientId){
+    try {
+      var r = await fetch("/api/client-state?clientId=" + encodeURIComponent(clientId) + "&v=v39c3-" + Date.now(), {
+        credentials: "include",
+        cache: "no-store"
+      });
+
+      var data = await r.json().catch(function(){ return {}; });
+
+      return {
+        httpStatus: r.status,
+        ok: !!data.ok,
+        found: !!data.found,
+        savedAt: data.savedAt || "",
+        summary: data.summary || {}
+      };
+    } catch(e) {
+      return { ok:false, found:false, error:String(e && e.message || e) };
+    }
+  }
+
+  function isBadTarget(el){
+    if (!el) return true;
+
+    var tag = String(el.tagName || "").toLowerCase();
+    if (tag === "button" || tag === "a" || tag === "input" || tag === "select" || tag === "textarea") return true;
+
+    var cls = String(el.className || "").toLowerCase();
+    if (cls.indexOf("tab-btn") >= 0 || cls.indexOf("nav") >= 0 || cls.indexOf("menu") >= 0) return true;
+
+    return false;
+  }
+
+  function findAdminTarget(){
+    var candidates = [
+      document.getElementById("sec-admin"),
+      document.querySelector("[data-section='admin']"),
+      document.getElementById("admin")
+    ];
+
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i] && !isBadTarget(candidates[i])) return candidates[i];
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll(".section,[id^='sec-'],section,main,div"));
+    for (var j = 0; j < sections.length; j++) {
+      var el = sections[j];
+      if (isBadTarget(el)) continue;
+
+      var id = String(el.id || "").toLowerCase();
+      var data = String(el.getAttribute && el.getAttribute("data-section") || "").toLowerCase();
+
+      if (id === "admin" || id === "sec-admin" || data === "admin") return el;
+    }
+
+    return null;
+  }
+
+  function isVisible(el){
+    if (!el) return false;
+
+    try {
+      var style = getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+
+      var rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return false;
+
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function isAdminTabName(tab){
+    return String(tab || "").trim().toLowerCase() === "admin";
+  }
+
+  function isAdminActive(){
+    if (window.__PB_ACTIVE_TAB_V39C3__) {
+      return isAdminTabName(window.__PB_ACTIVE_TAB_V39C3__);
+    }
+
+    var adminTarget = findAdminTarget();
+    return !!(adminTarget && isVisible(adminTarget));
+  }
+
+  function privateLink(clientId){
+    return location.origin + location.pathname + "?clientId=" + encodeURIComponent(clientId);
+  }
+
+  function removeDuplicatePanels(){
+    var panels = Array.prototype.slice.call(document.querySelectorAll("#pb-client-account-status-v39c"));
+    panels.forEach(function(panel, idx){
+      if (idx > 0) panel.remove();
+    });
+  }
+
+  function syncVisibility(){
+    var panel = document.getElementById("pb-client-account-status-v39c");
+    if (!panel) return false;
+
+    var adminTarget = findAdminTarget();
+
+    if (adminTarget && panel.parentNode !== adminTarget) {
+      adminTarget.insertBefore(panel, adminTarget.firstChild || null);
+    }
+
+    panel.style.display = isAdminActive() ? "" : "none";
+    panel.setAttribute("data-pb-admin-locked-v39c3", "true");
+
+    return true;
+  }
+
+  async function refresh(){
+    removeDuplicatePanels();
+
+    var clientId = getClientId();
+    var adminTarget = findAdminTarget();
+
+    if (!clientId || !adminTarget) {
+      syncVisibility();
+      return false;
+    }
+
+    var server = await getServerSummary(clientId);
+
+    var panel = document.getElementById("pb-client-account-status-v39c");
+
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-client-account-status-v39c";
+      panel.className = "card";
+      panel.style.marginTop = "1rem";
+      panel.setAttribute("data-admin-only", "true");
+    }
+
+    if (panel.parentNode !== adminTarget) {
+      adminTarget.insertBefore(panel, adminTarget.firstChild || null);
+    }
+
+    var link = privateLink(clientId);
+    var serverStatusColor = server.found ? "var(--lime)" : "var(--orange)";
+    var serverStatusText = server.found ? "Found" : "No State Yet";
+
+    panel.innerHTML = [
+      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
+        '<div>',
+          '<div class="card-title">🏢 Client Account</div>',
+          '<div style="font-size:.85rem;color:var(--txt3);line-height:1.45">Admin-only client status, private link, player usage, and server state.</div>',
+        '</div>',
+        '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
+      '</div>',
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.65rem;margin-top:.85rem">',
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Client ID</div>',
+          '<div style="font-family:monospace;font-size:.8rem;color:var(--txt);word-break:break-all;margin-top:.25rem">' + esc(clientId) + '</div>',
+        '</div>',
+
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Players</div>',
+          '<div style="font-size:1.15rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + activePlayers() + '</div>',
+          '<div style="font-size:.78rem;color:var(--txt3)">Total records: ' + totalPlayers() + '</div>',
+        '</div>',
+
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Server State</div>',
+          '<div style="font-size:1.15rem;font-weight:900;color:' + serverStatusColor + ';margin-top:.15rem">' + serverStatusText + '</div>',
+          '<div style="font-size:.78rem;color:var(--txt3)">Saved: ' + esc(server.savedAt || "—") + '</div>',
+        '</div>',
+      '</div>',
+
+      '<div style="margin-top:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.025)">',
+        '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-bottom:.25rem">Private Client Link</div>',
+        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">',
+          '<code style="font-size:.75rem;color:var(--txt2);word-break:break-all;flex:1">' + esc(link) + '</code>',
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbClientAccountStatusV39CCopyLink()">Copy</button>',
+        '</div>',
+      '</div>'
+    ].join("");
+
+    window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ = {
+      marker: MARKER,
+      clientId: clientId,
+      server: server,
+      activePlayers: activePlayers(),
+      totalPlayers: totalPlayers(),
+      adminTargetId: adminTarget.id || null,
+      activeTab: window.__PB_ACTIVE_TAB_V39C3__ || null,
+      visible: isAdminActive()
+    };
+
+    syncVisibility();
+
+    return window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__;
+  }
+
+  function installShowTabHook(){
+    if (typeof window.showTab !== "function") return false;
+    if (window.showTab.__pbClientAccountAdminLockV39C3) return true;
+
+    var originalShowTab = window.showTab;
+
+    window.showTab = function(tab){
+      window.__PB_ACTIVE_TAB_V39C3__ = String(tab || "");
+      var result = originalShowTab.apply(this, arguments);
+
+      setTimeout(syncVisibility, 0);
+      setTimeout(syncVisibility, 80);
+      setTimeout(refresh, 180);
+
+      return result;
+    };
+
+    window.showTab.__pbClientAccountAdminLockV39C3 = true;
+    return true;
+  }
+
+  window.pbClientAccountStatusV39CRefresh = refresh;
+
+  window.pbClientAccountStatusV39CCopyLink = async function(){
+    var clientId = getClientId();
+    var link = privateLink(clientId);
+
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("Private client link copied.");
+    } catch(e) {
+      prompt("Copy private client link:", link);
+    }
+  };
+
+  window.pbClientAccountStatusV39CStatus = async function(){
+    installShowTabHook();
+    var refreshed = await refresh();
+    var panel = document.getElementById("pb-client-account-status-v39c");
+    var adminTarget = findAdminTarget();
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      clientId: getClientId() || null,
+      hasPanel: !!panel,
+      inAdmin: !!(panel && adminTarget && panel.parentNode === adminTarget),
+      visible: !!(panel && panel.style.display !== "none"),
+      adminTargetId: adminTarget ? adminTarget.id || null : null,
+      activeTab: window.__PB_ACTIVE_TAB_V39C3__ || null,
+      refreshed: !!refreshed,
+      last: window.__PB_CLIENT_ACCOUNT_STATUS_PANEL_V39C_LAST__ || null
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function boot(){
+    installShowTabHook();
+    refresh();
+    setTimeout(function(){ installShowTabHook(); refresh(); }, 700);
+    setTimeout(function(){ installShowTabHook(); refresh(); }, 1800);
+    setTimeout(function(){ installShowTabHook(); refresh(); }, 3500);
+    setInterval(function(){ installShowTabHook(); syncVisibility(); }, 1500);
   }
 
   if (document.readyState === "loading") {
