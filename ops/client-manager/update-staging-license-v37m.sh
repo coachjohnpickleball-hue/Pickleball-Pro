@@ -1,164 +1,140 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STAGING_KV="d4be478f609e4696aae597c6adf6c533"
+ENVIRONMENT="staging"
+KV="d4be478f609e4696aae597c6adf6c533"
+CONFIRM_PREFIX="UPDATE"
+FORCE_PREFIX="FORCE STAGING DOWNGRADE"
 
-echo "------ SAFE LICENSE UPDATE - STAGING ONLY ------"
-echo ""
+CLIENT_ID="${1:-}"
+LEVEL="${2:-}"
 
-read -r -p "Client ID to update: " CLIENT
-CLIENT="$(echo "$CLIENT" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/-+/-/g; s/^-|-$//g')"
-
-if [ -z "$CLIENT" ]; then
-  echo "ERROR: No valid client ID."
+if [[ -z "$CLIENT_ID" || -z "$LEVEL" ]]; then
+  echo "Usage:"
+  echo "  $0 <clientId> <trial|club|pro|enterprise>"
   exit 1
 fi
 
-echo ""
-echo "Choose license level:"
-echo "1) trial      16 players, no mobile scoring"
-echo "2) club       40 players"
-echo "3) pro        96 players"
-echo "4) enterprise 250 players"
-echo ""
-read -r -p "Selection: " CHOICE
-
-case "$CHOICE" in
-  1) LEVEL="trial" ;;
-  2) LEVEL="club" ;;
-  3) LEVEL="pro" ;;
-  4) LEVEL="enterprise" ;;
-  trial|club|pro|enterprise) LEVEL="$CHOICE" ;;
+case "$LEVEL" in
+  trial)
+    LABEL="Trial"; LIMIT=16; MOBILE=false; OFFICIAL=false ;;
+  club)
+    LABEL="Club"; LIMIT=40; MOBILE=true; OFFICIAL=true ;;
+  pro)
+    LABEL="Pro"; LIMIT=96; MOBILE=true; OFFICIAL=true ;;
+  enterprise)
+    LABEL="Enterprise"; LIMIT=250; MOBILE=true; OFFICIAL=true ;;
   *)
-    echo "Cancelled. Invalid selection."
-    exit 0
-    ;;
+    echo "ERROR: invalid level: $LEVEL"
+    echo "Allowed: trial, club, pro, enterprise"
+    exit 1 ;;
 esac
 
-echo ""
-echo "This will update this STAGING client:"
-echo "Client: $CLIENT"
-echo "Level:  $LEVEL"
-echo ""
-echo "Type exactly:"
-echo "UPDATE $CLIENT $LEVEL"
-read -r -p "Confirm: " CONFIRM
-
-if [ "$CONFIRM" != "UPDATE $CLIENT $LEVEL" ]; then
-  echo "Cancelled. Nothing changed."
-  exit 0
-fi
-
 TMP_DIR="$(mktemp -d)"
-BEFORE="$TMP_DIR/before-license.json"
-AFTER="$TMP_DIR/after-license.json"
+STATE_FILE="$TMP_DIR/current-state.json"
+LICENSE_FILE="$TMP_DIR/license.json"
 
+echo "------ UPDATE $ENVIRONMENT LICENSE V37M/V37T ------"
+echo "Client: $CLIENT_ID"
+echo "New level: $LEVEL"
+echo "New player limit: $LIMIT"
 echo ""
-echo "------ SAFETY CHECKS ------"
 
-if npx wrangler kv key get "client-deleted:$CLIENT" --namespace-id "$STAGING_KV" --remote >/tmp/pb-license-update-tombstone.json 2>/dev/null; then
-  echo "ERROR: Client is tombstoned. Refusing to update:"
-  echo "client-deleted:$CLIENT"
-  exit 1
-else
-  echo "PASS: no tombstone found."
+echo "------ CURRENT PLAYER USAGE CHECK ------"
+
+ACTIVE_PLAYERS=0
+TOTAL_PLAYERS=0
+HAS_STATE="no"
+
+if npx wrangler kv key get "client-state::$CLIENT_ID::current" --namespace-id "$KV" --remote > "$STATE_FILE" 2>/dev/null; then
+  HAS_STATE="yes"
+  COUNTS="$(python3 - "$STATE_FILE" <<'PYCOUNTS'
+import json, sys
+
+try:
+    data = json.load(open(sys.argv[1]))
+except Exception:
+    print("0 0")
+    raise SystemExit
+
+state = data.get("state", data) if isinstance(data, dict) else {}
+players = state.get("players", []) if isinstance(state, dict) else []
+
+if not isinstance(players, list):
+    players = []
+
+active = [
+    p for p in players
+    if isinstance(p, dict)
+    and p.get("active", True) is not False
+    and p.get("waitlist", False) is not True
+]
+
+print(len(active), len(players))
+PYCOUNTS
+)"
+  ACTIVE_PLAYERS="$(echo "$COUNTS" | awk '{print $1}')"
+  TOTAL_PLAYERS="$(echo "$COUNTS" | awk '{print $2}')"
 fi
 
-if ! npx wrangler kv key get "client-license:$CLIENT" --namespace-id "$STAGING_KV" --remote > "$BEFORE" 2>/dev/null; then
-  echo "ERROR: Client license does not exist:"
-  echo "client-license:$CLIENT"
+echo "State found: $HAS_STATE"
+echo "Active players: $ACTIVE_PLAYERS"
+echo "Total players: $TOTAL_PLAYERS"
+echo "Requested limit: $LIMIT"
+
+if [[ "$ACTIVE_PLAYERS" -gt "$LIMIT" ]]; then
   echo ""
-  echo "Create the client first."
+  echo "STOP: This license change would put the client over limit."
+  echo "Client has $ACTIVE_PLAYERS active players."
+  echo "$LABEL allows only $LIMIT active players."
+  echo ""
+  echo "Recommended: choose a plan that supports at least $ACTIVE_PLAYERS players, or deactivate players first."
+  echo ""
+  read -r -p "Type '$FORCE_PREFIX $CLIENT_ID $LEVEL' to override, or press Enter to cancel: " FORCE_CONFIRM
+
+  if [[ "$FORCE_CONFIRM" != "$FORCE_PREFIX $CLIENT_ID $LEVEL" ]]; then
+    echo "Cancelled safely. No license change made."
+    exit 1
+  fi
+
+  echo "Override accepted. Continuing."
+fi
+
+echo ""
+echo "------ CONFIRM LICENSE UPDATE ------"
+
+CONFIRM_PHRASE="$CONFIRM_PREFIX $CLIENT_ID $LEVEL"
+read -r -p "Type '$CONFIRM_PHRASE' to continue: " CONFIRM
+
+if [[ "$CONFIRM" != "$CONFIRM_PHRASE" ]]; then
+  echo "Cancelled. No license change made."
   exit 1
 fi
 
-echo "PASS: existing license found."
-
-python3 - "$BEFORE" "$AFTER" "$CLIENT" "$LEVEL" <<'PY'
-import json, sys, datetime
-
-before_path, after_path, client_id, level = sys.argv[1:5]
-
-with open(before_path) as f:
-    data = json.load(f)
-
-levels = {
-    "trial": {
-        "licenseLabel": "Trial",
-        "licenseStatus": "trial",
-        "playerLimit": 16,
-        "mobileScoring": False,
-        "officialResults": False,
-        "support": "Community support",
-    },
-    "club": {
-        "licenseLabel": "Club",
-        "licenseStatus": "active",
-        "playerLimit": 40,
-        "mobileScoring": True,
-        "officialResults": True,
-        "support": "Standard support",
-    },
-    "pro": {
-        "licenseLabel": "Pro",
-        "licenseStatus": "active",
-        "playerLimit": 96,
-        "mobileScoring": True,
-        "officialResults": True,
-        "support": "Priority support",
-    },
-    "enterprise": {
-        "licenseLabel": "Enterprise",
-        "licenseStatus": "active",
-        "playerLimit": 250,
-        "mobileScoring": True,
-        "officialResults": True,
-        "support": "Dedicated support",
-    },
+cat > "$LICENSE_FILE" <<EOF
+{
+  "ok": true,
+  "marker": "PB_SAFE_LICENSE_UPDATE_V37M",
+  "safetyMarker": "PB_LICENSE_DOWNGRADE_GUARD_V37T",
+  "clientId": "$CLIENT_ID",
+  "licenseLevel": "$LEVEL",
+  "licenseLabel": "$LABEL",
+  "licenseStatus": "active",
+  "playerLimit": $LIMIT,
+  "mobileScoring": $MOBILE,
+  "officialResults": $OFFICIAL,
+  "environment": "$ENVIRONMENT",
+  "updatedAt": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
-
-patch = levels[level]
-
-data["ok"] = True
-data["marker"] = "PB_SAFE_LICENSE_UPDATE_V37M"
-data["clientId"] = data.get("clientId") or client_id
-data["clientName"] = data.get("clientName") or data.get("name") or client_id
-data["licenseLevel"] = level
-data.update(patch)
-data["environment"] = "staging"
-data["source"] = "ops-update-staging-license-v37m"
-data["updatedAt"] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
-
-with open(after_path, "w") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-
-print("Preview:")
-print(json.dumps({
-    "clientId": data["clientId"],
-    "clientName": data["clientName"],
-    "licenseLevel": data["licenseLevel"],
-    "licenseLabel": data["licenseLabel"],
-    "licenseStatus": data["licenseStatus"],
-    "playerLimit": data["playerLimit"],
-    "mobileScoring": data["mobileScoring"],
-    "officialResults": data["officialResults"],
-    "support": data["support"],
-    "marker": data["marker"],
-}, indent=2))
-PY
+EOF
 
 echo ""
-echo "------ WRITE UPDATED LICENSE ------"
-
-npx wrangler kv key put "client-license:$CLIENT" --path "$AFTER" --namespace-id "$STAGING_KV" --remote
+echo "------ WRITE LICENSE ------"
+npx wrangler kv key put "client-license:$CLIENT_ID" --path "$LICENSE_FILE" --namespace-id "$KV" --remote
 
 echo ""
-echo "------ VERIFY UPDATED LICENSE ------"
+echo "------ VERIFY LICENSE ------"
+npx wrangler kv key get "client-license:$CLIENT_ID" --namespace-id "$KV" --remote
 
-npx wrangler kv key get "client-license:$CLIENT" --namespace-id "$STAGING_KV" --remote >/tmp/pb-updated-license-check.json
-
-echo "GREEN: Staging license updated."
 echo ""
-echo "Backup folder:"
-echo "$TMP_DIR"
+echo "GREEN: $ENVIRONMENT license updated safely."
