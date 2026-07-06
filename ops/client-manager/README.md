@@ -199,3 +199,28 @@ The same backup options are available in the Client Manager menu:
 15) Backup STAGING clients
 16) Backup PRODUCTION clients
 
+## Restore Client From Backup
+
+V37Z adds a guarded restore tool:
+
+./ops/client-manager/restore-client-from-backup-v37z.sh <staging|production> <backupFolder> <clientId> [license|state|license-state]
+
+Examples:
+
+./ops/client-manager/restore-client-from-backup-v37z.sh production ops/client-manager/backups/production-YYYYMMDD-HHMMSS blue-zone-pickleball license-state
+
+Modes:
+- license
+- state
+- license-state
+
+Production restore automatically creates a fresh production backup before writing anything.
+
+Production confirmation phrase:
+
+RESTORE PRODUCTION <clientId> FROM BACKUP
+
+Staging confirmation phrase:
+
+RESTORE STAGING <clientId> FROM BACKUP
+
