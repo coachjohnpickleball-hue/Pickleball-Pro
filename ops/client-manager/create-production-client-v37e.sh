@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+pbProductionAutoBackupV37Y() {
+  echo ""
+  echo "------ AUTO-BACKUP BEFORE PRODUCTION CHANGE V37Y ------"
+
+  if [[ -x "./ops/client-manager/backup-clients-v37x.sh" ]]; then
+    ./ops/client-manager/backup-clients-v37x.sh production
+  else
+    echo "ERROR: backup tool missing: ./ops/client-manager/backup-clients-v37x.sh"
+    echo "Refusing production change without backup."
+    exit 1
+  fi
+
+  echo ""
+  echo "GREEN: production backup completed before change."
+}
+
+
 PROD_KV="faac1bcc30ef4711a9377e60ef70636d"
 PROD_URL="https://rally.coachjohnpickleball.workers.dev"
 
@@ -108,6 +125,8 @@ JSON
 
 echo ""
 echo "------ WRITE PRODUCTION LICENSE ------"
+
+pbProductionAutoBackupV37Y
 
 npx wrangler kv key put "client-license:$CLIENT_ID" --path "$TMP" --namespace-id "$PROD_KV" --remote
 
