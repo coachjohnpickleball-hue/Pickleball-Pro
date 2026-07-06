@@ -329,3 +329,29 @@ RENEWAL <clientId> <field> <YYYY-MM-DD|clear>
 
 Production renewal date changes automatically create a backup before writing.
 
+## Billing Summary Export
+
+V38L adds read-only billing summary exports:
+
+./ops/client-manager/billing-summary-export-v38l.sh staging
+./ops/client-manager/billing-summary-export-v38l.sh production
+
+Reports are written locally under:
+
+ops/client-manager/reports/
+
+The CSV/JSON include:
+- clientId
+- clientName
+- status
+- level
+- activePlayers
+- totalPlayers
+- playerLimit
+- renewalDate
+- daysLeft
+- billingHealth
+- privateLink
+
+Report files are ignored by Git.
+
