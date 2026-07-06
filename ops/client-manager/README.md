@@ -378,3 +378,24 @@ Production billing contact changes automatically create a backup before writing.
 
 V38M also adds billing contact columns to the V38L billing summary CSV/JSON export.
 
+## Billing Follow-Up Report
+
+V38O adds a read-only billing follow-up report:
+
+./ops/client-manager/billing-followup-report-v38o.sh staging
+./ops/client-manager/billing-followup-report-v38o.sh production
+
+It creates focused TXT/CSV reports under:
+
+ops/client-manager/reports/
+
+It only lists clients needing attention:
+- EXPIRED
+- EXPIRING_SOON
+- SUSPENDED
+- INACTIVE
+- OVER_LIMIT
+- NO_RENEWAL_DATE
+
+Each row includes a suggested action.
+
