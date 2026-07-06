@@ -290,3 +290,25 @@ It now clearly reports:
 
 This is read-only and makes suspended/non-paying clients easier to review.
 
+## Renewal / Expiry Audit
+
+V38I adds a read-only renewal / expiry audit:
+
+./ops/client-manager/renewal-expiry-audit-v38i.sh staging
+./ops/client-manager/renewal-expiry-audit-v38i.sh production
+
+It checks license fields:
+- renewalDate
+- expiresAt
+- subscriptionEndsAt
+- trialEndsAt
+
+It reports:
+- OK
+- TRIAL
+- EXPIRING_SOON
+- EXPIRED
+- SUSPENDED
+- NO_RENEWAL_DATE
+- TOMBSTONED
+
