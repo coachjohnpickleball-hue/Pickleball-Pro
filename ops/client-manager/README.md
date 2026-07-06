@@ -243,3 +243,15 @@ Restore modes:
 
 Production restores still use the guarded V37Z restore tool and create a fresh production backup before writing anything.
 
+## Backup Inventory
+
+V38B adds a read-only backup inventory tool:
+
+./ops/client-manager/backup-inventory-v38b.sh
+
+It lists local backup folders, environment, license count, state count, tombstone count, and latest production/staging backup.
+
+The same tool is available in the Client Manager menu:
+
+17) Backup inventory
+
