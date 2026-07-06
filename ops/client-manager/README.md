@@ -420,3 +420,22 @@ Drafts are generated for clients needing follow-up:
 - OVER_LIMIT
 - NO_RENEWAL_DATE
 
+## Client Onboarding Packet
+
+V38Q adds a read-only onboarding packet generator:
+
+./ops/client-manager/client-onboarding-packet-v38q.sh staging <clientId>
+./ops/client-manager/client-onboarding-packet-v38q.sh production <clientId>
+
+It creates local files under:
+
+ops/client-manager/reports/
+
+Files created:
+- welcome-email.txt
+- client-summary.txt
+- private-link.txt
+- license.json
+
+No KV changes are made.
+
