@@ -55733,6 +55733,274 @@ function exportEndSessionSummary(){
 
 
 
+
+/* PB_SMS_SETTINGS_PERSIST_V39L */
+(function(){
+  var MARKER = "PB_SMS_SETTINGS_PERSIST_V39L";
+  if (window.__PB_SMS_SETTINGS_PERSIST_V39L__) return;
+  window.__PB_SMS_SETTINGS_PERSIST_V39L__ = true;
+
+  var KEY_LABEL = "pb_sms_label";
+  var KEY_DT = "pb_sms_include_dt";
+  var KEY_AUTO = "pb_sms_auto_send";
+  var saveTimer = null;
+
+  function bool(value){
+    return value === true || value === "1" || value === 1 || value === "true";
+  }
+
+  function ensureRiverState(){
+    try {
+      if (!window.state || typeof state !== "object") return null;
+      if (!state.riverState || typeof state.riverState !== "object") {
+        state.riverState = { enabled:false, numCourts:0, partners:[] };
+      }
+      return state.riverState;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  function readStateSettings(){
+    var river = ensureRiverState();
+    var s = river && river.smsSettingsV39L;
+
+    if (!s || typeof s !== "object") return null;
+
+    return {
+      senderLabel: String(s.senderLabel || ""),
+      includeDateTime: !!s.includeDateTime,
+      autoSend: !!s.autoSend,
+      updatedAt: s.updatedAt || null,
+      source: s.source || null
+    };
+  }
+
+  function readLocalSettings(){
+    var label = "";
+    var includeDateTime = false;
+    var autoSend = false;
+
+    try { label = localStorage.getItem(KEY_LABEL) || ""; } catch(e) {}
+    try { includeDateTime = localStorage.getItem(KEY_DT) === "1"; } catch(e) {}
+    try { autoSend = localStorage.getItem(KEY_AUTO) === "1"; } catch(e) {}
+
+    return {
+      senderLabel: label,
+      includeDateTime: includeDateTime,
+      autoSend: autoSend
+    };
+  }
+
+  function readDomSettings(){
+    var local = readLocalSettings();
+
+    var labelEl = document.getElementById("sms-sender-label");
+    var dtEl = document.getElementById("sms-include-datetime");
+    var autoEl = document.getElementById("sms-auto-send");
+
+    return {
+      senderLabel: labelEl ? String(labelEl.value || "").trim() : local.senderLabel,
+      includeDateTime: dtEl ? !!dtEl.checked : local.includeDateTime,
+      autoSend: autoEl ? !!autoEl.checked : local.autoSend
+    };
+  }
+
+  function writeLocalSettings(s){
+    s = s || {};
+
+    try { localStorage.setItem(KEY_LABEL, String(s.senderLabel || "")); } catch(e) {}
+    try { localStorage.setItem(KEY_DT, bool(s.includeDateTime) ? "1" : "0"); } catch(e) {}
+    try { localStorage.setItem(KEY_AUTO, bool(s.autoSend) ? "1" : "0"); } catch(e) {}
+  }
+
+  function writeDomSettings(s){
+    s = s || {};
+
+    var labelEl = document.getElementById("sms-sender-label");
+    var dtEl = document.getElementById("sms-include-datetime");
+    var autoEl = document.getElementById("sms-auto-send");
+
+    if (labelEl) labelEl.value = String(s.senderLabel || "");
+    if (dtEl) dtEl.checked = !!s.includeDateTime;
+    if (autoEl) autoEl.checked = !!s.autoSend;
+  }
+
+  function writeStateSettings(s, source){
+    var river = ensureRiverState();
+    if (!river) return false;
+
+    s = s || {};
+
+    river.smsSettingsV39L = {
+      senderLabel: String(s.senderLabel || ""),
+      includeDateTime: !!s.includeDateTime,
+      autoSend: !!s.autoSend,
+      updatedAt: new Date().toISOString(),
+      source: source || MARKER
+    };
+
+    return true;
+  }
+
+  function callSmsUpdate(){
+    try {
+      if (typeof window.smsUpdate === "function") window.smsUpdate();
+    } catch(e) {}
+  }
+
+  function persistFromDom(source){
+    var settings = readDomSettings();
+
+    writeLocalSettings(settings);
+    writeStateSettings(settings, source || "dom-change");
+
+    if (saveTimer) clearTimeout(saveTimer);
+
+    saveTimer = setTimeout(function(){
+      try {
+        if (typeof window.autoSave === "function") window.autoSave();
+      } catch(e) {}
+
+      try {
+        if (typeof window.pbServerFirstHardIsolationV36BSaveVisibleToServer === "function") {
+          var result = window.pbServerFirstHardIsolationV36BSaveVisibleToServer();
+          if (result && typeof result.catch === "function") {
+            result.catch(function(err){
+              console.warn(MARKER + " server save warning", err);
+            });
+          }
+        }
+      } catch(e) {
+        console.warn(MARKER + " server save warning", e);
+      }
+    }, 700);
+
+    return settings;
+  }
+
+  function hydrate(source){
+    var stateSettings = readStateSettings();
+
+    if (stateSettings) {
+      writeLocalSettings(stateSettings);
+      writeDomSettings(stateSettings);
+      callSmsUpdate();
+      return stateSettings;
+    }
+
+    var localSettings = readLocalSettings();
+
+    writeStateSettings(localSettings, source || "seed-from-local");
+    writeDomSettings(localSettings);
+    callSmsUpdate();
+
+    return localSettings;
+  }
+
+  function wrapSaveFunction(name){
+    var original = window[name];
+
+    if (typeof original !== "function") return false;
+    if (original.__pbSmsSettingsPersistV39L) return true;
+
+    var wrapped = function(){
+      var result = original.apply(this, arguments);
+
+      try {
+        persistFromDom(name);
+      } catch(e) {
+        console.warn(MARKER + " persist warning", e);
+      }
+
+      return result;
+    };
+
+    wrapped.__pbSmsSettingsPersistV39L = true;
+    window[name] = wrapped;
+
+    return true;
+  }
+
+  function wrapLoadFunction(name){
+    var original = window[name];
+
+    if (typeof original !== "function") return false;
+    if (original.__pbSmsSettingsPersistV39L) return true;
+
+    var wrapped = function(){
+      hydrate(name + "-before");
+
+      var result = original.apply(this, arguments);
+
+      hydrate(name + "-after");
+
+      return result;
+    };
+
+    wrapped.__pbSmsSettingsPersistV39L = true;
+    window[name] = wrapped;
+
+    return true;
+  }
+
+  function install(){
+    wrapSaveFunction("smsSaveSenderLabel");
+    wrapSaveFunction("smsSaveIncludeDateTime");
+    wrapSaveFunction("smsSaveAutoSend");
+
+    wrapLoadFunction("smsLoadSenderLabel");
+    wrapLoadFunction("smsLoadIncludeDateTime");
+    wrapLoadFunction("smsLoadAutoSend");
+
+    hydrate("install");
+  }
+
+  window.pbSmsSettingsPersistV39LHydrate = hydrate;
+  window.pbSmsSettingsPersistV39LPersist = function(){
+    return persistFromDom("manual");
+  };
+
+  window.pbSmsSettingsPersistV39LStatus = function(){
+    install();
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      hasState: !!(window.state && typeof state === "object"),
+      hasRiverState: !!(window.state && state.riverState && typeof state.riverState === "object"),
+      stateSettings: readStateSettings(),
+      localSettings: readLocalSettings(),
+      domSettings: readDomSettings(),
+      wrapped: {
+        smsSaveSenderLabel: !!(window.smsSaveSenderLabel && window.smsSaveSenderLabel.__pbSmsSettingsPersistV39L),
+        smsSaveIncludeDateTime: !!(window.smsSaveIncludeDateTime && window.smsSaveIncludeDateTime.__pbSmsSettingsPersistV39L),
+        smsSaveAutoSend: !!(window.smsSaveAutoSend && window.smsSaveAutoSend.__pbSmsSettingsPersistV39L)
+      }
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+
+    return result;
+  };
+
+  function boot(){
+    install();
+    setTimeout(install, 500);
+    setTimeout(install, 1300);
+    setTimeout(install, 2600);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
+
 </script>
 
 </body>
