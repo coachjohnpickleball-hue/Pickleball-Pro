@@ -178,6 +178,10 @@ for client in clients:
     rows.append({
         "clientId": client,
         "clientName": data.get("clientName") or data.get("name") or "",
+        "billingName": data.get("billingName") or "",
+        "billingEmail": data.get("billingEmail") or "",
+        "billingPhone": data.get("billingPhone") or "",
+        "billingNotes": data.get("billingNotes") or "",
         "status": status,
         "level": level,
         "activePlayers": active,
@@ -192,6 +196,10 @@ for client in clients:
 fieldnames = [
     "clientId",
     "clientName",
+    "billingName",
+    "billingEmail",
+    "billingPhone",
+    "billingNotes",
     "status",
     "level",
     "activePlayers",

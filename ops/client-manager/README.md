@@ -355,3 +355,26 @@ The CSV/JSON include:
 
 Report files are ignored by Git.
 
+## Billing Contact Fields
+
+V38M adds guarded billing contact tools:
+
+./ops/client-manager/update-staging-billing-contact-v38m.sh <clientId>
+./ops/client-manager/update-production-billing-contact-v38m.sh <clientId>
+
+Fields:
+- billingName
+- billingEmail
+- billingPhone
+- billingNotes
+
+Production confirmation phrase:
+BILLING PRODUCTION <clientId>
+
+Staging confirmation phrase:
+BILLING <clientId>
+
+Production billing contact changes automatically create a backup before writing.
+
+V38M also adds billing contact columns to the V38L billing summary CSV/JSON export.
+
