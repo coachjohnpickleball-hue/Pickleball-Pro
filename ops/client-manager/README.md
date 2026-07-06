@@ -1,83 +1,157 @@
-# PickleBall Pro Client Manager Runbook
+# PickleBall Pro Client Manager
 
-## Current Status
+Safe command-line tools for managing PickleBall Pro clients, private links, license levels, audits, and cleanup.
 
-Client Manager is green and backed up to GitHub.
+## Location
 
-Current tools:
+Project root:
 
-- client-manager-v37g.sh
-- list-clients-v37f.sh
-- create-staging-client-v37e.sh
-- create-production-client-v37e.sh
-- delete-staging-client-v37d3.sh
-- delete-production-client-v37d3.sh
+/Users/jmerg/Desktop/! ! Pickleball Pro/Cloudflare Hosting/Rally/ChatGPT/rally.PickleballPro/Pickelball-Pro
 
-## Main Launcher
+Client Manager menu:
 
-Run this from the project root:
+ops/client-manager/client-manager-v37g.sh
 
-./ops/client-manager/client-manager-v37g.sh
+Easy launchers:
 
-## Staging
+./client-manager.sh
 
-URL:
+Or double-click:
 
+Open Client Manager.command
+
+## Launch
+
+From Terminal:
+
+setopt NO_BANG_HIST
+cd "/Users/jmerg/Desktop/! ! Pickleball Pro/Cloudflare Hosting/Rally/ChatGPT/rally.PickleballPro/Pickelball-Pro"
+./client-manager.sh
+
+## Menu
+
+Read-only:
+1)  List STAGING clients
+2)  List PRODUCTION clients
+3)  Audit STAGING clients
+4)  Audit PRODUCTION clients
+5)  License usage audit STAGING
+6)  License usage audit PRODUCTION
+7)  Inspect STAGING client
+8)  Inspect PRODUCTION client
+
+Staging operations:
+9)  Create STAGING client
+10) Delete STAGING client
+11) Update STAGING license
+
+Production operations:
+12) Create PRODUCTION client
+13) Delete PRODUCTION client
+14) Update PRODUCTION license
+
+Other:
+15) Show installed tools
+16) Quit
+
+## Environments
+
+Staging app:
 https://rally-staging.coachjohnpickleball.workers.dev
 
-KV:
-
-d4be478f609e4696aae597c6adf6c533
-
-## Production
-
-URL:
-
+Production app:
 https://rally.coachjohnpickleball.workers.dev
 
-KV:
+Staging KV:
+d4be478f609e4696aae597c6adf6c533
 
+Production KV:
 faac1bcc30ef4711a9377e60ef70636d
 
-## Rules
+## License levels
 
-- Cloudflare Access controls login.
-- clientId controls client separation.
-- Every client link must include ?clientId=<clientId>.
-- Deleted clients get a tombstone.
-- Tombstoned clients cannot be reopened from old links.
-- Tombstoned clients are hidden from admin lists.
-- Do not copy staging KV to production.
-- Do not delete tombstones unless building a separate revive process.
+trial       16 players   mobile scoring off   official results off
+club        40 players   mobile scoring on    official results on
+pro         96 players   mobile scoring on    official results on
+enterprise 250 players   mobile scoring on    official results on
 
-## Safe Workflow
+## Safety rules
 
-Use the launcher:
+Production actions require stronger confirmation.
 
-./ops/client-manager/client-manager-v37g.sh
+Create production client:
+CREATE PRODUCTION <clientId>
 
-Recommended normal actions:
+Delete production client:
+DELETE PRODUCTION <clientId>
 
-1. List staging clients.
-2. List production clients.
-3. Create staging client.
-4. Test staging link.
-5. Only create production client when ready.
-6. Only delete production client with exact confirmation.
+Update production license:
+UPDATE PRODUCTION <clientId> <level>
 
-## Known Green Markers
+The license update tools include downgrade protection. If a client has more active players than the requested new plan allows, the tool stops before making a change.
 
+Avoid emergency override unless you understand the risk. A client over the license limit may be blocked from saving new state by server-side enforcement.
+
+## Current license enforcement
+
+V37O:
+Browser-side license action enforcement. Blocks over-license actions in the UI.
+
+V37P:
+Server-side client-state license enforcement. Blocks direct API bypass attempts when active players exceed the license limit.
+
+V37Q:
+License usage audit. Reports each client’s license level, player limit, active players, total players, and health.
+
+V37T:
+Downgrade guard. Prevents accidental license updates that would put a client over limit.
+
+## Recommended workflow
+
+Before any production change:
+1) List PRODUCTION clients
+2) License usage audit PRODUCTION
+3) Inspect PRODUCTION client
+4) Make the change
+5) License usage audit PRODUCTION again
+6) Open the private production link and verify the app
+
+For new clients:
+1) Create STAGING client first
+2) Test private staging link
+3) Create PRODUCTION client
+4) Send the private production link to the client
+5) Run production license audit
+
+For deleting clients:
+1) Delete via Client Manager
+2) Confirm license and state are gone
+3) Confirm tombstone exists
+4) Confirm old private link returns deleted/blocked
+5) Run audit
+
+## Important markers
+
+Good markers:
 PB_CLIENT_TOMBSTONE_ENFORCEMENT_V37D2
-PB_CLIENT_TOMBSTONE_ROUTE_GATE_V37D3
 PB_ADMIN_CLIENTS_TOMBSTONE_FILTER_V37D4
 PB_SAFE_CLIENT_CREATE_V37E
+PB_SAFE_LICENSE_UPDATE_V37M
+PB_LICENSE_ACTION_ENFORCEMENT_V37O
+PB_SERVER_LICENSE_STATE_ENFORCEMENT_V37P
+PB_LICENSE_DOWNGRADE_GUARD_V37T
 
-## Recovery Tags
+Rejected markers that should not return:
+PB_CLIENT_ACCESS_KEY_GATE_CLIENT_V36E
+PB_ROLE_BASED_CLIENT_ACCESS_V36F
+PB_CLIENTKEY_RELAY_V36F2
+PB_DISABLE_CLIENTKEY_GATE_CLIENT_V36G
+PB_CLIENT_MANAGER_V37A_ROUTE
+PB_CLIENT_MANAGER_UI_V37A
 
-Latest important tags include:
+## Quick production health check
 
-green-client-manager-launcher-v37g
-green-client-list-tool-v37f
-green-production-admin-tombstone-filter-v37d4
-green-production-client-tombstone-v37d3
-green-staging-client-create-delete-lifecycle-v37e
+./ops/client-manager/list-clients-v37f.sh production
+./ops/client-manager/license-usage-audit-v37q.sh production
+
+Expected real clients should be visible, tombstoned clients should be hidden, and no active client should be over limit.
