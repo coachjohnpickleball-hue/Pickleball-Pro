@@ -58,8 +58,9 @@ while true; do
   echo " 14)  Update PRODUCTION license"
   echo ""
   echo "Other"
-  echo " 15)  Show installed tools"
-  echo " 16)  Quit"
+  echo " 15)  Health Check ALL"
+  echo " 16)  Show installed tools"
+  echo " 17)  Quit"
   echo ""
 
   read -r -p "Choose an option: " choice
@@ -79,14 +80,15 @@ while true; do
     12) run_tool "create-production-client-v37e.sh" ;;
     13) run_tool "delete-production-client-v37d3.sh" ;;
     14) run_tool "update-production-license-v37m.sh" ;;
-    15)
+    15) run_tool "health-check-all-v37w.sh" ;;
+    16)
       echo ""
       echo "Installed client-manager tools:"
       echo "----------------------------------------"
       ls -1 "$TOOL_DIR"
       pause_menu
       ;;
-    16|q|Q|quit|exit)
+    17|q|Q|quit|exit)
       echo "Goodbye."
       exit 0
       ;;

@@ -155,3 +155,22 @@ PB_CLIENT_MANAGER_UI_V37A
 ./ops/client-manager/license-usage-audit-v37q.sh production
 
 Expected real clients should be visible, tombstoned clients should be hidden, and no active client should be over limit.
+
+## Health Check ALL
+
+V37W adds a one-click read-only health check:
+
+./ops/client-manager/health-check-all-v37w.sh
+
+It runs:
+1) Production client list
+2) Production client audit
+3) Production license usage audit
+4) Staging client list
+5) Staging client audit
+6) Staging license usage audit
+
+The same check is available in the Client Manager menu as:
+
+15) Health Check ALL
+
