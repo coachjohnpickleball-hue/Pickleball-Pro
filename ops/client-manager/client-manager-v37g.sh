@@ -60,11 +60,13 @@ while true; do
   echo "Backups"
   echo " 15)  Backup STAGING clients"
   echo " 16)  Backup PRODUCTION clients"
+  echo " 17)  Restore STAGING client from backup"
+  echo " 18)  Restore PRODUCTION client from backup"
   echo ""
   echo "Other"
-  echo " 17)  Health Check ALL"
-  echo " 18)  Show installed tools"
-  echo " 19)  Quit"
+  echo " 19)  Health Check ALL"
+  echo " 20)  Show installed tools"
+  echo " 21)  Quit"
   echo ""
 
   read -r -p "Choose an option: " choice
@@ -86,15 +88,17 @@ while true; do
     14) run_tool "update-production-license-v37m.sh" ;;
     15) run_tool "backup-clients-v37x.sh" staging ;;
     16) run_tool "backup-clients-v37x.sh" production ;;
-    17) run_tool "health-check-all-v37w.sh" ;;
-    18)
+    17) run_tool "restore-client-menu-v38a.sh" staging ;;
+    18) run_tool "restore-client-menu-v38a.sh" production ;;
+    19) run_tool "health-check-all-v37w.sh" ;;
+    20)
       echo ""
       echo "Installed client-manager tools:"
       echo "----------------------------------------"
       ls -1 "$TOOL_DIR"
       pause_menu
       ;;
-    19|q|Q|quit|exit)
+    21|q|Q|quit|exit)
       echo "Goodbye."
       exit 0
       ;;

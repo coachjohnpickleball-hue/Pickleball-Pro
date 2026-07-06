@@ -224,3 +224,22 @@ Staging confirmation phrase:
 
 RESTORE STAGING <clientId> FROM BACKUP
 
+## Restore From Backup Menu
+
+V38A adds restore options to the Client Manager menu:
+
+17) Restore STAGING client from backup
+18) Restore PRODUCTION client from backup
+
+The menu wrapper asks for:
+1) backup folder
+2) client ID
+3) restore mode
+
+Restore modes:
+- license-state
+- state only
+- license only
+
+Production restores still use the guarded V37Z restore tool and create a fresh production backup before writing anything.
+
