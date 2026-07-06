@@ -55849,6 +55849,240 @@ function exportEndSessionSummary(){
   window.addEventListener("load", boot);
 })();
 
+
+/* PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D */
+(function(){
+  var MARKER = "PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D";
+  if (window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D__) return;
+  window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D__ = true;
+
+  function getClientId(){
+    try {
+      return String(new URLSearchParams(location.search || "").get("clientId") || "").trim();
+    } catch(e) {
+      return "";
+    }
+  }
+
+  function activePlayers(){
+    try {
+      if (!window.state || !Array.isArray(state.players)) return 0;
+      return state.players.filter(function(p){
+        return p && p.active !== false && p.waitlist !== true;
+      }).length;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function roundCount(){
+    try {
+      return window.state && Array.isArray(state.schedule) ? state.schedule.length : 0;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function completedMatches(){
+    try {
+      if (!window.state || !Array.isArray(state.schedule)) return 0;
+      var total = 0;
+      state.schedule.forEach(function(round){
+        var matches = Array.isArray(round.matches) ? round.matches : [];
+        matches.forEach(function(m){
+          if (!m) return;
+          if (m.completed || m.done || m.scoreA != null || m.scoreB != null || m.score1 != null || m.score2 != null) {
+            total++;
+          }
+        });
+      });
+      return total;
+    } catch(e) {
+      return 0;
+    }
+  }
+
+  function nextAction(){
+    var players = activePlayers();
+    var rounds = roundCount();
+    var complete = completedMatches();
+
+    if (!getClientId()) return "Open the app with a private client link.";
+    if (players === 0) return "Add players to start building the tournament.";
+    if (rounds === 0) return "Generate the first draft round.";
+    if (complete === 0) return "Send round details and start scoring.";
+    return "Keep scoring, notify players, and monitor standings.";
+  }
+
+  function homeTarget(){
+    return (
+      document.getElementById("sec-home") ||
+      document.getElementById("home") ||
+      document.querySelector("[data-section='home']")
+    );
+  }
+
+  function go(tab){
+    try {
+      if (typeof window.showTab === "function") {
+        window.showTab(tab);
+        return;
+      }
+    } catch(e) {}
+
+    try {
+      var el = document.getElementById("sec-" + tab);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch(e) {}
+  }
+
+  function summaryText(){
+    return [
+      "PickleBall Pro Game Day Summary",
+      "Client: " + (getClientId() || "—"),
+      "Players: " + activePlayers(),
+      "Rounds: " + roundCount(),
+      "Completed matches: " + completedMatches(),
+      "Next action: " + nextAction(),
+      "Link: " + location.href
+    ].join("\n");
+  }
+
+  function copySummary(){
+    var text = summaryText();
+    try {
+      navigator.clipboard.writeText(text).then(function(){
+        alert("Game day summary copied.");
+      }).catch(function(){
+        prompt("Copy game day summary:", text);
+      });
+    } catch(e) {
+      prompt("Copy game day summary:", text);
+    }
+  }
+
+  function btn(label, tab, icon){
+    return '<button type="button" class="btn btn-secondary btn-sm" onclick="pbGameDayControlCenterV39DGo(\'' + tab + '\')" style="min-width:118px">' +
+      icon + ' ' + label +
+      '</button>';
+  }
+
+  function render(){
+    var target = homeTarget();
+
+    if (!target) {
+      var existing = document.getElementById("pb-game-day-control-center-v39d");
+      if (existing) existing.remove();
+      return false;
+    }
+
+    var card = document.getElementById("pb-game-day-control-center-v39d");
+
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "pb-game-day-control-center-v39d";
+      card.className = "card";
+      card.style.marginTop = "1rem";
+      card.setAttribute("data-home-only", "true");
+    }
+
+    if (card.parentNode !== target) {
+      target.insertBefore(card, target.firstChild || null);
+    }
+
+    card.innerHTML = [
+      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap">',
+        '<div>',
+          '<div class="card-title">🎛️ Game Day Control Center</div>',
+          '<div style="font-size:.86rem;color:var(--txt3);line-height:1.45">Run the event from one clean home dashboard.</div>',
+        '</div>',
+        '<div style="font-family:monospace;font-size:.72rem;color:var(--txt3)">' + MARKER + '</div>',
+      '</div>',
+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.65rem;margin-top:.85rem">',
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Players</div>',
+          '<div style="font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + activePlayers() + '</div>',
+        '</div>',
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Rounds</div>',
+          '<div style="font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + roundCount() + '</div>',
+        '</div>',
+        '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.035)">',
+          '<div style="font-size:.72rem;color:var(--txt3);font-weight:800;text-transform:uppercase">Completed</div>',
+          '<div style="font-size:1.25rem;font-weight:900;color:var(--txt);margin-top:.15rem">' + completedMatches() + '</div>',
+        '</div>',
+      '</div>',
+
+      '<div style="margin-top:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.7rem;background:rgba(255,255,255,.025)">',
+        '<div style="font-size:.78rem;color:var(--txt3);font-weight:800;text-transform:uppercase;margin-bottom:.3rem">Next Best Action</div>',
+        '<div style="font-weight:850;color:var(--txt);line-height:1.45">' + nextAction() + '</div>',
+      '</div>',
+
+      '<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.85rem">',
+        btn("Players", "players", "👥"),
+        btn("Schedule", "schedule", "📅"),
+        btn("SMS", "sms", "📱"),
+        btn("Mobile Sync", "mobilesync", "🔗"),
+        btn("Standings", "standings", "🏆"),
+        btn("Admin", "admin", "⚙️"),
+        '<button type="button" class="btn btn-primary btn-sm" onclick="pbGameDayControlCenterV39DCopySummary()" style="min-width:150px">📋 Copy Summary</button>',
+      '</div>'
+    ].join("");
+
+    window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D_LAST__ = {
+      marker: MARKER,
+      clientId: getClientId() || null,
+      players: activePlayers(),
+      rounds: roundCount(),
+      completedMatches: completedMatches(),
+      nextAction: nextAction(),
+      location: "home"
+    };
+
+    return true;
+  }
+
+  window.pbGameDayControlCenterV39DGo = go;
+  window.pbGameDayControlCenterV39DCopySummary = copySummary;
+  window.pbGameDayControlCenterV39DRefresh = render;
+
+  window.pbGameDayControlCenterV39DStatus = function(){
+    render();
+
+    var card = document.getElementById("pb-game-day-control-center-v39d");
+    var target = homeTarget();
+
+    var result = {
+      marker: MARKER,
+      installed: true,
+      hasPanel: !!card,
+      inHome: !!(card && target && card.parentNode === target),
+      last: window.__PB_GAME_DAY_CONTROL_CENTER_HOME_ONLY_V39D_LAST__ || null
+    };
+
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  function boot(){
+    render();
+    setTimeout(render, 700);
+    setTimeout(render, 1800);
+    setTimeout(render, 3500);
+    setInterval(render, 5000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+
+  window.addEventListener("load", boot);
+})();
+
 </script>
 
 </body>
