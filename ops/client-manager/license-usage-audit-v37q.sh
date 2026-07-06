@@ -18,190 +18,189 @@ else
 fi
 
 TMP_DIR="$(mktemp -d)"
-LICENSE_KEYS="$TMP_DIR/license-keys.json"
-STATE_KEYS="$TMP_DIR/state-keys.json"
-TOMBSTONE_KEYS="$TMP_DIR/tombstone-keys.json"
-REPORT_JSON="$TMP_DIR/report.json"
+KEYS="$TMP_DIR/keys.json"
+REPORT="$TMP_DIR/report.json"
 
-echo "------ LICENSE USAGE AUDIT V37Q: $ENVIRONMENT ------"
+echo "=============================================="
+echo " PickleBall Pro License Usage Audit V38H"
+echo "=============================================="
+echo ""
+echo "Environment: $ENVIRONMENT"
+echo "Read-only. No KV changes are made."
 echo ""
 
-npx wrangler kv key list --namespace-id "$KV" --prefix "client-license:" --remote > "$LICENSE_KEYS"
-npx wrangler kv key list --namespace-id "$KV" --prefix "client-state::" --remote > "$STATE_KEYS"
-npx wrangler kv key list --namespace-id "$KV" --prefix "client-deleted:" --remote > "$TOMBSTONE_KEYS"
+echo "Loading client license keys..."
+npx wrangler kv key list --prefix "client-license:" --namespace-id "$KV" --remote > "$KEYS"
 
-python3 - "$LICENSE_KEYS" "$STATE_KEYS" "$TOMBSTONE_KEYS" "$REPORT_JSON" <<'PY'
-import json, sys, subprocess, tempfile, os
+python3 - "$KEYS" "$TMP_DIR" "$KV" <<'PY'
+import json, subprocess, sys
+from pathlib import Path
 
-license_keys_file, state_keys_file, tombstone_keys_file, report_file = sys.argv[1:5]
+keys_file, tmp_dir, kv = sys.argv[1:4]
+tmp = Path(tmp_dir)
 
-def load_keys(path):
+try:
+    keys = json.load(open(keys_file))
+except Exception:
+    keys = []
+
+clients = []
+for item in keys:
+    name = item.get("name", "")
+    if name.startswith("client-license:"):
+        clients.append(name.replace("client-license:", "", 1))
+
+clients = sorted(set(clients))
+
+def wrangler_get(key, out_file):
+    result = subprocess.run(
+        ["npx", "wrangler", "kv", "key", "get", key, "--namespace-id", kv, "--remote"],
+        stdout=open(out_file, "w"),
+        stderr=subprocess.DEVNULL,
+        text=True
+    )
+    return result.returncode == 0
+
+def load_json(path):
     try:
-        data = json.load(open(path))
-        return [x.get("name", "") for x in data if isinstance(x, dict) and x.get("name")]
-    except Exception:
-        return []
-
-license_keys = load_keys(license_keys_file)
-state_keys = load_keys(state_keys_file)
-tombstone_keys = load_keys(tombstone_keys_file)
-
-clients = set()
-
-for k in license_keys:
-    if k.startswith("client-license:"):
-        clients.add(k.replace("client-license:", "", 1))
-
-for k in state_keys:
-    if k.startswith("client-state::") and k.endswith("::current"):
-        clients.add(k.replace("client-state::", "", 1).replace("::current", "", 1))
-
-tombstoned = {
-    k.replace("client-deleted:", "", 1)
-    for k in tombstone_keys
-    if k.startswith("client-deleted:")
-}
-
-limits = {
-    "trial": 16,
-    "club": 40,
-    "pro": 96,
-    "enterprise": 250
-}
-
-report = {
-    "clients": sorted(clients),
-    "tombstoned": sorted(tombstoned),
-    "licenseKeys": license_keys,
-    "stateKeys": state_keys,
-    "tombstoneKeys": tombstone_keys,
-    "limits": limits
-}
-
-json.dump(report, open(report_file, "w"), indent=2)
-PY
-
-echo "Clients discovered:"
-python3 - "$REPORT_JSON" <<'PY'
-import json, sys
-data = json.load(open(sys.argv[1]))
-for c in data["clients"]:
-    tomb = " TOMBSTONED" if c in data["tombstoned"] else ""
-    print("-", c + tomb)
-PY
-
-echo ""
-echo "------ DETAILED USAGE REPORT ------"
-
-python3 - "$REPORT_JSON" "$KV" <<'PY'
-import json, sys, subprocess, tempfile, os
-
-report_file, kv = sys.argv[1], sys.argv[2]
-data = json.load(open(report_file))
-
-limits = data["limits"]
-clients = data["clients"]
-tombstoned = set(data["tombstoned"])
-
-def kv_get(key):
-    try:
-        out = subprocess.check_output(
-            ["npx", "wrangler", "kv", "key", "get", key, "--namespace-id", kv, "--remote"],
-            text=True,
-            stderr=subprocess.DEVNULL
-        )
-        if not out.strip():
-            return None
-        return json.loads(out)
+        return json.load(open(path))
     except Exception:
         return None
+
+def clean_level(license_data):
+    level = (
+        license_data.get("licenseLevel")
+        or license_data.get("level")
+        or license_data.get("plan")
+        or "club"
+    )
+    return str(level).lower()
+
+def clean_status(license_data):
+    status = (
+        license_data.get("licenseStatus")
+        or license_data.get("status")
+        or "active"
+    )
+    return str(status).lower()
+
+def limit_for(level, license_data):
+    explicit = (
+        license_data.get("playerLimit")
+        or license_data.get("maxPlayers")
+        or license_data.get("playersLimit")
+    )
+    try:
+        if explicit is not None:
+            return int(explicit)
+    except Exception:
+        pass
+
+    defaults = {
+        "trial": 16,
+        "club": 40,
+        "pro": 96,
+        "enterprise": 250,
+    }
+    return defaults.get(level, 40)
+
+def count_players(state_data):
+    if not isinstance(state_data, dict):
+        return 0, 0
+
+    state = state_data.get("state", state_data)
+    players = state.get("players", []) if isinstance(state, dict) else []
+
+    total = len(players) if isinstance(players, list) else 0
+    active = 0
+
+    if isinstance(players, list):
+        for p in players:
+            if not isinstance(p, dict):
+                continue
+            if p.get("active") is False:
+                continue
+            if p.get("waitlist") is True:
+                continue
+            active += 1
+
+    return active, total
 
 rows = []
 
 for client in clients:
-    lic = kv_get("client-license:" + client) or {}
-    rec = kv_get("client-state::" + client + "::current") or {}
+    license_file = tmp / f"license_{client}.json"
+    state_file = tmp / f"state_{client}.json"
+    tombstone_file = tmp / f"tombstone_{client}.json"
 
-    state = rec.get("state", rec) if isinstance(rec, dict) else {}
-    players = state.get("players", []) if isinstance(state, dict) else []
-    if not isinstance(players, list):
-        players = []
+    wrangler_get(f"client-license:{client}", str(license_file))
+    license_data = load_json(license_file) or {}
 
-    active_players = [
-        p for p in players
-        if isinstance(p, dict)
-        and p.get("active", True) is not False
-        and p.get("waitlist", False) is not True
-    ]
+    state_exists = wrangler_get(f"client-state::{client}::current", str(state_file))
+    state_data = load_json(state_file) if state_exists else None
 
-    level = str(
-        lic.get("licenseLevel")
-        or lic.get("level")
-        or lic.get("plan")
-        or "club"
-    ).lower()
+    tombstoned = wrangler_get(f"client-deleted:{client}", str(tombstone_file))
 
-    status = str(
-        lic.get("licenseStatus")
-        or lic.get("status")
-        or "active"
-    ).lower()
+    level = clean_level(license_data)
+    status = clean_status(license_data)
+    limit = limit_for(level, license_data)
+    active, total = count_players(state_data)
 
-    explicit_limit = lic.get("playerLimit") or lic.get("maxPlayers") or lic.get("playersLimit")
-    try:
-        player_limit = int(explicit_limit) if explicit_limit else limits.get(level, 40)
-    except Exception:
-        player_limit = limits.get(level, 40)
-
-    active_count = len(active_players)
-    total_count = len(players)
-
-    if client in tombstoned:
+    if tombstoned:
         health = "TOMBSTONED"
-    elif not lic:
-        health = "NO_LICENSE"
-    elif not rec:
-        health = "NO_STATE_YET"
-    elif active_count > player_limit:
+    elif status == "suspended":
+        health = "SUSPENDED"
+    elif status not in ("active", "trial"):
+        health = "INACTIVE"
+    elif active > limit:
         health = "OVER_LIMIT"
+    elif not state_exists:
+        health = "NO_STATE_YET"
+    elif level == "trial":
+        health = "TRIAL"
     else:
         health = "OK"
 
     rows.append({
-        "client": client,
-        "level": level,
+        "clientId": client,
+        "clientName": license_data.get("clientName") or license_data.get("name") or "",
         "status": status,
-        "limit": player_limit,
-        "active": active_count,
-        "total": total_count,
-        "health": health
+        "level": level,
+        "active": active,
+        "total": total,
+        "limit": limit,
+        "health": health,
     })
 
-print(f"{'CLIENT':38} {'LEVEL':12} {'STATUS':10} {'ACTIVE':>7} {'LIMIT':>7} {'TOTAL':>7} HEALTH")
-print("-" * 100)
+print("")
+print(f"{'CLIENT':34} | {'STATUS':10} | {'LEVEL':10} | {'ACTIVE/LIMIT':12} | HEALTH")
+print("-" * 92)
 
 for r in rows:
-    print(f"{r['client'][:38]:38} {r['level'][:12]:12} {r['status'][:10]:10} {r['active']:7} {r['limit']:7} {r['total']:7} {r['health']}")
+    client = r["clientId"][:34]
+    status = r["status"][:10]
+    level = r["level"][:10]
+    usage = f'{r["active"]}/{r["limit"]}'
+    print(f"{client:34} | {status:10} | {level:10} | {usage:12} | {r['health']}")
+
+counts = {}
+for r in rows:
+    counts[r["health"]] = counts.get(r["health"], 0) + 1
 
 print("")
 print("SUMMARY")
 print("-------")
-for health in ["OK", "OVER_LIMIT", "NO_LICENSE", "NO_STATE_YET", "TOMBSTONED"]:
-    count = sum(1 for r in rows if r["health"] == health)
-    print(f"{health}: {count}")
+print("Total clients:", len(rows))
+for key in ["OK", "TRIAL", "SUSPENDED", "INACTIVE", "OVER_LIMIT", "NO_STATE_YET", "TOMBSTONED"]:
+    print(f"{key}: {counts.get(key, 0)}")
 
-bad = [r for r in rows if r["health"] in ("OVER_LIMIT", "NO_LICENSE")]
+bad = counts.get("OVER_LIMIT", 0) + counts.get("INACTIVE", 0)
+print("")
 if bad:
-    print("")
-    print("ACTION NEEDED")
-    print("-------------")
-    for r in bad:
-        print(f"- {r['client']}: {r['health']} active={r['active']} limit={r['limit']} level={r['level']}")
+    print("ATTENTION: audit found clients needing review.")
 else:
-    print("")
-    print("GREEN: no over-limit or missing-license active clients found.")
+    print("GREEN: no over-limit or invalid-status clients found.")
 PY
 
 echo ""
-echo "Audit temp files:"
-echo "$TMP_DIR"
+echo "GREEN: $ENVIRONMENT license usage audit complete."

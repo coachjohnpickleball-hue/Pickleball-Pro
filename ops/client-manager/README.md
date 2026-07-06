@@ -272,3 +272,21 @@ Production status changes automatically create a backup before writing.
 
 V37P server-side enforcement blocks client-state saves when licenseStatus is not active or trial.
 
+## License Usage Audit Status Display
+
+V38H improves the existing license usage audit:
+
+./ops/client-manager/license-usage-audit-v37q.sh staging
+./ops/client-manager/license-usage-audit-v37q.sh production
+
+It now clearly reports:
+- OK
+- TRIAL
+- SUSPENDED
+- INACTIVE
+- OVER_LIMIT
+- NO_STATE_YET
+- TOMBSTONED
+
+This is read-only and makes suspended/non-paying clients easier to review.
+
