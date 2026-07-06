@@ -255,3 +255,20 @@ The same tool is available in the Client Manager menu:
 
 17) Backup inventory
 
+## Suspend / Reactivate Client
+
+V38C adds license status update tools:
+
+./ops/client-manager/update-staging-status-v38c.sh <clientId> <active|suspended|trial>
+./ops/client-manager/update-production-status-v38c.sh <clientId> <active|suspended|trial>
+
+Production confirmation phrase:
+STATUS PRODUCTION <clientId> <active|suspended|trial>
+
+Staging confirmation phrase:
+STATUS <clientId> <active|suspended|trial>
+
+Production status changes automatically create a backup before writing.
+
+V37P server-side enforcement blocks client-state saves when licenseStatus is not active or trial.
+
