@@ -57,13 +57,39 @@ fi
 echo "" | tee -a "$OUT"
 
 echo "------ CLIENT LIST ------" | tee -a "$OUT"
+
+list_kv_names() {
+  local RAW
+  RAW="$(npx wrangler kv key list --namespace-id "$KV_ID" --remote 2>/dev/null || true)"
+  printf "%s" "$RAW" | python3 - <<'PY2'
+import json, sys, re
+
+raw = sys.stdin.read()
+
+# Wrangler can print warnings/noise before JSON. Extract the JSON array safely.
+start = raw.find("[")
+end = raw.rfind("]")
+if start >= 0 and end > start:
+    raw = raw[start:end+1]
+
+names = []
+try:
+    data = json.loads(raw)
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and item.get("name"):
+                names.append(str(item["name"]))
+except Exception:
+    # Fallback parser for any non-standard spacing or line wrapping.
+    names = re.findall(r'"name"\s*:\s*"([^"]+)"', raw)
+
+for name in names:
+    print(name)
+PY2
+}
+
 if [ "$CLIENT_ID" = "all" ]; then
-  CLIENTS="$(npx wrangler kv key list --namespace-id "$KV_ID" --remote \
-    | tr ',' '\n' \
-    | grep -o '"name":"license::[^"]*"' \
-    | cut -d'"' -f4 \
-    | sed 's/^license:://' \
-    | sort || true)"
+  CLIENTS="$(list_kv_names | grep '^license::' | sed 's/^license:://' | sort || true)"
 else
   CLIENTS="$CLIENT_ID"
 fi
