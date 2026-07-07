@@ -57203,6 +57203,150 @@ function exportEndSessionSummary(){
   window.addEventListener("load", install);
 })();
 
+
+;/* PB_MORE_MENU_DUPLICATE_CLEANUP_V39W */
+(function(){
+  var MARKER = "PB_MORE_MENU_DUPLICATE_CLEANUP_V39W";
+  if (window.__PB_MORE_MENU_DUPLICATE_CLEANUP_V39W__) return;
+  window.__PB_MORE_MENU_DUPLICATE_CLEANUP_V39W__ = true;
+
+  function text(el){
+    return String((el && (el.innerText || el.textContent)) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function norm(el){
+    return text(el).toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  function visible(el){
+    try {
+      return !!el && !el.hidden && getComputedStyle(el).display !== "none" && getComputedStyle(el).visibility !== "hidden";
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function hide(el, reason){
+    if (!el) return false;
+    el.setAttribute("data-pb-more-menu-cleanup-v39w", reason || "duplicate");
+    el.style.setProperty("display", "none", "important");
+    el.style.setProperty("visibility", "hidden", "important");
+    return true;
+  }
+
+  function cleanup(){
+    var hidden = 0;
+    var hasStatic = !!document.querySelector(".pb-static-nav-btn-v4, .pb-static-more-top-v3, .pb-static-more-item-v3");
+
+    if (!hasStatic) {
+      return { marker: MARKER, installed: true, skipped: "static nav not found", hiddenThisRun: 0 };
+    }
+
+    var duplicateKeys = {
+      "home":1,
+      "players":1,
+      "player roster":1,
+      "teams":1,
+      "schedule":1,
+      "courts":1,
+      "comms":1,
+      "communications hub":1,
+      "mobile sync":1,
+      "sms":1,
+      "email":1,
+      "reporting":1,
+      "standings":1,
+      "tournament report":1,
+      "player stats":1,
+      "end session summary":1,
+      "playoffs":1,
+      "season board":1,
+      "more":1,
+      "checkin":1,
+      "self checkin qr":1,
+      "public display":1,
+      "player portal":1,
+      "player portal qr":1,
+      "player lookup":1,
+      "fun facts":1,
+      "fairness":1,
+      "tournament history":1,
+      "admin":1
+    };
+
+    Array.prototype.slice.call(document.querySelectorAll(".tab-btn")).forEach(function(el){
+      if (
+        el.classList.contains("pb-static-more-top-v3") ||
+        el.classList.contains("pb-static-more-item-v3") ||
+        el.classList.contains("pb-static-nav-btn-v4") ||
+        el.classList.contains("pb-static-menu-btn-v4")
+      ) return;
+
+      if (duplicateKeys[norm(el)]) {
+        hide(el, "legacy-tab-duplicate");
+        hidden++;
+      }
+    });
+
+    var moreKeys = {};
+    Array.prototype.slice.call(document.querySelectorAll(".pb-static-more-item-v3")).forEach(function(el){
+      var k = norm(el);
+      if (k) moreKeys[k] = true;
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll(".pb-static-menu-btn-v4")).forEach(function(el){
+      if (moreKeys[norm(el)]) {
+        hide(el, "static-menu-duplicate-of-more");
+        hidden++;
+      }
+    });
+
+    return {
+      marker: MARKER,
+      installed: true,
+      hiddenThisRun: hidden,
+      visibleStaticNav: Array.prototype.slice.call(document.querySelectorAll(".pb-static-nav-btn-v4")).filter(visible).length,
+      visibleStaticMoreTop: Array.prototype.slice.call(document.querySelectorAll(".pb-static-more-top-v3")).filter(visible).length,
+      visibleStaticMoreItems: Array.prototype.slice.call(document.querySelectorAll(".pb-static-more-item-v3")).filter(visible).length,
+      visibleOldTabButtons: Array.prototype.slice.call(document.querySelectorAll(".tab-btn")).filter(function(el){
+        return visible(el) && !el.classList.contains("pb-static-more-top-v3");
+      }).length
+    };
+  }
+
+  function install(){
+    cleanup();
+    setTimeout(cleanup, 100);
+    setTimeout(cleanup, 500);
+    setTimeout(cleanup, 1200);
+  }
+
+  window.pbMoreMenuDuplicateCleanupV39WRun = cleanup;
+  window.pbMoreMenuDuplicateCleanupV39WStatus = function(){
+    var result = cleanup();
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e){}
+    return result;
+  };
+
+  var oldShowTab = window.showTab;
+  if (typeof oldShowTab === "function" && !oldShowTab.__pbMoreMenuDuplicateCleanupV39WWrapped) {
+    var wrapped = function(){
+      var result = oldShowTab.apply(this, arguments);
+      setTimeout(cleanup, 80);
+      setTimeout(cleanup, 400);
+      return result;
+    };
+    wrapped.__pbMoreMenuDuplicateCleanupV39WWrapped = true;
+    window.showTab = wrapped;
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
