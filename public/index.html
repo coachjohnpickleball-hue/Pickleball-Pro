@@ -57587,6 +57587,400 @@ function exportEndSessionSummary(){
   window.addEventListener("load", install);
 })();
 
+
+;/* PB_MISSING_SCORE_CHECKLIST_COMPACT_V39X2 */
+(function(){
+  var MARKER = "PB_MISSING_SCORE_CHECKLIST_COMPACT_V39X2";
+  if (window.__PB_MISSING_SCORE_CHECKLIST_COMPACT_V39X2__) return;
+  window.__PB_MISSING_SCORE_CHECKLIST_COMPACT_V39X2__ = true;
+
+  window.__pbMissingScoreChecklistV39X2Expanded = false;
+
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function hasScore(v){
+    return v !== undefined && v !== null && String(v).trim() !== "";
+  }
+
+  function complete(m){
+    if (!m) return false;
+    return !!(m.complete || m.completed || m.winner || hasScore(m.scoreA) || hasScore(m.scoreB) || hasScore(m.aScore) || hasScore(m.bScore));
+  }
+
+  function playerName(x){
+    try {
+      if (x && typeof x === "object") return String(x.name || x.playerName || x.fullName || x.displayName || "Player").trim();
+      var idx = Number(x);
+      if (window.state && Array.isArray(state.players) && state.players[idx]) {
+        return String(state.players[idx].name || state.players[idx].playerName || state.players[idx].fullName || ("Player " + (idx + 1))).trim();
+      }
+    } catch(e){}
+    return String(x == null ? "Player" : x).trim();
+  }
+
+  function teamText(team){
+    if (!Array.isArray(team)) return playerName(team);
+    return team.map(playerName).join(" / ");
+  }
+
+  function getMissing(){
+    var out = [];
+    try {
+      if (!window.state || !Array.isArray(state.schedule)) return out;
+      state.schedule.forEach(function(round, ri){
+        (round || []).forEach(function(m, mi){
+          if (!m || complete(m)) return;
+          out.push({
+            roundIndex: ri,
+            roundNumber: ri + 1,
+            matchIndex: mi,
+            court: m.court || m.courtName || (mi + 1),
+            teamA: teamText(m.teamA || m.a || m.playersA || []),
+            teamB: teamText(m.teamB || m.b || m.playersB || [])
+          });
+        });
+      });
+    } catch(e){
+      console.warn(MARKER + " getMissing failed", e);
+    }
+    return out;
+  }
+
+  function grouped(missing){
+    var g = {};
+    missing.forEach(function(x){
+      var k = "Round " + x.roundNumber;
+      if (!g[k]) g[k] = [];
+      g[k].push(x);
+    });
+    return g;
+  }
+
+  function compactRender(){
+    try {
+      var body = document.getElementById("pb-missing-score-checklist-v39x-body");
+      if (!body) return { marker: MARKER, installed: true, rendered: false, reason: "body not found" };
+
+      var missing = getMissing();
+      var expanded = !!window.__pbMissingScoreChecklistV39X2Expanded;
+
+      if (!missing.length) {
+        body.innerHTML =
+          '<div style="padding:.65rem .75rem;border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.08);border-radius:.75rem;color:var(--txt2);font-size:.9rem">' +
+            '✅ No missing scores.' +
+          '</div>';
+        return { marker: MARKER, installed: true, rendered: true, missingScores: 0, compact: true };
+      }
+
+      var g = grouped(missing);
+      var rounds = Object.keys(g);
+      var next = missing[0];
+
+      var chips = rounds.slice(0, 6).map(function(r){
+        return '<span style="display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;font-size:.8rem;color:var(--txt2);background:rgba(255,255,255,.03)">' +
+          esc(r) + ': <strong>' + g[r].length + '</strong>' +
+        '</span>';
+      }).join(" ");
+
+      var details = "";
+      if (expanded) {
+        details =
+          '<div style="margin-top:.65rem;max-height:260px;overflow:auto;border-top:1px solid var(--border);padding-top:.55rem;display:grid;gap:.4rem">' +
+          missing.slice(0, 20).map(function(x){
+            return '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;border:1px solid var(--border);border-radius:.65rem;padding:.45rem .6rem;background:rgba(255,255,255,.025)">' +
+              '<div style="font-size:.85rem">' +
+                '<strong>R' + esc(x.roundNumber) + ' · Court ' + esc(x.court) + '</strong>' +
+                '<div style="color:var(--txt3);font-size:.8rem">' + esc(x.teamA) + ' vs ' + esc(x.teamB) + '</div>' +
+              '</div>' +
+              '<button type="button" class="btn btn-secondary btn-sm" onclick="pbMissingScoreChecklistV39XJump(' + x.roundIndex + ',' + x.matchIndex + ')">Jump</button>' +
+            '</div>';
+          }).join("") +
+          (missing.length > 20 ? '<div style="font-size:.8rem;color:var(--txt3)">Showing first 20. Use Copy List for the full list.</div>' : '') +
+          '</div>';
+      }
+
+      body.innerHTML =
+        '<div style="border:1px solid var(--border);border-radius:.75rem;padding:.65rem .75rem;background:rgba(255,255,255,.03)">' +
+          '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap">' +
+            '<div style="font-size:.9rem;color:var(--txt2)">' +
+              '<strong>' + missing.length + '</strong> missing score' + (missing.length === 1 ? '' : 's') +
+              '<div style="font-size:.8rem;color:var(--txt3);margin-top:.15rem">Next: Round ' + esc(next.roundNumber) + ' · Court ' + esc(next.court) + '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-secondary btn-sm" onclick="pbMissingScoreChecklistV39X2Toggle()">' + (expanded ? 'Hide Details' : 'Show Details') + '</button>' +
+          '</div>' +
+          '<div style="margin-top:.55rem;display:flex;gap:.4rem;flex-wrap:wrap">' + chips + (rounds.length > 6 ? '<span style="font-size:.8rem;color:var(--txt3)">+' + (rounds.length - 6) + ' more round groups</span>' : '') + '</div>' +
+          details +
+        '</div>';
+
+      return { marker: MARKER, installed: true, rendered: true, missingScores: missing.length, compact: true, expanded: expanded };
+    } catch(e) {
+      console.warn(MARKER + " render failed", e);
+      return { marker: MARKER, installed: true, rendered: false, error: String(e && e.message || e) };
+    }
+  }
+
+  window.pbMissingScoreChecklistV39X2Toggle = function(){
+    window.__pbMissingScoreChecklistV39X2Expanded = !window.__pbMissingScoreChecklistV39X2Expanded;
+    return compactRender();
+  };
+
+  var oldRender = window.pbMissingScoreChecklistV39XRender;
+  if (typeof oldRender === "function" && !oldRender.__pbMissingScoreChecklistCompactV39X2Wrapped) {
+    var wrappedRender = function(){
+      try { oldRender.apply(this, arguments); } catch(e) {}
+      return compactRender();
+    };
+    wrappedRender.__pbMissingScoreChecklistCompactV39X2Wrapped = true;
+    window.pbMissingScoreChecklistV39XRender = wrappedRender;
+  }
+
+  window.pbMissingScoreChecklistV39X2Status = function(){
+    var result = compactRender();
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e){}
+    return result;
+  };
+
+  function install(){
+    if (typeof oldRender === "function") {
+      try { oldRender(); } catch(e) {}
+    }
+    compactRender();
+    setTimeout(compactRender, 250);
+    setTimeout(compactRender, 1000);
+  }
+
+  ["renderSchedule","saveScore","saveScoreInline","generateSchedule","regenerateRemaining","lockRound","unlockRound","showTab"].forEach(function(name){
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbMissingScoreChecklistCompactV39X2Wrapped) {
+        var wrapped = function(){
+          var result = fn.apply(this, arguments);
+          setTimeout(compactRender, 160);
+          setTimeout(compactRender, 700);
+          return result;
+        };
+        wrapped.__pbMissingScoreChecklistCompactV39X2Wrapped = true;
+        window[name] = wrapped;
+      }
+    } catch(e){}
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
+
+;/* PB_ROUND_NAV_MISSING_SCORE_BADGES_V39Y */
+(function(){
+  var MARKER = "PB_ROUND_NAV_MISSING_SCORE_BADGES_V39Y";
+  if (window.__PB_ROUND_NAV_MISSING_SCORE_BADGES_V39Y__) return;
+  window.__PB_ROUND_NAV_MISSING_SCORE_BADGES_V39Y__ = true;
+
+  function hasScore(v){ return v !== undefined && v !== null && String(v).trim() !== ""; }
+
+  function complete(m){
+    return !!(m && (m.complete || m.completed || m.winner || hasScore(m.scoreA) || hasScore(m.scoreB) || hasScore(m.aScore) || hasScore(m.bScore)));
+  }
+
+  function stats(){
+    var rounds = [];
+    var missing = [];
+
+    try {
+      if (!window.state || !Array.isArray(state.schedule)) return { rounds: rounds, missing: missing };
+
+      state.schedule.forEach(function(round, ri){
+        var total = 0, done = 0, miss = 0;
+
+        (round || []).forEach(function(m, mi){
+          if (!m) return;
+          total++;
+          if (complete(m)) done++;
+          else {
+            miss++;
+            missing.push({
+              roundIndex: ri,
+              matchIndex: mi,
+              roundNumber: ri + 1,
+              court: m.court || m.courtName || (mi + 1)
+            });
+          }
+        });
+
+        rounds.push({
+          roundIndex: ri,
+          roundNumber: ri + 1,
+          total: total,
+          done: done,
+          missing: miss
+        });
+      });
+    } catch(e) {}
+
+    return { rounds: rounds, missing: missing };
+  }
+
+  function hideOldChecklist(){
+    var panel = document.getElementById("pb-missing-score-checklist-v39x");
+    if (panel) {
+      panel.setAttribute("data-hidden-by-v39y", "true");
+      panel.style.setProperty("display", "none", "important");
+    }
+  }
+
+  function host(){
+    var h = document.getElementById("pb-round-nav-score-badges-v39y");
+    if (h) return h;
+
+    var nav = document.getElementById("pb-schedule-round-navigator-v39u");
+    var fallback = nav || document.getElementById("pb-schedule-review-panel-v39t") || document.getElementById("schedule-container") || document.getElementById("sec-schedule");
+    if (!fallback) return null;
+
+    h = document.createElement("div");
+    h.id = "pb-round-nav-score-badges-v39y";
+    h.setAttribute("data-marker", MARKER);
+    h.style.marginTop = ".65rem";
+
+    if (nav) nav.appendChild(h);
+    else if (fallback.parentNode) fallback.parentNode.insertBefore(h, fallback.nextSibling);
+    else fallback.appendChild(h);
+
+    return h;
+  }
+
+  function jump(roundIndex, matchIndex){
+    try {
+      if (typeof pbMissingScoreChecklistV39XJump === "function") {
+        pbMissingScoreChecklistV39XJump(roundIndex, matchIndex || 0);
+        return;
+      }
+      if (typeof showTab === "function") showTab("schedule");
+      setTimeout(function(){
+        var c = document.getElementById("schedule-container") || document.getElementById("sec-schedule") || document.body;
+        c.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    } catch(e) {}
+  }
+
+  function copyMissing(){
+    var data = stats();
+    var text = data.missing.length
+      ? data.missing.map(function(x){ return "Round " + x.roundNumber + " · Court " + x.court; }).join("\n")
+      : "No missing scores.";
+
+    try {
+      if (typeof pbMissingScoreChecklistV39XCopy === "function") return pbMissingScoreChecklistV39XCopy();
+      navigator.clipboard.writeText(text);
+      if (typeof toast === "function") toast("Copied missing scores.", "ok");
+    } catch(e) {
+      try { copy(text); } catch(_) {}
+    }
+
+    return text;
+  }
+
+  function render(){
+    hideOldChecklist();
+
+    var h = host();
+    if (!h) return { marker: MARKER, installed: true, rendered: false, reason: "host not found" };
+
+    var data = stats();
+    var totalMissing = data.missing.length;
+
+    if (!data.rounds.length) {
+      h.innerHTML = '<div style="border:1px solid var(--border);border-radius:.75rem;padding:.6rem .75rem;background:rgba(255,255,255,.03);font-size:.85rem;color:var(--txt3)">Score status appears here after a schedule is generated.</div>';
+      return { marker: MARKER, installed: true, rendered: true, rounds: 0, missingScores: 0 };
+    }
+
+    var chips = data.rounds.map(function(r){
+      var bg = r.missing ? "rgba(245,158,11,.10)" : "rgba(34,197,94,.10)";
+      var bd = r.missing ? "rgba(245,158,11,.35)" : "rgba(34,197,94,.30)";
+      var txt = r.missing ? r.missing + " missing" : "done";
+
+      return '<button type="button" onclick="pbRoundNavMissingScoreBadgesV39YJumpRound(' + r.roundIndex + ')" style="border:1px solid ' + bd + ';background:' + bg + ';border-radius:999px;padding:.32rem .62rem;font-size:.8rem;color:var(--txt2);cursor:pointer"><strong>R' + r.roundNumber + '</strong> · ' + txt + '</button>';
+    }).join("");
+
+    h.innerHTML =
+      '<div style="border:1px solid var(--border);border-radius:.85rem;padding:.65rem .75rem;background:rgba(255,255,255,.03)">' +
+        '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap">' +
+          '<div style="font-size:.9rem;color:var(--txt2)"><strong>Score Status</strong><span style="margin-left:.45rem;color:var(--txt3)">· ' + (totalMissing ? totalMissing + ' missing' : 'all scores complete') + '</span></div>' +
+          '<div style="display:flex;gap:.45rem;flex-wrap:wrap">' +
+            '<button type="button" class="btn btn-secondary btn-sm" onclick="pbRoundNavMissingScoreBadgesV39YCopy()">Copy Missing</button>' +
+            '<button type="button" class="btn btn-primary btn-sm" onclick="pbRoundNavMissingScoreBadgesV39YJumpFirst()">Jump to First</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.55rem">' + chips + '</div>' +
+      '</div>';
+
+    return {
+      marker: MARKER,
+      installed: true,
+      rendered: true,
+      rounds: data.rounds.length,
+      missingScores: totalMissing,
+      oldChecklistHidden: !!document.querySelector('#pb-missing-score-checklist-v39x[data-hidden-by-v39y="true"]')
+    };
+  }
+
+  window.pbRoundNavMissingScoreBadgesV39YRender = render;
+  window.pbRoundNavMissingScoreBadgesV39YCopy = copyMissing;
+  window.pbRoundNavMissingScoreBadgesV39YJumpFirst = function(){
+    var data = stats();
+    if (data.missing.length) jump(data.missing[0].roundIndex, data.missing[0].matchIndex);
+    else if (typeof toast === "function") toast("No missing scores.", "ok");
+  };
+  window.pbRoundNavMissingScoreBadgesV39YJumpRound = function(roundIndex){
+    var data = stats();
+    var target = data.missing.find(function(x){ return x.roundIndex === roundIndex; });
+    if (target) jump(target.roundIndex, target.matchIndex);
+    else jump(roundIndex, 0);
+  };
+  window.pbRoundNavMissingScoreBadgesV39YStatus = function(){
+    var result = render();
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e) {}
+    return result;
+  };
+
+  ["renderSchedule","saveScore","saveScoreInline","generateSchedule","regenerateRemaining","lockRound","unlockRound","showTab","pbScheduleRoundNavigatorV39URender"].forEach(function(name){
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbRoundNavBadgesV39YWrapped) {
+        var wrapped = function(){
+          var result = fn.apply(this, arguments);
+          setTimeout(render, 120);
+          setTimeout(render, 600);
+          return result;
+        };
+        wrapped.__pbRoundNavBadgesV39YWrapped = true;
+        window[name] = wrapped;
+      }
+    } catch(e) {}
+  });
+
+  function install(){
+    render();
+    setTimeout(render, 250);
+    setTimeout(render, 1000);
+    setTimeout(render, 2000);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
