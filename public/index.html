@@ -56966,6 +56966,243 @@ function exportEndSessionSummary(){
   window.addEventListener("load", install);
 })();
 
+
+;/* PB_SCHEDULE_ROUND_NAVIGATOR_V39U */
+(function(){
+  var MARKER = "PB_SCHEDULE_ROUND_NAVIGATOR_V39U";
+  if (window.__PB_SCHEDULE_ROUND_NAVIGATOR_V39U__) return;
+  window.__PB_SCHEDULE_ROUND_NAVIGATOR_V39U__ = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function safeSchedule(){
+    try { return Array.isArray(state.schedule) ? state.schedule : []; } catch(e){ return []; }
+  }
+
+  function isStarted(idx){
+    try { return !!(state.startedRounds && state.startedRounds.has && state.startedRounds.has(idx)); } catch(e){ return false; }
+  }
+
+  function matchScored(m){
+    if (!m || typeof m !== "object") return false;
+    if (m.complete || m.completed) return true;
+    var vals = [m.scoreA, m.scoreB, m.aScore, m.bScore, m.teamAScore, m.teamBScore, m.pointsA, m.pointsB];
+    return vals.some(function(v){ return String(v == null ? "" : v).trim() !== ""; });
+  }
+
+  function roundInfo(round, idx){
+    var matches = Array.isArray(round) ? round : [];
+    var scored = matches.filter(matchScored).length;
+    var complete = matches.length > 0 && scored >= matches.length;
+    var started = isStarted(idx);
+    var status = complete ? "Scored" : started ? "Live" : scored ? "Partial" : "Pending";
+    return {
+      idx: idx,
+      roundNumber: idx + 1,
+      matches: matches.length,
+      scored: scored,
+      complete: complete,
+      started: started,
+      status: status
+    };
+  }
+
+  function allInfo(){
+    return safeSchedule().map(roundInfo);
+  }
+
+  function currentRoundIndex(){
+    var info = allInfo();
+    if (!info.length) return -1;
+
+    for (var i=0; i<info.length; i++) {
+      if (info[i].started && !info[i].complete) return i;
+    }
+
+    for (var j=0; j<info.length; j++) {
+      if (!info[j].complete) return j;
+    }
+
+    return info.length - 1;
+  }
+
+  function nextMissingScoreIndex(){
+    var info = allInfo();
+    for (var i=0; i<info.length; i++) {
+      if (info[i].matches && info[i].scored < info[i].matches) return i;
+    }
+    return -1;
+  }
+
+  function scrollToRound(idx){
+    idx = Number(idx);
+    if (!isFinite(idx) || idx < 0) return false;
+
+    var targetText = "Round " + (idx + 1);
+    var container = byId("schedule-container") || byId("sec-schedule") || document.body;
+    var candidates = Array.prototype.slice.call(container.querySelectorAll("*")).filter(function(el){
+      var text = String(el.innerText || el.textContent || "").replace(/\s+/g," ").trim();
+      if (!text) return false;
+      if (text.length > 160) return false;
+      return text.indexOf(targetText) >= 0;
+    });
+
+    var target = candidates[0] || container;
+    try {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.style.outline = "2px solid rgba(198,255,0,.75)";
+      target.style.outlineOffset = "4px";
+      setTimeout(function(){ target.style.outline = ""; target.style.outlineOffset = ""; }, 1400);
+    } catch(e) {
+      try { target.scrollIntoView(); } catch(_){}
+    }
+
+    return true;
+  }
+
+  function pill(info){
+    var tone = info.complete ? "ok" : info.started ? "live" : info.scored ? "warn" : "pending";
+    var bg = "rgba(255,255,255,.055)";
+    var border = "rgba(255,255,255,.13)";
+    var color = "var(--txt2)";
+
+    if (tone === "ok") {
+      bg = "rgba(198,255,0,.10)";
+      border = "rgba(198,255,0,.30)";
+      color = "var(--lime)";
+    } else if (tone === "live") {
+      bg = "rgba(96,165,250,.12)";
+      border = "rgba(96,165,250,.32)";
+      color = "#93c5fd";
+    } else if (tone === "warn") {
+      bg = "rgba(249,168,37,.12)";
+      border = "rgba(249,168,37,.32)";
+      color = "var(--ball)";
+    }
+
+    return '<button type="button" class="btn btn-secondary btn-sm" ' +
+      'style="border-color:'+border+';background:'+bg+';color:'+color+';font-weight:900" ' +
+      'onclick="pbScheduleRoundNavigatorV39UJump('+info.idx+')" ' +
+      'title="'+esc(info.status+' · '+info.scored+'/'+info.matches+' scored')+'">' +
+      'R'+info.roundNumber+' · '+esc(info.status) +
+      '</button>';
+  }
+
+  function render(){
+    var sec = byId("sec-schedule");
+    if (!sec) return false;
+
+    var panel = byId("pb-schedule-round-navigator-v39u");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-schedule-round-navigator-v39u";
+      panel.className = "card";
+      panel.style.margin = "0 0 .9rem 0";
+
+      var anchor = byId("pb-schedule-review-panel-v39t") || byId("schedule-preview-panel") || byId("schedule-container");
+      if (anchor && anchor.parentNode) {
+        if (anchor.id === "pb-schedule-review-panel-v39t" && anchor.nextSibling) anchor.parentNode.insertBefore(panel, anchor.nextSibling);
+        else anchor.parentNode.insertBefore(panel, anchor);
+      } else {
+        sec.insertBefore(panel, sec.firstChild);
+      }
+    }
+
+    var info = allInfo();
+    var current = currentRoundIndex();
+    var missing = nextMissingScoreIndex();
+
+    if (!info.length) {
+      panel.innerHTML =
+        '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap">' +
+          '<div>' +
+            '<div class="card-title" style="margin:0">🧭 Round Navigator</div>' +
+            '<div style="font-size:.82rem;color:var(--txt3);line-height:1.45;margin-top:.25rem">Generate a schedule to jump between rounds and missing scores.</div>' +
+          '</div>' +
+          '<div style="font-family:monospace;font-size:.68rem;color:var(--txt3)">'+MARKER+'</div>' +
+        '</div>';
+      return true;
+    }
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<div>' +
+          '<div class="card-title" style="margin:0">🧭 Round Navigator</div>' +
+          '<div style="font-size:.82rem;color:var(--txt3);line-height:1.45;margin-top:.25rem">Fast jump controls for long schedules and score entry.</div>' +
+        '</div>' +
+        '<div style="font-family:monospace;font-size:.68rem;color:var(--txt3)">'+MARKER+'</div>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="pbScheduleRoundNavigatorV39UJumpCurrent()">Jump Current</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbScheduleRoundNavigatorV39UJumpMissing()">Next Missing Score</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbScheduleRoundNavigatorV39URender()">Refresh</button>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:.42rem;flex-wrap:wrap">' +
+        info.map(pill).join("") +
+      '</div>' +
+
+      '<div style="font-size:.78rem;color:var(--txt3);margin-top:.65rem">' +
+        'Current: ' + esc(current >= 0 ? "Round " + (current + 1) : "—") +
+        ' · Next missing score: ' + esc(missing >= 0 ? "Round " + (missing + 1) : "none") +
+      '</div>';
+
+    return true;
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbScheduleRoundNavigatorV39UWrapped) return;
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      setTimeout(render, 80);
+      setTimeout(render, 450);
+      return result;
+    };
+    wrapped.__pbScheduleRoundNavigatorV39UWrapped = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    ["showTab","generateSchedule","regenerateRemaining","rebuildUpcomingRounds","lockRound","unlockRound","renderSchedule","saveScore","saveScoreInline","renderCourtsGrid"].forEach(wrap);
+    render();
+    setTimeout(render, 300);
+    setTimeout(render, 1200);
+  }
+
+  window.pbScheduleRoundNavigatorV39URender = render;
+  window.pbScheduleRoundNavigatorV39UJump = scrollToRound;
+  window.pbScheduleRoundNavigatorV39UJumpCurrent = function(){ return scrollToRound(currentRoundIndex()); };
+  window.pbScheduleRoundNavigatorV39UJumpMissing = function(){ return scrollToRound(nextMissingScoreIndex()); };
+  window.pbScheduleRoundNavigatorV39UStatus = function(){
+    var status = {
+      marker: MARKER,
+      installed: true,
+      hasPanel: !!byId("pb-schedule-round-navigator-v39u"),
+      rounds: allInfo(),
+      currentRoundIndex: currentRoundIndex(),
+      nextMissingScoreIndex: nextMissingScoreIndex()
+    };
+    console.log(JSON.stringify(status, null, 2));
+    try { copy(JSON.stringify(status, null, 2)); } catch(e){}
+    return status;
+  };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
