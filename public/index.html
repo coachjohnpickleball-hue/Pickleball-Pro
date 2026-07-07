@@ -4662,6 +4662,56 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 }
 </style>
 
+
+<style id="pb-admin-direct-cleanup-v39o-style">
+/* PB_ADMIN_DIRECT_HTML_CLEANUP_V39O */
+/* Static CSS only. No JavaScript. No refresh loop. */
+
+#sec-admin .pb-admin-section-divider-v39o {
+  margin: 1rem 0 .65rem 0;
+  padding: .55rem .75rem;
+  border: 1px solid rgba(198,255,0,.16);
+  border-radius: 12px;
+  background: rgba(198,255,0,.045);
+}
+
+#sec-admin .pb-admin-section-divider-v39o-title {
+  font-weight: 900;
+  color: var(--txt);
+  font-size: .92rem;
+}
+
+#sec-admin .pb-admin-section-divider-v39o-note {
+  color: var(--txt3);
+  font-size: .8rem;
+  line-height: 1.35;
+  margin-top: .18rem;
+}
+
+#sec-admin > .card {
+  margin-top: .75rem;
+}
+
+#sec-admin .card-title {
+  line-height: 1.2;
+}
+
+#sec-admin .btn {
+  margin-bottom: .22rem;
+}
+
+#sec-admin code {
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  #sec-admin .pb-admin-section-divider-v39o {
+    margin-top: .85rem;
+    padding: .5rem .65rem;
+  }
+}
+</style>
+
 </head>
 <body>
 <script id="admin-hard-hide-early">
@@ -5770,6 +5820,13 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
   <!-- /PB_ADMIN_STATIC_HEADER_V39K -->
 
   <div class="card">
+    
+    <!-- PB_ADMIN_DIRECT_HTML_CLEANUP_V39O:safety -->
+    <div class="pb-admin-section-divider-v39o">
+      <div class="pb-admin-section-divider-v39o-title">Safety & Access</div>
+      <div class="pb-admin-section-divider-v39o-note">Lock the event, review access, and manage terms before or during live play.</div>
+    </div>
+    <!-- /PB_ADMIN_DIRECT_HTML_CLEANUP_V39O -->
     <div class="card-title">🔒 Admin Lock Mode</div>
     <p style="color:var(--txt2);margin-top:-.35rem">Turn this on during live play to reduce accidental roster, court, schedule, and score edits.</p>
     <div class="premium-panel">
@@ -5784,7 +5841,7 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem">
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/access-log','_blank')">🔐 Open Access Log</button>
       <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/tos-status','_blank')">📄 TOS Status</button>
-      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">📄 Terms Settings</button>
+      <button class="btn btn-secondary btn-sm admin-lock-safe" data-admin-only onclick="window.open('/admin/terms-settings','_blank')">⚙️ Terms Settings</button>
     </div>
     <div style="color:var(--txt3);font-size:.82rem;line-height:1.55;margin-top:.7rem">Allowed while locked: navigation, TV/public displays, copy links, refresh, fullscreen, admin reports, and this unlock button.</div>
   </div>
@@ -5793,6 +5850,13 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 <!-- ══════════════════ PUBLIC SELF CHECK-IN VIEW ══════════════════ -->
 <div id="sec-selfcheckinpublic" class="section">
   <div class="card">
+    
+    <!-- PB_ADMIN_DIRECT_HTML_CLEANUP_V39O:operations -->
+    <div class="pb-admin-section-divider-v39o">
+      <div class="pb-admin-section-divider-v39o-title">Event Operations</div>
+      <div class="pb-admin-section-divider-v39o-note">Player check-in, player portal, QR tools, and live event setup.</div>
+    </div>
+    <!-- /PB_ADMIN_DIRECT_HTML_CLEANUP_V39O -->
     <div class="card-title">✅ Player Check-In</div>
     <div id="self-public-status" style="color:var(--txt3);font-size:.85rem;margin-bottom:1rem">Select your name to check in.</div>
     <input id="self-public-search" placeholder="Search your name..." oninput="renderSelfCheckinPublic()" style="width:100%;padding:.8rem;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--txt);margin-bottom:1rem">
@@ -5843,6 +5907,13 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 
   <!-- Setup card -->
   <div class="card" id="po-setup-card">
+    
+    <!-- PB_ADMIN_DIRECT_HTML_CLEANUP_V39O:competition -->
+    <div class="pb-admin-section-divider-v39o">
+      <div class="pb-admin-section-divider-v39o-title">Competition Tools</div>
+      <div class="pb-admin-section-divider-v39o-note">Playoff bracket setup, bracket preview, and competitive session controls.</div>
+    </div>
+    <!-- /PB_ADMIN_DIRECT_HTML_CLEANUP_V39O -->
     <div class="card-title">🏆 Playoff Bracket Setup</div>
     <div class="form-row">
       <div class="form-group">
@@ -6026,6 +6097,13 @@ html[data-pb-fixed-partner-direct-v28="1"] #pb-fixed-partner-direct-panel-v28 {
 <div id="sec-history" class="section">
   <div style="max-width:1100px;margin:0 auto;padding:2rem;display:flex;flex-direction:column;gap:1.25rem">
     <div class="card">
+      
+    <!-- PB_ADMIN_DIRECT_HTML_CLEANUP_V39O:records -->
+    <div class="pb-admin-section-divider-v39o">
+      <div class="pb-admin-section-divider-v39o-title">Records & History</div>
+      <div class="pb-admin-section-divider-v39o-note">Review player stats, tournament records, and historical event data.</div>
+    </div>
+    <!-- /PB_ADMIN_DIRECT_HTML_CLEANUP_V39O -->
       <div class="card-title">🏆 Tournament History</div>
       <div style="color:var(--txt2);font-size:0.9rem;line-height:1.55">
         Save completed events, review past standings, restore a previous tournament, or export an archive.
