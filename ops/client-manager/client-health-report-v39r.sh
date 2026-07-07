@@ -89,12 +89,12 @@ PY2
 
 if [ "$CLIENT_ID" = "all" ]; then
   TMP_LICENSES="$(mktemp)"
-  npx wrangler kv key list --namespace-id "$KV_ID" --remote --prefix "license::" > "$TMP_LICENSES" 2>&1 || true
+  npx wrangler kv key list --namespace-id "$KV_ID" --remote --prefix "client-license:" > "$TMP_LICENSES" 2>&1 || true
 
   CLIENTS="$(python3 - "$TMP_LICENSES" <<'PY2'
 import re, sys
 raw = open(sys.argv[1], "r", encoding="utf-8", errors="ignore").read()
-names = re.findall(r'"name"\s*:\s*"license::([^"]+)"', raw)
+names = re.findall(r'"name"\s*:\s*"client-license:([^"]+)"', raw)
 for name in sorted(set(names)):
     print(name)
 PY2
@@ -114,8 +114,13 @@ for C in $CLIENTS; do
   echo "" | tee -a "$OUT"
   echo "===== CLIENT: $C =====" | tee -a "$OUT"
 
+  if npx wrangler kv key get "client-deleted:$C" --namespace-id "$KV_ID" --remote >/dev/null 2>&1; then
+    echo "Tombstoned: yes — hidden/deleted client record." | tee -a "$OUT"
+    continue
+  fi
+
   echo "--- License ---" | tee -a "$OUT"
-  npx wrangler kv key get "license::$C" --namespace-id "$KV_ID" --remote 2>/dev/null \
+  npx wrangler kv key get "client-license:$C" --namespace-id "$KV_ID" --remote 2>/dev/null \
     | python3 -m json.tool 2>/dev/null \
     | tee -a "$OUT" || echo "No readable license record." | tee -a "$OUT"
 
