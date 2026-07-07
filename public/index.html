@@ -56704,6 +56704,268 @@ function exportEndSessionSummary(){
   window.addEventListener("load", boot);
 })();
 
+
+;/* PB_SCHEDULE_REVIEW_PANEL_V39T */
+(function(){
+  var MARKER = "PB_SCHEDULE_REVIEW_PANEL_V39T";
+  if (window.__PB_SCHEDULE_REVIEW_PANEL_V39T__) return;
+  window.__PB_SCHEDULE_REVIEW_PANEL_V39T__ = true;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function safeArr(v){
+    if (Array.isArray(v)) return v;
+    try { if (v instanceof Set) return Array.from(v); } catch(e){}
+    return [];
+  }
+
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function playerName(p){
+    if (!p) return "";
+    if (typeof p === "string") return p.trim();
+    if (typeof p === "number") return String(p);
+    if (typeof p === "object") {
+      return String(
+        p.name ||
+        p.playerName ||
+        p.fullName ||
+        p.displayName ||
+        p.label ||
+        p.id ||
+        ""
+      ).trim();
+    }
+    return "";
+  }
+
+  function teamNames(team){
+    if (!team) return [];
+    if (Array.isArray(team)) return team.map(playerName).filter(Boolean);
+    if (typeof team === "string") {
+      return team
+        .split(/\s*(?:\/|,|&|\+| and )\s*/i)
+        .map(function(x){ return x.trim(); })
+        .filter(Boolean);
+    }
+    if (typeof team === "object") return [playerName(team)].filter(Boolean);
+    return [];
+  }
+
+  function matchPlayers(m){
+    if (!m || typeof m !== "object") return [];
+    var out = [];
+
+    ["teamA","teamB","a","b","players","team1","team2"].forEach(function(k){
+      out = out.concat(teamNames(m[k]));
+    });
+
+    ["playerA","playerB","player1","player2","player3","player4","p1","p2","p3","p4"].forEach(function(k){
+      var n = playerName(m[k]);
+      if (n) out.push(n);
+    });
+
+    var seen = {};
+    return out.filter(function(n){
+      var key = n.toLowerCase();
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function hasScore(m){
+    if (!m || typeof m !== "object") return false;
+    if (m.complete || m.completed) return true;
+    var fields = ["scoreA","scoreB","aScore","bScore","teamAScore","teamBScore","pointsA","pointsB"];
+    return fields.some(function(k){
+      return String(m[k] == null ? "" : m[k]).trim() !== "";
+    });
+  }
+
+  function analyze(){
+    var st = window.state || {};
+    var schedule = Array.isArray(st.schedule) ? st.schedule : [];
+    var byeRounds = Array.isArray(st.byeRounds) ? st.byeRounds : [];
+    var started = safeArr(st.startedRounds).map(function(x){ return Number(x); }).filter(function(x){ return !isNaN(x); });
+    var selectedCourts = 0;
+
+    try {
+      if (st.selectedCourts instanceof Set) selectedCourts = st.selectedCourts.size;
+      else if (Array.isArray(st.selectedCourts)) selectedCourts = st.selectedCourts.length;
+    } catch(e){}
+
+    var rounds = schedule.length;
+    var matches = 0;
+    var completed = 0;
+    var protectedRounds = 0;
+    var duplicateWarnings = [];
+    var byes = 0;
+
+    schedule.forEach(function(round, idx){
+      var roundHasScore = false;
+      var seen = {};
+      var dups = [];
+
+      if (Array.isArray(round)) {
+        matches += round.length;
+
+        round.forEach(function(m){
+          if (hasScore(m)) {
+            completed++;
+            roundHasScore = true;
+          }
+
+          matchPlayers(m).forEach(function(n){
+            var key = n.toLowerCase();
+            if (seen[key]) dups.push(n);
+            seen[key] = true;
+          });
+        });
+      }
+
+      var byeList = Array.isArray(byeRounds[idx]) ? byeRounds[idx] : [];
+      byes += byeList.length;
+
+      if (dups.length) {
+        duplicateWarnings.push("Round " + (idx + 1) + ": " + Array.from(new Set(dups)).join(", "));
+      }
+
+      if (roundHasScore || started.indexOf(idx) >= 0) protectedRounds++;
+    });
+
+    var mobileReady = rounds > 0 && matches > 0 && selectedCourts > 0;
+
+    return {
+      marker: MARKER,
+      rounds: rounds,
+      matches: matches,
+      completed: completed,
+      protectedRounds: protectedRounds,
+      selectedCourts: selectedCourts,
+      byes: byes,
+      duplicateWarnings: duplicateWarnings,
+      mobileReady: mobileReady,
+      installed: true
+    };
+  }
+
+  function pill(label, value, tone){
+    var bg = "rgba(255,255,255,.055)";
+    var border = "rgba(255,255,255,.12)";
+    var color = "var(--txt)";
+    if (tone === "ok") { bg = "rgba(198,255,0,.10)"; border = "rgba(198,255,0,.28)"; color = "var(--lime)"; }
+    if (tone === "warn") { bg = "rgba(249,168,37,.12)"; border = "rgba(249,168,37,.32)"; color = "var(--ball)"; }
+    if (tone === "bad") { bg = "rgba(239,68,68,.12)"; border = "rgba(239,68,68,.32)"; color = "#ff8a8a"; }
+
+    return '<div style="border:1px solid '+border+';background:'+bg+';border-radius:14px;padding:.55rem .7rem;min-width:112px">' +
+      '<div style="font-size:.68rem;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;font-weight:800">' + esc(label) + '</div>' +
+      '<div style="font-size:1.12rem;font-weight:950;color:'+color+';margin-top:.12rem">' + esc(value) + '</div>' +
+    '</div>';
+  }
+
+  function render(){
+    var sec = byId("sec-schedule");
+    if (!sec) return false;
+
+    var panel = byId("pb-schedule-review-panel-v39t");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = "pb-schedule-review-panel-v39t";
+      panel.className = "card";
+      panel.style.margin = "0 0 .9rem 0";
+
+      var anchor = byId("schedule-preview-panel") || byId("schedule-container");
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(panel, anchor);
+      else sec.insertBefore(panel, sec.firstChild);
+    }
+
+    var a = analyze();
+    var issueHtml = "";
+
+    if (!a.rounds) {
+      issueHtml = '<div style="color:var(--txt3);font-size:.86rem;line-height:1.45">No schedule generated yet. Select players/courts, then generate the schedule.</div>';
+    } else if (a.duplicateWarnings.length) {
+      issueHtml = '<div style="color:#ffb4b4;font-size:.86rem;line-height:1.45"><strong>Duplicate warning:</strong><br>' +
+        a.duplicateWarnings.slice(0,5).map(esc).join("<br>") +
+        (a.duplicateWarnings.length > 5 ? "<br>+" + (a.duplicateWarnings.length - 5) + " more" : "") +
+        '</div>';
+    } else {
+      issueHtml = '<div style="color:var(--lime);font-size:.86rem;font-weight:800">GREEN: no duplicate player warnings found in generated rounds.</div>';
+    }
+
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:.65rem">' +
+        '<div>' +
+          '<div class="card-title" style="margin:0">📋 Schedule Review</div>' +
+          '<div style="font-size:.82rem;color:var(--txt3);line-height:1.45;margin-top:.25rem">Quick health check before starting rounds, regenerating, or pushing to Mobile Sync.</div>' +
+        '</div>' +
+        '<div style="font-family:monospace;font-size:.68rem;color:var(--txt3)">'+MARKER+'</div>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:.55rem;flex-wrap:wrap;margin:.65rem 0">' +
+        pill("Rounds", a.rounds, a.rounds ? "ok" : "warn") +
+        pill("Matches", a.matches, a.matches ? "ok" : "warn") +
+        pill("Scored", a.completed, a.completed ? "ok" : "") +
+        pill("Locked", a.protectedRounds, a.protectedRounds ? "ok" : "") +
+        pill("Courts", a.selectedCourts, a.selectedCourts ? "ok" : "warn") +
+        pill("Byes", a.byes, a.byes ? "warn" : "") +
+        pill("Mobile Sync", a.mobileReady ? "Ready" : "Not ready", a.mobileReady ? "ok" : "warn") +
+      '</div>' +
+
+      '<div style="border-top:1px solid var(--border);padding-top:.65rem;margin-top:.65rem">' +
+        issueHtml +
+      '</div>' +
+
+      '<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.75rem">' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="pbScheduleReviewPanelV39TRender()">Refresh Review</button>' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="showTab(&quot;mobilesync&quot;)">Open Mobile Sync</button>' +
+      '</div>';
+
+    return true;
+  }
+
+  function wrap(name){
+    var fn = window[name];
+    if (typeof fn !== "function" || fn.__pbScheduleReviewV39TWrapped) return;
+    var wrapped = function(){
+      var result = fn.apply(this, arguments);
+      setTimeout(render, 60);
+      setTimeout(render, 400);
+      return result;
+    };
+    wrapped.__pbScheduleReviewV39TWrapped = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    ["showTab","generateSchedule","regenerateRemaining","rebuildUpcomingRounds","lockRound","unlockRound","renderSchedule","saveScore","saveScoreInline","renderCourtsGrid"].forEach(wrap);
+    render();
+    setTimeout(render, 300);
+    setTimeout(render, 1200);
+  }
+
+  window.pbScheduleReviewPanelV39TRender = render;
+  window.pbScheduleReviewPanelV39TStatus = function(){
+    var status = analyze();
+    status.hasPanel = !!byId("pb-schedule-review-panel-v39t");
+    console.log(JSON.stringify(status, null, 2));
+    try { copy(JSON.stringify(status, null, 2)); } catch(e){}
+    return status;
+  };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
