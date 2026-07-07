@@ -57981,6 +57981,321 @@ function exportEndSessionSummary(){
   window.addEventListener("load", install);
 })();
 
+
+;/* PB_PLAYER_SCHEDULE_LOOKUP_V39Z */
+(function(){
+  var MARKER = "PB_PLAYER_SCHEDULE_LOOKUP_V39Z";
+  if (window.__PB_PLAYER_SCHEDULE_LOOKUP_V39Z__) return;
+  window.__PB_PLAYER_SCHEDULE_LOOKUP_V39Z__ = true;
+
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function norm(v){
+    return String(v == null ? "" : v).trim().toLowerCase();
+  }
+
+  function playerName(x){
+    try {
+      if (x && typeof x === "object") {
+        return String(x.name || x.playerName || x.fullName || x.displayName || "Player").trim();
+      }
+
+      var idx = Number(x);
+      if (window.state && Array.isArray(state.players) && state.players[idx]) {
+        return String(state.players[idx].name || state.players[idx].playerName || state.players[idx].fullName || ("Player " + (idx + 1))).trim();
+      }
+    } catch(e){}
+
+    return String(x == null ? "Player" : x).trim();
+  }
+
+  function teamList(team){
+    if (!Array.isArray(team)) return [playerName(team)];
+    return team.map(playerName).filter(Boolean);
+  }
+
+  function getPlayers(){
+    try {
+      if (!window.state || !Array.isArray(state.players)) return [];
+      return state.players.map(playerName).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); });
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function hasScore(v){
+    return v !== undefined && v !== null && String(v).trim() !== "";
+  }
+
+  function complete(m){
+    return !!(m && (m.complete || m.completed || m.winner || hasScore(m.scoreA) || hasScore(m.scoreB) || hasScore(m.aScore) || hasScore(m.bScore)));
+  }
+
+  function findSchedule(player){
+    var q = norm(player);
+    var rows = [];
+
+    try {
+      if (!q || !window.state || !Array.isArray(state.schedule)) return rows;
+
+      state.schedule.forEach(function(round, ri){
+        var found = false;
+
+        (round || []).forEach(function(m, mi){
+          if (!m) return;
+
+          var a = teamList(m.teamA || m.a || m.playersA || []);
+          var b = teamList(m.teamB || m.b || m.playersB || []);
+
+          var inA = a.some(function(n){ return norm(n) === q; });
+          var inB = b.some(function(n){ return norm(n) === q; });
+
+          if (!inA && !inB) return;
+
+          found = true;
+
+          var myTeam = inA ? a : b;
+          var oppTeam = inA ? b : a;
+          var partner = myTeam.filter(function(n){ return norm(n) !== q; }).join(" / ") || "Singles / no partner";
+          var opponents = oppTeam.join(" / ") || "Opponent TBD";
+
+          rows.push({
+            type: "match",
+            roundIndex: ri,
+            matchIndex: mi,
+            roundNumber: ri + 1,
+            court: m.court || m.courtName || (mi + 1),
+            partner: partner,
+            opponents: opponents,
+            complete: complete(m)
+          });
+        });
+
+        if (!found) {
+          rows.push({
+            type: "bye",
+            roundIndex: ri,
+            roundNumber: ri + 1
+          });
+        }
+      });
+    } catch(e) {
+      console.warn(MARKER + " lookup failed", e);
+    }
+
+    return rows;
+  }
+
+  function ensurePanel(){
+    var existing = document.getElementById("pb-player-schedule-lookup-v39z");
+    if (existing) return existing;
+
+    var panel = document.createElement("div");
+    panel.id = "pb-player-schedule-lookup-v39z";
+    panel.className = "card";
+    panel.style.margin = "1rem 0";
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap">' +
+        '<div>' +
+          '<div class="card-title" style="margin-bottom:.2rem">Player Schedule Lookup</div>' +
+          '<div style="font-size:.85rem;color:var(--txt3)">Find a player’s rounds, courts, partners, opponents, and byes.</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">' +
+          '<input id="pb-player-schedule-lookup-v39z-input" list="pb-player-schedule-lookup-v39z-list" placeholder="Type player name..." style="min-width:220px;padding:.55rem .7rem;border-radius:.7rem;border:1px solid var(--border);background:var(--bg2);color:var(--txt)">' +
+          '<datalist id="pb-player-schedule-lookup-v39z-list"></datalist>' +
+          '<button type="button" class="btn btn-primary btn-sm" onclick="pbPlayerScheduleLookupV39ZSearch()">Find</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbPlayerScheduleLookupV39ZClear()">Clear</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="pb-player-schedule-lookup-v39z-body" style="margin-top:.75rem"></div>';
+
+    var anchor =
+      document.getElementById("pb-round-nav-score-badges-v39y") ||
+      document.getElementById("pb-schedule-round-navigator-v39u") ||
+      document.getElementById("pb-schedule-review-panel-v39t") ||
+      document.getElementById("schedule-container") ||
+      document.getElementById("sec-schedule");
+
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(panel, anchor.nextSibling);
+    else document.body.appendChild(panel);
+
+    var input = panel.querySelector("#pb-player-schedule-lookup-v39z-input");
+    if (input) {
+      input.addEventListener("keydown", function(e){
+        if (e.key === "Enter") {
+          e.preventDefault();
+          window.pbPlayerScheduleLookupV39ZSearch();
+        }
+      });
+    }
+
+    return panel;
+  }
+
+  function renderOptions(){
+    var list = document.getElementById("pb-player-schedule-lookup-v39z-list");
+    if (!list) return;
+
+    list.innerHTML = getPlayers().map(function(n){
+      return '<option value="' + esc(n) + '"></option>';
+    }).join("");
+  }
+
+  function jump(roundIndex, matchIndex){
+    try {
+      if (typeof showTab === "function") showTab("schedule");
+
+      if (typeof pbMissingScoreChecklistV39XJump === "function") {
+        pbMissingScoreChecklistV39XJump(roundIndex, matchIndex || 0);
+        return;
+      }
+
+      setTimeout(function(){
+        var container = document.getElementById("schedule-container") || document.getElementById("sec-schedule") || document.body;
+        container.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
+    } catch(e) {}
+  }
+
+  function renderResult(player){
+    ensurePanel();
+    renderOptions();
+
+    var body = document.getElementById("pb-player-schedule-lookup-v39z-body");
+    if (!body) return { marker: MARKER, installed: true, rendered: false, reason: "body not found" };
+
+    var rows = findSchedule(player);
+
+    if (!String(player || "").trim()) {
+      body.innerHTML =
+        '<div style="padding:.65rem .75rem;border:1px solid var(--border);border-radius:.75rem;background:rgba(255,255,255,.03);font-size:.85rem;color:var(--txt3)">Type a player name to view their schedule.</div>';
+      return { marker: MARKER, installed: true, rendered: true, player: "", rows: 0 };
+    }
+
+    if (!rows.length) {
+      body.innerHTML =
+        '<div style="padding:.65rem .75rem;border:1px solid rgba(245,158,11,.35);border-radius:.75rem;background:rgba(245,158,11,.08);font-size:.9rem;color:var(--txt2)">No schedule found for <strong>' + esc(player) + '</strong>.</div>';
+      return { marker: MARKER, installed: true, rendered: true, player: player, rows: 0 };
+    }
+
+    var matchCount = rows.filter(function(r){ return r.type === "match"; }).length;
+    var byeCount = rows.filter(function(r){ return r.type === "bye"; }).length;
+
+    body.innerHTML =
+      '<div style="border:1px solid var(--border);border-radius:.85rem;padding:.65rem .75rem;background:rgba(255,255,255,.03)">' +
+        '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:.55rem">' +
+          '<div style="font-size:.9rem;color:var(--txt2)"><strong>' + esc(player) + '</strong><span style="margin-left:.45rem;color:var(--txt3)">· ' + matchCount + ' matches · ' + byeCount + ' byes</span></div>' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbPlayerScheduleLookupV39ZCopy()">Copy Player Schedule</button>' +
+        '</div>' +
+        '<div style="display:grid;gap:.45rem">' +
+          rows.map(function(r){
+            if (r.type === "bye") {
+              return '<div style="border:1px solid var(--border);border-radius:.7rem;padding:.5rem .65rem;font-size:.85rem;color:var(--txt3);background:rgba(255,255,255,.025)"><strong>Round ' + r.roundNumber + '</strong> · Bye / not scheduled</div>';
+            }
+
+            return '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;border:1px solid var(--border);border-radius:.7rem;padding:.5rem .65rem;background:rgba(255,255,255,.025)">' +
+              '<div style="font-size:.85rem;color:var(--txt2)">' +
+                '<strong>Round ' + r.roundNumber + ' · Court ' + esc(r.court) + '</strong>' +
+                '<div style="font-size:.8rem;color:var(--txt3)">Partner: ' + esc(r.partner) + '</div>' +
+                '<div style="font-size:.8rem;color:var(--txt3)">Vs: ' + esc(r.opponents) + '</div>' +
+              '</div>' +
+              '<div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap">' +
+                '<span style="font-size:.78rem;color:' + (r.complete ? 'var(--success)' : 'var(--txt3)') + '">' + (r.complete ? 'Scored' : 'Pending') + '</span>' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="pbPlayerScheduleLookupV39ZJump(' + r.roundIndex + ',' + r.matchIndex + ')">Jump</button>' +
+              '</div>' +
+            '</div>';
+          }).join("") +
+        '</div>' +
+      '</div>';
+
+    return { marker: MARKER, installed: true, rendered: true, player: player, rows: rows.length, matches: matchCount, byes: byeCount };
+  }
+
+  window.pbPlayerScheduleLookupV39ZSearch = function(){
+    var input = document.getElementById("pb-player-schedule-lookup-v39z-input");
+    var player = input ? input.value : "";
+    window.__pbPlayerScheduleLookupV39ZLast = player;
+    return renderResult(player);
+  };
+
+  window.pbPlayerScheduleLookupV39ZClear = function(){
+    var input = document.getElementById("pb-player-schedule-lookup-v39z-input");
+    if (input) input.value = "";
+    window.__pbPlayerScheduleLookupV39ZLast = "";
+    return renderResult("");
+  };
+
+  window.pbPlayerScheduleLookupV39ZJump = jump;
+
+  window.pbPlayerScheduleLookupV39ZCopy = function(){
+    var player = window.__pbPlayerScheduleLookupV39ZLast || "";
+    var rows = findSchedule(player);
+    var lines = rows.map(function(r){
+      if (r.type === "bye") return "Round " + r.roundNumber + ": Bye / not scheduled";
+      return "Round " + r.roundNumber + " · Court " + r.court + " · Partner: " + r.partner + " · Vs: " + r.opponents + " · " + (r.complete ? "Scored" : "Pending");
+    });
+
+    var text = lines.length ? player + "\n" + lines.join("\n") : "No schedule found for " + player;
+
+    try {
+      navigator.clipboard.writeText(text);
+      if (typeof toast === "function") toast("Copied player schedule.", "ok");
+    } catch(e) {
+      try { copy(text); } catch(_) {}
+    }
+
+    return text;
+  };
+
+  window.pbPlayerScheduleLookupV39ZRender = function(){
+    ensurePanel();
+    renderOptions();
+    return renderResult(window.__pbPlayerScheduleLookupV39ZLast || "");
+  };
+
+  window.pbPlayerScheduleLookupV39ZStatus = function(){
+    var result = window.pbPlayerScheduleLookupV39ZRender();
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e){}
+    return result;
+  };
+
+  ["renderSchedule","generateSchedule","regenerateRemaining","showTab","pbScheduleRoundNavigatorV39URender","pbRoundNavMissingScoreBadgesV39YRender"].forEach(function(name){
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbPlayerScheduleLookupV39ZWrapped) {
+        var wrapped = function(){
+          var result = fn.apply(this, arguments);
+          setTimeout(window.pbPlayerScheduleLookupV39ZRender, 150);
+          setTimeout(window.pbPlayerScheduleLookupV39ZRender, 700);
+          return result;
+        };
+        wrapped.__pbPlayerScheduleLookupV39ZWrapped = true;
+        window[name] = wrapped;
+      }
+    } catch(e) {}
+  });
+
+  function install(){
+    ensurePanel();
+    renderOptions();
+    renderResult("");
+    setTimeout(window.pbPlayerScheduleLookupV39ZRender, 300);
+    setTimeout(window.pbPlayerScheduleLookupV39ZRender, 1000);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
