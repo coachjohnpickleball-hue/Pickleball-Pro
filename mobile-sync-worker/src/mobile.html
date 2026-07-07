@@ -379,6 +379,85 @@ html.pb-ms-polish-v1 .court-tile .claimed-by {
 }
 
 </style>
+
+<style id="pb-mobile-sync-ui-polish-v39p-style">
+/* PB_MOBILE_SYNC_UI_POLISH_V39P */
+/* Static mobile UI polish only. No API, no Durable Object, no scoring logic changes. */
+
+.pb-mobile-polish-card-v39p {
+  border: 1px solid rgba(198,255,0,.18);
+  background: rgba(198,255,0,.055);
+  border-radius: 18px;
+  padding: .8rem .9rem;
+  margin-bottom: .85rem;
+}
+
+.pb-mobile-polish-title-v39p {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  color: var(--txt);
+  font-size: 1rem;
+  margin-bottom: .18rem;
+}
+
+.pb-mobile-polish-note-v39p {
+  color: var(--txt3);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+.pb-mobile-polish-steps-v39p {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .45rem;
+  margin-top: .65rem;
+}
+
+.pb-mobile-polish-step-v39p {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: .55rem .45rem;
+  text-align: center;
+  font-size: .72rem;
+  color: var(--txt2);
+  font-weight: 700;
+}
+
+.pb-mobile-polish-step-v39p strong {
+  display: block;
+  color: var(--lime);
+  font-size: .84rem;
+  margin-bottom: .12rem;
+}
+
+.pb-mobile-polish-helper-v39p {
+  font-size: .78rem;
+  color: var(--txt3);
+  line-height: 1.4;
+  margin-top: .5rem;
+}
+
+.pb-mobile-polish-helper-v39p strong {
+  color: var(--txt2);
+}
+
+@media (max-width: 430px) {
+  .pb-mobile-polish-card-v39p {
+    padding: .75rem;
+    border-radius: 16px;
+  }
+
+  .pb-mobile-polish-steps-v39p {
+    grid-template-columns: 1fr;
+  }
+
+  .pb-mobile-polish-step-v39p {
+    text-align: left;
+  }
+}
+</style>
+
 </head>
 <body>
 
@@ -416,6 +495,21 @@ html.pb-ms-polish-v1 .court-tile .claimed-by {
 
   <!-- ════════ SCREEN 1: Enter tournament code ════════ -->
   <section class="screen active" id="screen-code">
+
+  <!-- PB_MOBILE_SYNC_UI_POLISH_V39P:code -->
+  <div class="pb-mobile-polish-card-v39p">
+    <div class="pb-mobile-polish-title-v39p">Scorekeeper Mode</div>
+    <div class="pb-mobile-polish-note-v39p">
+      Enter the tournament code from the organizer, then choose your court and submit scores when your match is ready.
+    </div>
+    <div class="pb-mobile-polish-steps-v39p">
+      <div class="pb-mobile-polish-step-v39p"><strong>1</strong>Code</div>
+      <div class="pb-mobile-polish-step-v39p"><strong>2</strong>Court</div>
+      <div class="pb-mobile-polish-step-v39p"><strong>3</strong>Score</div>
+    </div>
+  </div>
+  <!-- /PB_MOBILE_SYNC_UI_POLISH_V39P -->
+
     <div>
       <span class="field-label">Tournament code</span>
       <input type="text" id="code-input" placeholder="e.g. BURL25" autocapitalize="characters" autocomplete="off" maxlength="32">
@@ -427,6 +521,16 @@ html.pb-ms-polish-v1 .court-tile .claimed-by {
 
   <!-- ════════ SCREEN 2: Pick your court ════════ -->
   <section class="screen" id="screen-court">
+
+  <!-- PB_MOBILE_SYNC_UI_POLISH_V39P:court -->
+  <div class="pb-mobile-polish-card-v39p">
+    <div class="pb-mobile-polish-title-v39p">Choose your court</div>
+    <div class="pb-mobile-polish-note-v39p">
+      Pick the court you are scoring for. If a court is already claimed, choose your assigned court or ask the organizer.
+    </div>
+  </div>
+  <!-- /PB_MOBILE_SYNC_UI_POLISH_V39P -->
+
     <!-- Always-visible round banner — shown above name/court regardless of
          whether this phone is locked to one court or showing the full grid. -->
     <div id="court-screen-round-banner" style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:var(--ball);background:rgba(249,168,37,0.1);border:1px solid rgba(249,168,37,0.35);border-radius:0.7rem;padding:0.55rem;display:none">
@@ -520,6 +624,13 @@ html.pb-ms-polish-v1 .court-tile .claimed-by {
     </div>
 
     <button class="btn btn-primary btn-block" id="submit-score-btn">Submit Score</button>
+
+    <!-- PB_MOBILE_SYNC_UI_POLISH_V39P:score -->
+    <div class="pb-mobile-polish-helper-v39p">
+      <strong>Tip:</strong> Double-check both team names before submitting. Scores sync back to the organizer automatically.
+    </div>
+    <!-- /PB_MOBILE_SYNC_UI_POLISH_V39P -->
+
     <div class="error-text" id="score-error"></div>
     <button class="btn btn-secondary btn-block" id="change-court-btn-2">↺ Switch court / name</button>
   </section>
