@@ -57347,6 +57347,246 @@ function exportEndSessionSummary(){
   window.addEventListener("load", install);
 })();
 
+
+;/* PB_MISSING_SCORE_CHECKLIST_V39X */
+(function(){
+  var MARKER = "PB_MISSING_SCORE_CHECKLIST_V39X";
+  if (window.__PB_MISSING_SCORE_CHECKLIST_V39X__) return;
+  window.__PB_MISSING_SCORE_CHECKLIST_V39X__ = true;
+
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function hasScore(v){
+    return v !== undefined && v !== null && String(v).trim() !== "";
+  }
+
+  function matchComplete(m){
+    if (!m) return false;
+    return !!(m.complete || m.completed || m.winner || hasScore(m.scoreA) || hasScore(m.scoreB) || hasScore(m.aScore) || hasScore(m.bScore));
+  }
+
+  function scoreText(m){
+    var a = hasScore(m.scoreA) ? m.scoreA : hasScore(m.aScore) ? m.aScore : "";
+    var b = hasScore(m.scoreB) ? m.scoreB : hasScore(m.bScore) ? m.bScore : "";
+    if (!hasScore(a) && !hasScore(b)) return "No score";
+    return String(a || "0") + " - " + String(b || "0");
+  }
+
+  function playerName(x){
+    try {
+      if (x && typeof x === "object") return String(x.name || x.playerName || x.fullName || x.displayName || "Player").trim();
+      var idx = Number(x);
+      if (window.state && Array.isArray(state.players) && state.players[idx]) {
+        return String(state.players[idx].name || state.players[idx].playerName || state.players[idx].fullName || ("Player " + (idx + 1))).trim();
+      }
+    } catch(e){}
+    return String(x == null ? "Player" : x).trim();
+  }
+
+  function teamText(team){
+    if (!Array.isArray(team)) return playerName(team);
+    return team.map(playerName).join(" / ");
+  }
+
+  function getMissing(){
+    var out = [];
+    try {
+      if (!window.state || !Array.isArray(state.schedule)) return out;
+
+      state.schedule.forEach(function(round, ri){
+        (round || []).forEach(function(m, mi){
+          if (!m) return;
+          if (matchComplete(m)) return;
+
+          out.push({
+            roundIndex: ri,
+            roundNumber: ri + 1,
+            matchIndex: mi,
+            id: m.id || "",
+            court: m.court || m.courtName || (mi + 1),
+            teamA: teamText(m.teamA || m.a || m.playersA || []),
+            teamB: teamText(m.teamB || m.b || m.playersB || []),
+            score: scoreText(m)
+          });
+        });
+      });
+    } catch(e) {
+      console.warn(MARKER + " getMissing failed", e);
+    }
+    return out;
+  }
+
+  function ensurePanel(){
+    var existing = document.getElementById("pb-missing-score-checklist-v39x");
+    if (existing) return existing;
+
+    var schedule =
+      document.getElementById("sec-schedule") ||
+      document.getElementById("schedule") ||
+      document.querySelector('[id*="schedule" i]');
+
+    if (!schedule) return null;
+
+    var panel = document.createElement("div");
+    panel.id = "pb-missing-score-checklist-v39x";
+    panel.className = "card";
+    panel.style.margin = "1rem 0";
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap">' +
+        '<div>' +
+          '<div class="card-title" style="margin-bottom:.2rem">Missing Score Checklist</div>' +
+          '<div style="font-size:.85rem;color:var(--txt3)">Quickly see which courts still need scores before standings/reporting.</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap">' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbMissingScoreChecklistV39XRender()">Refresh</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="pbMissingScoreChecklistV39XCopy()">Copy List</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" onclick="pbMissingScoreChecklistV39XJumpFirst()">Jump to First</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="pb-missing-score-checklist-v39x-body" style="margin-top:.75rem"></div>';
+
+    var anchor =
+      document.getElementById("pb-schedule-review-panel-v39t") ||
+      document.getElementById("pb-schedule-round-navigator-v39u") ||
+      document.getElementById("schedule-preview-panel") ||
+      document.getElementById("schedule-container");
+
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(panel, anchor.nextSibling);
+    else schedule.appendChild(panel);
+
+    return panel;
+  }
+
+  function render(){
+    var panel = ensurePanel();
+    if (!panel) return { marker: MARKER, installed: true, rendered: false, reason: "schedule panel not found" };
+
+    var body = document.getElementById("pb-missing-score-checklist-v39x-body");
+    if (!body) return { marker: MARKER, installed: true, rendered: false, reason: "body not found" };
+
+    var missing = getMissing();
+
+    if (!missing.length) {
+      body.innerHTML =
+        '<div style="padding:.75rem;border:1px solid rgba(34,197,94,.25);background:rgba(34,197,94,.08);border-radius:.75rem;color:var(--txt2)">' +
+          '✅ No missing scores found.' +
+        '</div>';
+    } else {
+      body.innerHTML =
+        '<div style="font-size:.9rem;color:var(--txt2);margin-bottom:.5rem"><strong>' + missing.length + '</strong> match' + (missing.length === 1 ? '' : 'es') + ' still need score entry.</div>' +
+        '<div style="display:grid;gap:.5rem">' +
+        missing.slice(0, 30).map(function(x, i){
+          return '<div style="display:flex;justify-content:space-between;gap:.75rem;align-items:center;flex-wrap:wrap;border:1px solid var(--border);border-radius:.75rem;padding:.6rem .75rem;background:rgba(255,255,255,.03)">' +
+            '<div style="font-size:.9rem">' +
+              '<strong>Round ' + esc(x.roundNumber) + ' · Court ' + esc(x.court) + '</strong>' +
+              '<div style="color:var(--txt2);font-size:.85rem">' + esc(x.teamA) + ' vs ' + esc(x.teamB) + '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-secondary btn-sm" onclick="pbMissingScoreChecklistV39XJump(' + x.roundIndex + ',' + x.matchIndex + ')">Jump</button>' +
+          '</div>';
+        }).join("") +
+        (missing.length > 30 ? '<div style="font-size:.85rem;color:var(--txt3)">Showing first 30 missing scores.</div>' : '') +
+        '</div>';
+    }
+
+    return {
+      marker: MARKER,
+      installed: true,
+      rendered: true,
+      missingScores: missing.length
+    };
+  }
+
+  function jump(roundIndex, matchIndex){
+    try {
+      if (typeof showTab === "function") showTab("schedule");
+
+      setTimeout(function(){
+        var container = document.getElementById("schedule-container") || document.getElementById("sec-schedule") || document.body;
+        var roundNum = Number(roundIndex) + 1;
+        var cards = Array.prototype.slice.call(container.querySelectorAll(".card, .round-card, .match-card, div"));
+
+        var target = cards.find(function(el){
+          var t = String(el.innerText || el.textContent || "");
+          return t.indexOf("Round " + roundNum) >= 0 && t.length < 4000;
+        }) || container;
+
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.style.outline = "3px solid rgba(198,255,0,.65)";
+        target.style.outlineOffset = "4px";
+        setTimeout(function(){ target.style.outline = ""; target.style.outlineOffset = ""; }, 2200);
+      }, 120);
+    } catch(e) {
+      console.warn(MARKER + " jump failed", e);
+    }
+  }
+
+  function copyList(){
+    var missing = getMissing();
+    var lines = missing.map(function(x){
+      return "Round " + x.roundNumber + " · Court " + x.court + " · " + x.teamA + " vs " + x.teamB;
+    });
+
+    var text = lines.length ? lines.join("\n") : "No missing scores found.";
+
+    try {
+      navigator.clipboard.writeText(text);
+      if (typeof toast === "function") toast("Copied missing score list.", "ok");
+    } catch(e) {
+      try { copy(text); } catch(_) {}
+    }
+
+    return text;
+  }
+
+  window.pbMissingScoreChecklistV39XRender = render;
+  window.pbMissingScoreChecklistV39XCopy = copyList;
+  window.pbMissingScoreChecklistV39XJump = jump;
+  window.pbMissingScoreChecklistV39XJumpFirst = function(){
+    var missing = getMissing();
+    if (missing.length) jump(missing[0].roundIndex, missing[0].matchIndex);
+    else if (typeof toast === "function") toast("No missing scores found.", "ok");
+  };
+  window.pbMissingScoreChecklistV39XStatus = function(){
+    var result = render();
+    console.log(JSON.stringify(result, null, 2));
+    try { copy(JSON.stringify(result, null, 2)); } catch(e){}
+    return result;
+  };
+
+  function install(){
+    render();
+    setTimeout(render, 250);
+    setTimeout(render, 1000);
+  }
+
+  ["renderSchedule","saveScore","saveScoreInline","generateSchedule","regenerateRemaining","lockRound","unlockRound","showTab"].forEach(function(name){
+    try {
+      var fn = window[name];
+      if (typeof fn === "function" && !fn.__pbMissingScoreChecklistV39XWrapped) {
+        var wrapped = function(){
+          var result = fn.apply(this, arguments);
+          setTimeout(render, 120);
+          setTimeout(render, 600);
+          return result;
+        };
+        wrapped.__pbMissingScoreChecklistV39XWrapped = true;
+        window[name] = wrapped;
+      }
+    } catch(e){}
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  else install();
+
+  window.addEventListener("load", install);
+})();
+
 </script>
 
 </body>
