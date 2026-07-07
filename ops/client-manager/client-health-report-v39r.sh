@@ -59,34 +59,33 @@ echo "" | tee -a "$OUT"
 echo "------ CLIENT LIST ------" | tee -a "$OUT"
 
 list_kv_names() {
-  local RAW
-  RAW="$(npx wrangler kv key list --namespace-id "$KV_ID" --remote 2>/dev/null || true)"
-  printf "%s" "$RAW" | python3 - <<'PY2'
-import json, sys, re
+  local TMP
+  TMP="$(mktemp)"
 
-raw = sys.stdin.read()
+  # Capture Wrangler output to a file first. Do not pipe into python with a heredoc,
+  # because the heredoc becomes python's stdin and hides the Wrangler output.
+  npx wrangler kv key list --namespace-id "$KV_ID" --remote > "$TMP" 2>&1 || true
 
-# Wrangler can print warnings/noise before JSON. Extract the JSON array safely.
-start = raw.find("[")
-end = raw.rfind("]")
-if start >= 0 and end > start:
-    raw = raw[start:end+1]
+  python3 - "$TMP" <<'PY2'
+import re, sys
 
-names = []
-try:
-    data = json.loads(raw)
-    if isinstance(data, list):
-        for item in data:
-            if isinstance(item, dict) and item.get("name"):
-                names.append(str(item["name"]))
-except Exception:
-    # Fallback parser for any non-standard spacing or line wrapping.
-    names = re.findall(r'"name"\s*:\s*"([^"]+)"', raw)
+path = sys.argv[1]
+raw = open(path, "r", encoding="utf-8", errors="ignore").read()
 
-for name in names:
+# Primary parser for Wrangler JSON output.
+names = re.findall(r'"name"\s*:\s*"([^"]+)"', raw)
+
+# Fallback parser if Wrangler output format changes.
+if not names:
+    names = re.findall(r'((?:license|client-state)::[A-Za-z0-9_.:-]+)', raw)
+
+for name in sorted(set(names)):
     print(name)
 PY2
+
+  rm -f "$TMP"
 }
+
 
 if [ "$CLIENT_ID" = "all" ]; then
   CLIENTS="$(list_kv_names | grep '^license::' | sed 's/^license:://' | sort || true)"
@@ -96,6 +95,8 @@ fi
 
 if [ -z "${CLIENTS:-}" ]; then
   echo "No clients found." | tee -a "$OUT"
+else
+  echo "$CLIENTS" | sed 's/^/- /' | tee -a "$OUT"
 fi
 
 for C in $CLIENTS; do
