@@ -88,7 +88,18 @@ PY2
 
 
 if [ "$CLIENT_ID" = "all" ]; then
-  CLIENTS="$(list_kv_names | grep '^license::' | sed 's/^license:://' | sort || true)"
+  TMP_LICENSES="$(mktemp)"
+  npx wrangler kv key list --namespace-id "$KV_ID" --remote --prefix "license::" > "$TMP_LICENSES" 2>&1 || true
+
+  CLIENTS="$(python3 - "$TMP_LICENSES" <<'PY2'
+import re, sys
+raw = open(sys.argv[1], "r", encoding="utf-8", errors="ignore").read()
+names = re.findall(r'"name"\s*:\s*"license::([^"]+)"', raw)
+for name in sorted(set(names)):
+    print(name)
+PY2
+)"
+  rm -f "$TMP_LICENSES"
 else
   CLIENTS="$CLIENT_ID"
 fi
